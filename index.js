@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder, PermissionsBitField, Colors } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder, PermissionsBitField, Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, AttachmentBuilder } = require('discord.js');
 const https = require('https');
 const fs = require('fs');
 
@@ -103,38 +103,120 @@ client.on('messageCreate', async (msg) => {
             // ── !help ──────────────────────────────────────────────────────────────────
             if (command === 'help') {
                   const isS = isStaff(member);
-                  const e = new EmbedBuilder()
-                    .setColor(ACCENT)
-                    .setTitle('⚡ RazorReaper Bot — Commands')
-                    .setDescription('Prefix: `!`  |  Visit **rr.sellhub.cx**')
-                    .addFields(
-                      { name: '🎟️ Ticket Commands', value:
-                                  '`!ticket` — View your open ticket\n' +
-                                  '`!queue` — See how many tickets are open\n' +
-                                  '`!ticketinfo` — Info about current ticket *(inside ticket)*\n' +
-                                  '`!adduser @user` — Add someone to current ticket *(inside ticket)*'
-                      },
-                      { name: '📊 Server Commands', value:
-                                  '`!info` — Server statistics\n' +
-                                  '`!userinfo [@user]` — User details\n' +
-                                  '`!status` — Bot & server status\n' +
-                                  '`!rules` — Display server rules'
-                      },
-                            );
+
+                  // Category embeds
+                  const helpCategories = {
+                          home: () => {
+                                  const e = new EmbedBuilder()
+                                    .setColor(ACCENT)
+                                    .setTitle('⚡ RazorReaper Bot')
+                                    .setDescription(
+                                            'Welcome to the **RazorReaper** help menu!\n\n' +
+                                            'Use the dropdown below to browse command categories.\n\n' +
+                                            '**Prefix:** `!`\n' +
+                                            '**Website:** [rr.sellhub.cx](https://rr.sellhub.cx)'
+                                    )
+                                    .setThumbnail(client.user.displayAvatarURL({ dynamic: true, size: 256 }))
+                                    .addFields(
+                                            { name: '📂 Categories', value:
+                                                    '🎟️ **Tickets** — Manage support tickets\n' +
+                                                    '📊 **Server** — Server info & utilities\n' +
+                                                    '😎 **Emoji** — Steal emojis & stickers\n' +
+                                                    (isS ? '🔨 **Staff** — Moderation tools\n' : '')
+                                            },
+                                    )
+                                    .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() })
+                                    .setTimestamp();
+                                  return e;
+                          },
+                          tickets: () => new EmbedBuilder()
+                            .setColor(ACCENT)
+                            .setTitle('🎟️ Ticket Commands')
+                            .setDescription('Manage and interact with the ticket system.')
+                            .addFields(
+                                    { name: '`!ticket`', value: 'View your open ticket(s)', inline: true },
+                                    { name: '`!queue`', value: 'See how many tickets are open', inline: true },
+                                    { name: '`!ticketinfo`', value: 'Info about current ticket *(inside ticket)*', inline: true },
+                                    { name: '`!adduser @user`', value: 'Add someone to current ticket *(inside ticket)*', inline: true },
+                            )
+                            .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
+                          server: () => new EmbedBuilder()
+                            .setColor(CYAN)
+                            .setTitle('📊 Server Commands')
+                            .setDescription('View server info and utilities.')
+                            .addFields(
+                                    { name: '`!info`', value: 'Server statistics', inline: true },
+                                    { name: '`!userinfo [@user]`', value: 'User details', inline: true },
+                                    { name: '`!status`', value: 'Bot & server status', inline: true },
+                                    { name: '`!rules`', value: 'Display server rules', inline: true },
+                                    { name: '`!ping`', value: 'Check bot latency', inline: true },
+                            )
+                            .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
+                          emoji: () => new EmbedBuilder()
+                            .setColor(0xffcc00)
+                            .setTitle('😎 Emoji & Sticker Commands')
+                            .setDescription('Steal emojis and stickers from other servers!')
+                            .addFields(
+                                    { name: '`!steal <emoji(s)>`', value: 'Steal one or more emojis — shows a selection menu with **Steal / Download / Both** options' },
+                                    { name: '`!steal` *(reply)*', value: 'Reply to a message to steal all custom emojis from it' },
+                                    { name: '`!steal <emoji_id> [name]`', value: 'Steal an emoji by its raw ID' },
+                                    { name: '`!steal <image_url> [name]`', value: 'Create an emoji from an image URL' },
+                                    { name: '`!stealsticker` *(reply)*', value: 'Reply to a sticker message to steal or download it' },
+                            )
+                            .setFooter({ text: 'Requires Manage Expressions permission', iconURL: client.user.displayAvatarURL() }),
+                          staff: () => new EmbedBuilder()
+                            .setColor(0xff4444)
+                            .setTitle('🔨 Staff Commands')
+                            .setDescription('Moderation and management tools. Staff only.')
+                            .addFields(
+                                    { name: '`!purge [1-100]`', value: 'Bulk delete messages', inline: true },
+                                    { name: '`!kick @user [reason]`', value: 'Kick a member', inline: true },
+                                    { name: '`!ban @user [reason]`', value: 'Ban a member', inline: true },
+                                    { name: '`!warn @user [reason]`', value: 'Warn a member', inline: true },
+                                    { name: '`!warns @user`', value: 'View warnings', inline: true },
+                                    { name: '`!clearwarns @user`', value: 'Clear warnings', inline: true },
+                                    { name: '`!close [reason]`', value: 'Close ticket *(inside ticket)*', inline: true },
+                                    { name: '`!say [#channel] <msg>`', value: 'Send announcement', inline: true },
+                            )
+                            .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
+                  };
+
+                  // Build the select menu
+                  const options = [
+                          { label: 'Home', description: 'Main help overview', value: 'home', emoji: '⚡' },
+                          { label: 'Tickets', description: 'Ticket system commands', value: 'tickets', emoji: '🎟️' },
+                          { label: 'Server', description: 'Server info & utilities', value: 'server', emoji: '📊' },
+                          { label: 'Emoji & Stickers', description: 'Steal emojis & stickers', value: 'emoji', emoji: '😎' },
+                  ];
                   if (isS) {
-                          e.addFields({ name: '🔨 Staff Commands', value:
-                                    '`!purge [1-100]` — Bulk delete messages\n' +
-                                    '`!kick @user [reason]` — Kick a member\n' +
-                                    '`!ban @user [reason]` — Ban a member\n' +
-                                    '`!warn @user [reason]` — Warn a member\n' +
-                                    '`!warns @user` — View warnings\n' +
-                                    '`!clearwarns @user` — Clear warnings\n' +
-                                    '`!close [reason]` — Close ticket *(inside ticket)*\n' +
-                                    '`!say [#channel] <msg>` — Send announcement'
-                                      });
+                          options.push({ label: 'Staff', description: 'Moderation tools', value: 'staff', emoji: '🔨' });
                   }
-                  e.setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() });
-                  return msg.reply({ embeds: [e] });
+
+                  const selectMenu = new StringSelectMenuBuilder()
+                    .setCustomId(`help_menu_${msg.id}`)
+                    .setPlaceholder('Select a category...')
+                    .addOptions(options);
+
+                  const row = new ActionRowBuilder().addComponents(selectMenu);
+                  const reply = await msg.reply({ embeds: [helpCategories.home()], components: [row] });
+
+                  const collector = reply.createMessageComponentCollector({
+                          filter: (i) => i.user.id === msg.author.id,
+                          time: 120_000,
+                  });
+
+                  collector.on('collect', async (interaction) => {
+                          const category = interaction.values[0];
+                          const builder = helpCategories[category];
+                          if (builder) {
+                                  await interaction.update({ embeds: [builder()] });
+                          }
+                  });
+
+                  collector.on('end', () => {
+                          reply.edit({ components: [] }).catch(() => {});
+                  });
+                  return;
             }
 
             // ── !info ──────────────────────────────────────────────────────────────────
@@ -398,6 +480,310 @@ client.on('messageCreate', async (msg) => {
                   if (!target) return msg.reply({ embeds: [errEmbed('❌ Mention a user.')] });
                   warns[target.id] = [];
                   return msg.reply({ embeds: [okEmbed(`✅ Cleared all warnings for **${target.user.tag}**.`)] });
+            }
+
+            // ── !stealemoji / !steal ────────────────────────────────────────────────
+            if (command === 'stealemoji' || command === 'steal') {
+                  if (!member.permissions.has(PermissionsBitField.Flags.ManageGuildExpressions)) {
+                          return msg.reply({ embeds: [errEmbed('❌ You need the **Manage Expressions** permission.')] });
+                  }
+
+                  // Collect all emojis from args + replied message
+                  const emojiRegex = /<(a?):(\w+):(\d+)>/g;
+                  const found = [];
+
+                  // Parse emojis from command arguments
+                  const fullArgs = args.join(' ');
+                  for (const match of fullArgs.matchAll(emojiRegex)) {
+                          found.push({ animated: match[1] === 'a', name: match[2], id: match[3] });
+                  }
+
+                  // Parse emojis from replied message
+                  if (msg.reference) {
+                          const ref = await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null);
+                          if (ref) {
+                                  for (const match of ref.content.matchAll(emojiRegex)) {
+                                          // Avoid duplicates
+                                          if (!found.some(e => e.id === match[3])) {
+                                                  found.push({ animated: match[1] === 'a', name: match[2], id: match[3] });
+                                          }
+                                  }
+                          }
+                  }
+
+                  // Handle single emoji ID or URL (no selection needed)
+                  if (found.length === 0 && args[0]) {
+                          if (/^\d+$/.test(args[0])) {
+                                  found.push({ animated: false, name: args[1] || 'stolen_emoji', id: args[0], tryGif: true });
+                          } else if (args[0].startsWith('http')) {
+                                  const eName = args[1] || 'stolen_emoji';
+                                  try {
+                                          const emoji = await guild.emojis.create({ attachment: args[0], name: eName });
+                                          return msg.reply({ embeds: [okEmbed(`✅ Added ${emoji} as \`:${eName}:\``)] });
+                                  } catch (e) {
+                                          return msg.reply({ embeds: [errEmbed(`❌ Failed to create emoji: ${e.message}`)] });
+                                  }
+                          }
+                  }
+
+                  if (found.length === 0) {
+                          return msg.reply({ embeds: [errEmbed('❌ No custom emojis found.\n**Usage:** `!steal <emoji(s)>` or reply to a message with `!steal`')] });
+                  }
+
+                  // Build emoji list for the preview embed
+                  const emojiList = found.map((e, i) =>
+                          `**${i + 1}.** \`:${e.name}:\` ${e.animated ? '*(animated)*' : ''}`
+                  ).join('\n');
+
+                  const previewEmbed = new EmbedBuilder()
+                    .setColor(CYAN)
+                    .setTitle('😎 Emoji Stealer — Select & Choose')
+                    .setDescription(`Found **${found.length}** emoji(s):\n\n${emojiList}`)
+                    .setFooter({ text: 'Select emojis below, then choose to steal or download. Expires in 60s.' })
+                    .setTimestamp();
+
+                  // Build select menu if multiple emojis
+                  const components = [];
+                  if (found.length > 1) {
+                          const selectMenu = new StringSelectMenuBuilder()
+                            .setCustomId(`steal_select_${msg.id}`)
+                            .setPlaceholder('Select emojis to steal/download...')
+                            .setMinValues(1)
+                            .setMaxValues(found.length)
+                            .addOptions(found.map((e, i) => ({
+                                    label: `:${e.name}:`,
+                                    description: e.animated ? 'Animated emoji' : 'Static emoji',
+                                    value: String(i),
+                                    emoji: { id: e.id, animated: e.animated },
+                            })));
+                          components.push(new ActionRowBuilder().addComponents(selectMenu));
+                  }
+
+                  // Action buttons
+                  const buttons = new ActionRowBuilder().addComponents(
+                          new ButtonBuilder()
+                            .setCustomId(`steal_add_${msg.id}`)
+                            .setLabel('Steal to Server')
+                            .setStyle(ButtonStyle.Success)
+                            .setEmoji('😎'),
+                          new ButtonBuilder()
+                            .setCustomId(`steal_dl_${msg.id}`)
+                            .setLabel('Download')
+                            .setStyle(ButtonStyle.Primary)
+                            .setEmoji('📥'),
+                          new ButtonBuilder()
+                            .setCustomId(`steal_both_${msg.id}`)
+                            .setLabel('Steal + Download')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setEmoji('⚡'),
+                          new ButtonBuilder()
+                            .setCustomId(`steal_cancel_${msg.id}`)
+                            .setLabel('Cancel')
+                            .setStyle(ButtonStyle.Danger),
+                  );
+                  components.push(buttons);
+
+                  const reply = await msg.reply({ embeds: [previewEmbed], components });
+
+                  // Track selected emoji indices (default: all)
+                  let selectedIndices = found.map((_, i) => i);
+
+                  const collector = reply.createMessageComponentCollector({
+                          filter: (i) => i.user.id === msg.author.id,
+                          time: 60_000,
+                  });
+
+                  collector.on('collect', async (interaction) => {
+                          // Handle select menu
+                          if (interaction.customId === `steal_select_${msg.id}`) {
+                                  selectedIndices = interaction.values.map(Number);
+                                  const selected = selectedIndices.map(i => found[i]);
+                                  const updatedList = found.map((e, i) =>
+                                          `${selectedIndices.includes(i) ? '✅' : '⬜'} **${i + 1}.** \`:${e.name}:\` ${e.animated ? '*(animated)*' : ''}`
+                                  ).join('\n');
+                                  previewEmbed.setDescription(`Found **${found.length}** emoji(s) — **${selected.length}** selected:\n\n${updatedList}`);
+                                  await interaction.update({ embeds: [previewEmbed] });
+                                  return;
+                          }
+
+                          // Handle cancel
+                          if (interaction.customId === `steal_cancel_${msg.id}`) {
+                                  collector.stop('cancelled');
+                                  await interaction.update({
+                                          embeds: [errEmbed('❌ Emoji steal cancelled.')],
+                                          components: [],
+                                  });
+                                  return;
+                          }
+
+                          // Determine action
+                          const doSteal = interaction.customId === `steal_add_${msg.id}` || interaction.customId === `steal_both_${msg.id}`;
+                          const doDownload = interaction.customId === `steal_dl_${msg.id}` || interaction.customId === `steal_both_${msg.id}`;
+
+                          await interaction.deferUpdate();
+                          collector.stop('acted');
+
+                          const selected = selectedIndices.map(i => found[i]);
+                          const results = [];
+                          const attachments = [];
+
+                          for (const emoji of selected) {
+                                  const ext = emoji.animated ? 'gif' : 'png';
+                                  let url = `https://cdn.discordapp.com/emojis/${emoji.id}.${ext}`;
+
+                                  if (doSteal) {
+                                          try {
+                                                  const created = await guild.emojis.create({ attachment: url, name: emoji.name });
+                                                  results.push(`✅ ${created} \`:${emoji.name}:\` — added to server`);
+                                          } catch (e) {
+                                                  // If ID-only emoji, try the other format
+                                                  if (emoji.tryGif) {
+                                                          url = `https://cdn.discordapp.com/emojis/${emoji.id}.gif`;
+                                                          try {
+                                                                  const created = await guild.emojis.create({ attachment: url, name: emoji.name });
+                                                                  results.push(`✅ ${created} \`:${emoji.name}:\` — added to server`);
+                                                                  continue;
+                                                          } catch {}
+                                                  }
+                                                  results.push(`❌ \`:${emoji.name}:\` — ${e.message}`);
+                                          }
+                                  }
+
+                                  if (doDownload) {
+                                          try {
+                                                  const attachment = new AttachmentBuilder(url, { name: `${emoji.name}.${ext}` });
+                                                  attachments.push(attachment);
+                                                  if (!doSteal) results.push(`📥 \`:${emoji.name}:\` — downloaded`);
+                                                  else results.push(`📥 \`:${emoji.name}:\` — file attached`);
+                                          } catch (e) {
+                                                  results.push(`❌ \`:${emoji.name}:\` download failed — ${e.message}`);
+                                          }
+                                  }
+                          }
+
+                          const resultEmbed = new EmbedBuilder()
+                            .setColor(0x00cc66)
+                            .setTitle('😎 Emoji Steal — Results')
+                            .setDescription(results.join('\n'))
+                            .setFooter({ text: `Requested by ${msg.author.tag}` })
+                            .setTimestamp();
+
+                          await reply.edit({
+                                  embeds: [resultEmbed],
+                                  components: [],
+                                  files: attachments,
+                          });
+                  });
+
+                  collector.on('end', (_, reason) => {
+                          if (reason === 'time') {
+                                  reply.edit({
+                                          embeds: [errEmbed('⏰ Emoji steal timed out.')],
+                                          components: [],
+                                  }).catch(() => {});
+                          }
+                  });
+                  return;
+            }
+
+            // ── !stealsticker ──────────────────────────────────────────────────────────
+            if (command === 'stealsticker') {
+                  if (!member.permissions.has(PermissionsBitField.Flags.ManageGuildExpressions)) {
+                          return msg.reply({ embeds: [errEmbed('❌ You need the **Manage Expressions** permission.')] });
+                  }
+                  const ref = msg.reference ? await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null) : null;
+                  if (!ref || ref.stickers.size === 0) {
+                          return msg.reply({ embeds: [errEmbed('❌ Reply to a message that has a sticker.\n**Usage:** Reply to a sticker message with `!stealsticker [name]`')] });
+                  }
+                  const sticker = ref.stickers.first();
+                  const stickerName = args[0] || sticker.name;
+
+                  const buttons = new ActionRowBuilder().addComponents(
+                          new ButtonBuilder()
+                            .setCustomId(`sticker_add_${msg.id}`)
+                            .setLabel('Steal to Server')
+                            .setStyle(ButtonStyle.Success)
+                            .setEmoji('😎'),
+                          new ButtonBuilder()
+                            .setCustomId(`sticker_dl_${msg.id}`)
+                            .setLabel('Download')
+                            .setStyle(ButtonStyle.Primary)
+                            .setEmoji('📥'),
+                          new ButtonBuilder()
+                            .setCustomId(`sticker_both_${msg.id}`)
+                            .setLabel('Steal + Download')
+                            .setStyle(ButtonStyle.Secondary)
+                            .setEmoji('⚡'),
+                          new ButtonBuilder()
+                            .setCustomId(`sticker_cancel_${msg.id}`)
+                            .setLabel('Cancel')
+                            .setStyle(ButtonStyle.Danger),
+                  );
+
+                  const previewEmbed = new EmbedBuilder()
+                    .setColor(CYAN)
+                    .setTitle('🎨 Sticker Stealer')
+                    .setDescription(`**Sticker:** ${stickerName}\n**Format:** ${sticker.format}`)
+                    .setThumbnail(sticker.url)
+                    .setFooter({ text: 'Choose an action below. Expires in 60s.' })
+                    .setTimestamp();
+
+                  const reply = await msg.reply({ embeds: [previewEmbed], components: [buttons] });
+
+                  const collector = reply.createMessageComponentCollector({
+                          filter: (i) => i.user.id === msg.author.id,
+                          time: 60_000,
+                  });
+
+                  collector.on('collect', async (interaction) => {
+                          if (interaction.customId === `sticker_cancel_${msg.id}`) {
+                                  collector.stop('cancelled');
+                                  await interaction.update({ embeds: [errEmbed('❌ Sticker steal cancelled.')], components: [] });
+                                  return;
+                          }
+
+                          const doSteal = interaction.customId === `sticker_add_${msg.id}` || interaction.customId === `sticker_both_${msg.id}`;
+                          const doDownload = interaction.customId === `sticker_dl_${msg.id}` || interaction.customId === `sticker_both_${msg.id}`;
+
+                          await interaction.deferUpdate();
+                          collector.stop('acted');
+
+                          const results = [];
+                          const attachments = [];
+
+                          if (doSteal) {
+                                  try {
+                                          const created = await guild.stickers.create({ file: sticker.url, name: stickerName, tags: '😀' });
+                                          results.push(`✅ Added sticker **${created.name}** to the server!`);
+                                  } catch (e) {
+                                          results.push(`❌ Failed to steal sticker: ${e.message}`);
+                                  }
+                          }
+
+                          if (doDownload) {
+                                  try {
+                                          const ext = sticker.format === 'LOTTIE' ? 'json' : sticker.format === 'APNG' ? 'png' : 'png';
+                                          const attachment = new AttachmentBuilder(sticker.url, { name: `${stickerName}.${ext}` });
+                                          attachments.push(attachment);
+                                          results.push(`📥 Sticker file attached!`);
+                                  } catch (e) {
+                                          results.push(`❌ Download failed: ${e.message}`);
+                                  }
+                          }
+
+                          await reply.edit({
+                                  embeds: [okEmbed(results.join('\n'))],
+                                  components: [],
+                                  files: attachments,
+                          });
+                  });
+
+                  collector.on('end', (_, reason) => {
+                          if (reason === 'time') {
+                                  reply.edit({ embeds: [errEmbed('⏰ Sticker steal timed out.')], components: [] }).catch(() => {});
+                          }
+                  });
+                  return;
             }
 });
 
