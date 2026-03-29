@@ -122,7 +122,8 @@ client.on('messageCreate', async (msg) => {
                                                     '🎟️ **Tickets** — Manage support tickets\n' +
                                                     '📊 **Server** — Server info & utilities\n' +
                                                     '😎 **Emoji** — Steal emojis & stickers\n' +
-                                                    (isS ? '🔨 **Staff** — Moderation tools\n' : '')
+                                                    (isS ? '🛡️ **Admin** — Channel management & tools\n' +
+                                                    '🔨 **Staff** — Moderation & member management\n' : '')
                                             },
                                     )
                                     .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() })
@@ -167,20 +168,27 @@ client.on('messageCreate', async (msg) => {
                                     { name: '`!stealsticker` *(reply)*', value: 'Reply to a sticker message to steal or download it' },
                             )
                             .setFooter({ text: 'Download: everyone | Steal to server: staff only', iconURL: client.user.displayAvatarURL() }),
+                          admin: () => new EmbedBuilder()
+                            .setColor(0x9b59b6)
+                            .setTitle('🛡️ Admin Commands')
+                            .setDescription('Channel management and administrative tools. Staff only.')
+                            .addFields(
+                                    { name: '`!clear`', value: 'Interactive message cleaner — select amount, target and filter from dropdown menus\nOptions: **10 / 25 / 50 / 100** messages | Filter by **All / Specific user / Bots only**' },
+                                    { name: '`!purge [1-100]`', value: 'Quick bulk-delete messages (includes your command message)' },
+                                    { name: '`!say [#channel] <msg>`', value: 'Send an announcement as the bot — optionally in a different channel' },
+                                    { name: '`!close [reason]`', value: 'Close a ticket channel *(use inside a ticket channel)*' },
+                            )
+                            .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
                           staff: () => new EmbedBuilder()
                             .setColor(0xff4444)
                             .setTitle('🔨 Staff Commands')
-                            .setDescription('Moderation and management tools. Staff only.')
+                            .setDescription('Member moderation and management. Staff only.')
                             .addFields(
-                                    { name: '`!clear <amount> [@user]`', value: 'Delete messages in this channel — optionally filter by a specific user\nExample: `!clear 50 @someone` to delete their last 50 messages' },
-                                    { name: '`!purge [1-100]`', value: 'Quick bulk-delete messages (includes your command message)' },
                                     { name: '`!kick @user [reason]`', value: 'Kick a member from the server with an optional reason' },
                                     { name: '`!ban @user [reason]`', value: 'Ban a member from the server with an optional reason' },
                                     { name: '`!warn @user [reason]`', value: 'Issue a warning to a member — they get a DM notification' },
                                     { name: '`!warns @user`', value: 'View all warnings for a member' },
                                     { name: '`!clearwarns @user`', value: 'Clear all warnings for a member' },
-                                    { name: '`!close [reason]`', value: 'Close a ticket channel *(use inside a ticket channel)*' },
-                                    { name: '`!say [#channel] <msg>`', value: 'Send an announcement as the bot — optionally in a different channel' },
                             )
                             .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
                   };
@@ -193,7 +201,8 @@ client.on('messageCreate', async (msg) => {
                           { label: 'Emoji & Stickers', description: 'Steal emojis & stickers', value: 'emoji', emoji: '😎' },
                   ];
                   if (isS) {
-                          options.push({ label: 'Staff', description: 'Moderation tools', value: 'staff', emoji: '🔨' });
+                          options.push({ label: 'Admin', description: 'Channel management & tools', value: 'admin', emoji: '🛡️' });
+                          options.push({ label: 'Staff', description: 'Member moderation', value: 'staff', emoji: '🔨' });
                   }
 
                   const selectMenu = new StringSelectMenuBuilder()
@@ -407,51 +416,189 @@ client.on('messageCreate', async (msg) => {
                   return targetChannel.send(text);
             }
 
-            // ── !clear <amount> [@user] ────────────────────────────────────────────
+            // ── !clear (interactive) ───────────────────────────────────────────────
             if (command === 'clear') {
                   if (!isStaff(member)) return msg.reply({ embeds: [errEmbed('❌ No permission.')] });
-                  const amount = parseInt(args[0]);
-                  if (isNaN(amount) || amount < 1 || amount > 500) {
-                          return msg.reply({ embeds: [errEmbed('❌ Provide a number between 1 and 500.\n**Usage:** `!clear <amount> [@user]`')] });
+
+                  // State
+                  let selectedAmount = null;
+                  let selectedFilter = 'all'; // all | user | bots
+                  let selectedUser = null;
+
+                  // Amount select menu
+                  const amountMenu = new StringSelectMenuBuilder()
+                    .setCustomId(`clear_amount_${msg.id}`)
+                    .setPlaceholder('Select amount of messages...')
+                    .addOptions([
+                            { label: '10 Messages', value: '10', emoji: '🔟' },
+                            { label: '25 Messages', value: '25', emoji: '📄' },
+                            { label: '50 Messages', value: '50', emoji: '📑' },
+                            { label: '100 Messages', value: '100', emoji: '📚' },
+                    ]);
+
+                  // Filter select menu
+                  const filterMenu = new StringSelectMenuBuilder()
+                    .setCustomId(`clear_filter_${msg.id}`)
+                    .setPlaceholder('Filter messages by...')
+                    .addOptions([
+                            { label: 'All Messages', description: 'Delete messages from everyone', value: 'all', emoji: '📨' },
+                            { label: 'Specific User', description: 'Mention a user after selecting', value: 'user', emoji: '👤' },
+                            { label: 'Bots Only', description: 'Only delete bot messages', value: 'bots', emoji: '🤖' },
+                    ]);
+
+                  const confirmRow = new ActionRowBuilder().addComponents(
+                          new ButtonBuilder()
+                            .setCustomId(`clear_confirm_${msg.id}`)
+                            .setLabel('Clear Messages')
+                            .setStyle(ButtonStyle.Danger)
+                            .setEmoji('🗑️')
+                            .setDisabled(true),
+                          new ButtonBuilder()
+                            .setCustomId(`clear_cancel_${msg.id}`)
+                            .setLabel('Cancel')
+                            .setStyle(ButtonStyle.Secondary),
+                  );
+
+                  const clearEmbed = new EmbedBuilder()
+                    .setColor(0x9b59b6)
+                    .setTitle('🗑️ Channel Clear')
+                    .setDescription(
+                            '**Step 1:** Select how many messages to delete\n' +
+                            '**Step 2:** Choose a filter\n' +
+                            '**Step 3:** Confirm\n\n' +
+                            '> **Amount:** *not selected*\n' +
+                            '> **Filter:** *not selected*'
+                    )
+                    .setFooter({ text: `Requested by ${msg.author.tag} • Expires in 60s` })
+                    .setTimestamp();
+
+                  const clearReply = await msg.reply({
+                          embeds: [clearEmbed],
+                          components: [
+                                  new ActionRowBuilder().addComponents(amountMenu),
+                                  new ActionRowBuilder().addComponents(filterMenu),
+                                  confirmRow,
+                          ],
+                  });
+
+                  function updateEmbed() {
+                          const amountText = selectedAmount ? `**${selectedAmount}** messages` : '*not selected*';
+                          let filterText = '*not selected*';
+                          if (selectedFilter === 'all') filterText = '**All messages**';
+                          else if (selectedFilter === 'bots') filterText = '**Bots only**';
+                          else if (selectedFilter === 'user' && selectedUser) filterText = `**From:** ${selectedUser}`;
+                          else if (selectedFilter === 'user') filterText = '**Specific user** — mention a user in chat';
+
+                          clearEmbed.setDescription(
+                                  '**Step 1:** Select how many messages to delete\n' +
+                                  '**Step 2:** Choose a filter\n' +
+                                  '**Step 3:** Confirm\n\n' +
+                                  `> **Amount:** ${amountText}\n` +
+                                  `> **Filter:** ${filterText}`
+                          );
                   }
-                  const targetUser = msg.mentions.users.first();
-                  await msg.delete().catch(() => {});
 
-                  let totalDeleted = 0;
-                  let remaining = amount;
+                  // Listen for user mention if "Specific User" is selected
+                  const mentionCollector = msg.channel.createMessageCollector({
+                          filter: (m) => m.author.id === msg.author.id && m.mentions.users.size > 0,
+                          time: 60_000,
+                  });
 
-                  // Discord can only bulk-delete 100 at a time, and only messages < 14 days old
-                  while (remaining > 0) {
-                          const fetchAmount = Math.min(remaining, 100);
-                          const fetched = await msg.channel.messages.fetch({ limit: fetchAmount }).catch(() => null);
-                          if (!fetched || fetched.size === 0) break;
+                  mentionCollector.on('collect', async (m) => {
+                          if (selectedFilter !== 'user') return;
+                          selectedUser = m.mentions.users.first();
+                          await m.delete().catch(() => {});
+                          updateEmbed();
+                          const canConfirm = selectedAmount && (selectedFilter !== 'user' || selectedUser);
+                          confirmRow.components[0].setDisabled(!canConfirm);
+                          await clearReply.edit({ embeds: [clearEmbed], components: clearReply.components }).catch(() => {});
+                  });
 
-                          let toDelete = fetched;
-                          if (targetUser) {
-                                  toDelete = fetched.filter(m => m.author.id === targetUser.id);
+                  const clearCollector = clearReply.createMessageComponentCollector({
+                          filter: (i) => i.user.id === msg.author.id,
+                          time: 60_000,
+                  });
+
+                  clearCollector.on('collect', async (interaction) => {
+                          if (interaction.customId === `clear_cancel_${msg.id}`) {
+                                  clearCollector.stop('cancelled');
+                                  mentionCollector.stop();
+                                  return interaction.update({ embeds: [errEmbed('❌ Clear cancelled.')], components: [] });
                           }
 
-                          // Filter out messages older than 14 days (bulk delete limit)
-                          const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
-                          toDelete = toDelete.filter(m => m.createdTimestamp > twoWeeksAgo);
+                          if (interaction.customId === `clear_amount_${msg.id}`) {
+                                  selectedAmount = parseInt(interaction.values[0]);
+                                  updateEmbed();
+                                  const canConfirm = selectedAmount && (selectedFilter !== 'user' || selectedUser);
+                                  confirmRow.components[0].setDisabled(!canConfirm);
+                                  return interaction.update({ embeds: [clearEmbed] });
+                          }
 
-                          if (toDelete.size === 0) break;
+                          if (interaction.customId === `clear_filter_${msg.id}`) {
+                                  selectedFilter = interaction.values[0];
+                                  if (selectedFilter !== 'user') selectedUser = null;
+                                  updateEmbed();
+                                  const canConfirm = selectedAmount && (selectedFilter !== 'user' || selectedUser);
+                                  confirmRow.components[0].setDisabled(!canConfirm);
+                                  return interaction.update({ embeds: [clearEmbed] });
+                          }
 
-                          const deleted = await msg.channel.bulkDelete(toDelete, true).catch(() => null);
-                          if (!deleted || deleted.size === 0) break;
+                          if (interaction.customId === `clear_confirm_${msg.id}`) {
+                                  clearCollector.stop('confirmed');
+                                  mentionCollector.stop();
+                                  await interaction.update({
+                                          embeds: [infoEmbed('🗑️ Clearing messages...')],
+                                          components: [],
+                                  });
 
-                          totalDeleted += deleted.size;
-                          remaining -= fetchAmount;
+                                  let totalDeleted = 0;
+                                  let remaining = selectedAmount;
 
-                          // Small delay to avoid rate limits
-                          if (remaining > 0) await new Promise(r => setTimeout(r, 1000));
-                  }
+                                  while (remaining > 0) {
+                                          const fetchAmount = Math.min(remaining, 100);
+                                          const fetched = await msg.channel.messages.fetch({ limit: fetchAmount }).catch(() => null);
+                                          if (!fetched || fetched.size === 0) break;
 
-                  const desc = targetUser
-                          ? `🗑️ Deleted **${totalDeleted}** messages from ${targetUser} in this channel.`
-                          : `🗑️ Deleted **${totalDeleted}** messages in this channel.`;
-                  const m = await msg.channel.send({ embeds: [okEmbed(desc)] });
-                  setTimeout(() => m.delete().catch(() => {}), 5000);
+                                          let toDelete = fetched;
+                                          // Don't delete the bot's clear UI message
+                                          toDelete = toDelete.filter(m => m.id !== clearReply.id);
+
+                                          if (selectedFilter === 'user' && selectedUser) {
+                                                  toDelete = toDelete.filter(m => m.author.id === selectedUser.id);
+                                          } else if (selectedFilter === 'bots') {
+                                                  toDelete = toDelete.filter(m => m.author.bot);
+                                          }
+
+                                          const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+                                          toDelete = toDelete.filter(m => m.createdTimestamp > twoWeeksAgo);
+
+                                          if (toDelete.size === 0) break;
+
+                                          const deleted = await msg.channel.bulkDelete(toDelete, true).catch(() => null);
+                                          if (!deleted || deleted.size === 0) break;
+
+                                          totalDeleted += deleted.size;
+                                          remaining -= fetchAmount;
+
+                                          if (remaining > 0) await new Promise(r => setTimeout(r, 1000));
+                                  }
+
+                                  let desc = `🗑️ Deleted **${totalDeleted}** messages`;
+                                  if (selectedFilter === 'user' && selectedUser) desc += ` from ${selectedUser}`;
+                                  else if (selectedFilter === 'bots') desc += ' from bots';
+                                  desc += ' in this channel.';
+
+                                  await clearReply.edit({ embeds: [okEmbed(desc)] });
+                                  setTimeout(() => clearReply.delete().catch(() => {}), 5000);
+                          }
+                  });
+
+                  clearCollector.on('end', (_, reason) => {
+                          mentionCollector.stop();
+                          if (reason === 'time') {
+                                  clearReply.edit({ embeds: [errEmbed('⏰ Clear timed out.')], components: [] }).catch(() => {});
+                          }
+                  });
                   return;
             }
 
