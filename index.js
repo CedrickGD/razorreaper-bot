@@ -134,10 +134,10 @@ client.on('messageCreate', async (msg) => {
                             .setTitle('🎟️ Ticket Commands')
                             .setDescription('Manage and interact with the ticket system.')
                             .addFields(
-                                    { name: '`!ticket`', value: 'View your open ticket(s)', inline: true },
-                                    { name: '`!queue`', value: 'See how many tickets are open', inline: true },
-                                    { name: '`!ticketinfo`', value: 'Info about current ticket *(inside ticket)*', inline: true },
-                                    { name: '`!adduser @user`', value: 'Add someone to current ticket *(inside ticket)*', inline: true },
+                                    { name: '`!ticket`', value: 'View your open ticket(s)' },
+                                    { name: '`!queue`', value: 'See how many tickets are open' },
+                                    { name: '`!ticketinfo`', value: 'Info about current ticket *(use inside a ticket channel)*' },
+                                    { name: '`!adduser @user`', value: 'Add someone to current ticket *(use inside a ticket channel)*' },
                             )
                             .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
                           server: () => new EmbedBuilder()
@@ -145,17 +145,20 @@ client.on('messageCreate', async (msg) => {
                             .setTitle('📊 Server Commands')
                             .setDescription('View server info and utilities.')
                             .addFields(
-                                    { name: '`!info`', value: 'Server statistics', inline: true },
-                                    { name: '`!userinfo [@user]`', value: 'User details', inline: true },
-                                    { name: '`!status`', value: 'Bot & server status', inline: true },
-                                    { name: '`!rules`', value: 'Display server rules', inline: true },
-                                    { name: '`!ping`', value: 'Check bot latency', inline: true },
+                                    { name: '`!info`', value: 'Server statistics — members, boosts, creation date and more' },
+                                    { name: '`!userinfo [@user]`', value: 'Detailed user profile — roles, join date, account age' },
+                                    { name: '`!status`', value: 'Bot & server status — uptime, ping, open tickets' },
+                                    { name: '`!rules`', value: 'Display the server rules' },
+                                    { name: '`!ping`', value: 'Check bot latency and WebSocket ping' },
                             )
                             .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
                           emoji: () => new EmbedBuilder()
                             .setColor(0xffcc00)
                             .setTitle('😎 Emoji & Sticker Commands')
-                            .setDescription('Steal emojis and stickers from other servers!')
+                            .setDescription(
+                                    'Steal emojis and stickers from other servers!\n\n' +
+                                    'Everyone can **download** emojis. Only staff can **steal to server**.'
+                            )
                             .addFields(
                                     { name: '`!steal <emoji(s)>`', value: 'Steal one or more emojis — shows a selection menu with **Steal / Download / Both** options' },
                                     { name: '`!steal` *(reply)*', value: 'Reply to a message to steal all custom emojis from it' },
@@ -163,20 +166,21 @@ client.on('messageCreate', async (msg) => {
                                     { name: '`!steal <image_url> [name]`', value: 'Create an emoji from an image URL' },
                                     { name: '`!stealsticker` *(reply)*', value: 'Reply to a sticker message to steal or download it' },
                             )
-                            .setFooter({ text: 'Requires Manage Expressions permission', iconURL: client.user.displayAvatarURL() }),
+                            .setFooter({ text: 'Download: everyone | Steal to server: staff only', iconURL: client.user.displayAvatarURL() }),
                           staff: () => new EmbedBuilder()
                             .setColor(0xff4444)
                             .setTitle('🔨 Staff Commands')
                             .setDescription('Moderation and management tools. Staff only.')
                             .addFields(
-                                    { name: '`!purge [1-100]`', value: 'Bulk delete messages', inline: true },
-                                    { name: '`!kick @user [reason]`', value: 'Kick a member', inline: true },
-                                    { name: '`!ban @user [reason]`', value: 'Ban a member', inline: true },
-                                    { name: '`!warn @user [reason]`', value: 'Warn a member', inline: true },
-                                    { name: '`!warns @user`', value: 'View warnings', inline: true },
-                                    { name: '`!clearwarns @user`', value: 'Clear warnings', inline: true },
-                                    { name: '`!close [reason]`', value: 'Close ticket *(inside ticket)*', inline: true },
-                                    { name: '`!say [#channel] <msg>`', value: 'Send announcement', inline: true },
+                                    { name: '`!clear <amount> [@user]`', value: 'Delete messages in this channel — optionally filter by a specific user\nExample: `!clear 50 @someone` to delete their last 50 messages' },
+                                    { name: '`!purge [1-100]`', value: 'Quick bulk-delete messages (includes your command message)' },
+                                    { name: '`!kick @user [reason]`', value: 'Kick a member from the server with an optional reason' },
+                                    { name: '`!ban @user [reason]`', value: 'Ban a member from the server with an optional reason' },
+                                    { name: '`!warn @user [reason]`', value: 'Issue a warning to a member — they get a DM notification' },
+                                    { name: '`!warns @user`', value: 'View all warnings for a member' },
+                                    { name: '`!clearwarns @user`', value: 'Clear all warnings for a member' },
+                                    { name: '`!close [reason]`', value: 'Close a ticket channel *(use inside a ticket channel)*' },
+                                    { name: '`!say [#channel] <msg>`', value: 'Send an announcement as the bot — optionally in a different channel' },
                             )
                             .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
                   };
@@ -403,6 +407,54 @@ client.on('messageCreate', async (msg) => {
                   return targetChannel.send(text);
             }
 
+            // ── !clear <amount> [@user] ────────────────────────────────────────────
+            if (command === 'clear') {
+                  if (!isStaff(member)) return msg.reply({ embeds: [errEmbed('❌ No permission.')] });
+                  const amount = parseInt(args[0]);
+                  if (isNaN(amount) || amount < 1 || amount > 500) {
+                          return msg.reply({ embeds: [errEmbed('❌ Provide a number between 1 and 500.\n**Usage:** `!clear <amount> [@user]`')] });
+                  }
+                  const targetUser = msg.mentions.users.first();
+                  await msg.delete().catch(() => {});
+
+                  let totalDeleted = 0;
+                  let remaining = amount;
+
+                  // Discord can only bulk-delete 100 at a time, and only messages < 14 days old
+                  while (remaining > 0) {
+                          const fetchAmount = Math.min(remaining, 100);
+                          const fetched = await msg.channel.messages.fetch({ limit: fetchAmount }).catch(() => null);
+                          if (!fetched || fetched.size === 0) break;
+
+                          let toDelete = fetched;
+                          if (targetUser) {
+                                  toDelete = fetched.filter(m => m.author.id === targetUser.id);
+                          }
+
+                          // Filter out messages older than 14 days (bulk delete limit)
+                          const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+                          toDelete = toDelete.filter(m => m.createdTimestamp > twoWeeksAgo);
+
+                          if (toDelete.size === 0) break;
+
+                          const deleted = await msg.channel.bulkDelete(toDelete, true).catch(() => null);
+                          if (!deleted || deleted.size === 0) break;
+
+                          totalDeleted += deleted.size;
+                          remaining -= fetchAmount;
+
+                          // Small delay to avoid rate limits
+                          if (remaining > 0) await new Promise(r => setTimeout(r, 1000));
+                  }
+
+                  const desc = targetUser
+                          ? `🗑️ Deleted **${totalDeleted}** messages from ${targetUser} in this channel.`
+                          : `🗑️ Deleted **${totalDeleted}** messages in this channel.`;
+                  const m = await msg.channel.send({ embeds: [okEmbed(desc)] });
+                  setTimeout(() => m.delete().catch(() => {}), 5000);
+                  return;
+            }
+
             // ── !purge [n] ─────────────────────────────────────────────────────────────
             if (command === 'purge') {
                   if (!isStaff(member)) return msg.reply({ embeds: [errEmbed('❌ No permission.')] });
@@ -484,9 +536,7 @@ client.on('messageCreate', async (msg) => {
 
             // ── !stealemoji / !steal ────────────────────────────────────────────────
             if (command === 'stealemoji' || command === 'steal') {
-                  if (!member.permissions.has(PermissionsBitField.Flags.ManageGuildExpressions)) {
-                          return msg.reply({ embeds: [errEmbed('❌ You need the **Manage Expressions** permission.')] });
-                  }
+                  const canStealToServer = isStaff(member);
 
                   // Collect all emojis from args + replied message
                   const emojiRegex = /<(a?):(\w+):(\d+)>/g;
@@ -498,15 +548,81 @@ client.on('messageCreate', async (msg) => {
                           found.push({ animated: match[1] === 'a', name: match[2], id: match[3] });
                   }
 
-                  // Parse emojis from replied message
+                  // Parse emojis from replied message — also detect stickers
                   if (msg.reference) {
                           const ref = await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null);
                           if (ref) {
                                   for (const match of ref.content.matchAll(emojiRegex)) {
-                                          // Avoid duplicates
                                           if (!found.some(e => e.id === match[3])) {
                                                   found.push({ animated: match[1] === 'a', name: match[2], id: match[3] });
                                           }
+                                  }
+                                  // If no emojis found but message has stickers, redirect to stealsticker logic
+                                  if (found.length === 0 && ref.stickers.size > 0) {
+                                          const sticker = ref.stickers.first();
+                                          const stickerName = args[0] || sticker.name;
+                                          const stickerButtons = new ActionRowBuilder().addComponents(
+                                                  new ButtonBuilder()
+                                                    .setCustomId(`sticker_add_${msg.id}`)
+                                                    .setLabel('Steal to Server')
+                                                    .setStyle(ButtonStyle.Success)
+                                                    .setEmoji('😎')
+                                                    .setDisabled(!canStealToServer),
+                                                  new ButtonBuilder()
+                                                    .setCustomId(`sticker_dl_${msg.id}`)
+                                                    .setLabel('Download')
+                                                    .setStyle(ButtonStyle.Primary)
+                                                    .setEmoji('📥'),
+                                                  new ButtonBuilder()
+                                                    .setCustomId(`sticker_both_${msg.id}`)
+                                                    .setLabel('Steal + Download')
+                                                    .setStyle(ButtonStyle.Secondary)
+                                                    .setEmoji('⚡')
+                                                    .setDisabled(!canStealToServer),
+                                                  new ButtonBuilder()
+                                                    .setCustomId(`sticker_cancel_${msg.id}`)
+                                                    .setLabel('Cancel')
+                                                    .setStyle(ButtonStyle.Danger),
+                                          );
+                                          const stickerEmbed = new EmbedBuilder()
+                                            .setColor(CYAN)
+                                            .setTitle('🎨 Sticker Found!')
+                                            .setDescription(`**Sticker:** ${stickerName}\n**Format:** ${sticker.format}`)
+                                            .setThumbnail(sticker.url)
+                                            .setFooter({ text: 'Choose an action below. Expires in 60s.' })
+                                            .setTimestamp();
+                                          const stickerReply = await msg.reply({ embeds: [stickerEmbed], components: [stickerButtons] });
+                                          const stickerCollector = stickerReply.createMessageComponentCollector({
+                                                  filter: (i) => i.user.id === msg.author.id, time: 60_000,
+                                          });
+                                          stickerCollector.on('collect', async (interaction) => {
+                                                  if (interaction.customId === `sticker_cancel_${msg.id}`) {
+                                                          stickerCollector.stop('cancelled');
+                                                          return interaction.update({ embeds: [errEmbed('❌ Cancelled.')], components: [] });
+                                                  }
+                                                  const doSteal = interaction.customId.includes('_add_') || interaction.customId.includes('_both_');
+                                                  const doDownload = interaction.customId.includes('_dl_') || interaction.customId.includes('_both_');
+                                                  await interaction.deferUpdate();
+                                                  stickerCollector.stop('acted');
+                                                  const results = [];
+                                                  const files = [];
+                                                  if (doSteal) {
+                                                          try {
+                                                                  const created = await guild.stickers.create({ file: sticker.url, name: stickerName, tags: '😀' });
+                                                                  results.push(`✅ Added sticker **${created.name}** to the server!`);
+                                                          } catch (e) { results.push(`❌ Failed: ${e.message}`); }
+                                                  }
+                                                  if (doDownload) {
+                                                          const ext = sticker.format === 'LOTTIE' ? 'json' : 'png';
+                                                          files.push(new AttachmentBuilder(sticker.url, { name: `${stickerName}.${ext}` }));
+                                                          results.push('📥 Sticker file attached!');
+                                                  }
+                                                  await stickerReply.edit({ embeds: [okEmbed(results.join('\n'))], components: [], files });
+                                          });
+                                          stickerCollector.on('end', (_, reason) => {
+                                                  if (reason === 'time') stickerReply.edit({ embeds: [errEmbed('⏰ Timed out.')], components: [] }).catch(() => {});
+                                          });
+                                          return;
                                   }
                           }
                   }
@@ -559,13 +675,14 @@ client.on('messageCreate', async (msg) => {
                           components.push(new ActionRowBuilder().addComponents(selectMenu));
                   }
 
-                  // Action buttons
+                  // Action buttons — steal options disabled for non-staff
                   const buttons = new ActionRowBuilder().addComponents(
                           new ButtonBuilder()
                             .setCustomId(`steal_add_${msg.id}`)
                             .setLabel('Steal to Server')
                             .setStyle(ButtonStyle.Success)
-                            .setEmoji('😎'),
+                            .setEmoji('😎')
+                            .setDisabled(!canStealToServer),
                           new ButtonBuilder()
                             .setCustomId(`steal_dl_${msg.id}`)
                             .setLabel('Download')
@@ -575,7 +692,8 @@ client.on('messageCreate', async (msg) => {
                             .setCustomId(`steal_both_${msg.id}`)
                             .setLabel('Steal + Download')
                             .setStyle(ButtonStyle.Secondary)
-                            .setEmoji('⚡'),
+                            .setEmoji('⚡')
+                            .setDisabled(!canStealToServer),
                           new ButtonBuilder()
                             .setCustomId(`steal_cancel_${msg.id}`)
                             .setLabel('Cancel')
@@ -688,9 +806,7 @@ client.on('messageCreate', async (msg) => {
 
             // ── !stealsticker ──────────────────────────────────────────────────────────
             if (command === 'stealsticker') {
-                  if (!member.permissions.has(PermissionsBitField.Flags.ManageGuildExpressions)) {
-                          return msg.reply({ embeds: [errEmbed('❌ You need the **Manage Expressions** permission.')] });
-                  }
+                  const canStealStickerToServer = isStaff(member);
                   const ref = msg.reference ? await msg.channel.messages.fetch(msg.reference.messageId).catch(() => null) : null;
                   if (!ref || ref.stickers.size === 0) {
                           return msg.reply({ embeds: [errEmbed('❌ Reply to a message that has a sticker.\n**Usage:** Reply to a sticker message with `!stealsticker [name]`')] });
@@ -703,7 +819,8 @@ client.on('messageCreate', async (msg) => {
                             .setCustomId(`sticker_add_${msg.id}`)
                             .setLabel('Steal to Server')
                             .setStyle(ButtonStyle.Success)
-                            .setEmoji('😎'),
+                            .setEmoji('😎')
+                            .setDisabled(!canStealStickerToServer),
                           new ButtonBuilder()
                             .setCustomId(`sticker_dl_${msg.id}`)
                             .setLabel('Download')
@@ -713,7 +830,8 @@ client.on('messageCreate', async (msg) => {
                             .setCustomId(`sticker_both_${msg.id}`)
                             .setLabel('Steal + Download')
                             .setStyle(ButtonStyle.Secondary)
-                            .setEmoji('⚡'),
+                            .setEmoji('⚡')
+                            .setDisabled(!canStealStickerToServer),
                           new ButtonBuilder()
                             .setCustomId(`sticker_cancel_${msg.id}`)
                             .setLabel('Cancel')
