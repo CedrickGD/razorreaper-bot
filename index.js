@@ -116,12 +116,22 @@ client.once('ready', async () => {
         console.error('[RazorReaper] Failed to register slash commands:', err);
     }
 
-    // Set bot bio
+    // Set bot bio + banner
     try {
+        const path = require('path');
+        const bannerPath = path.join(__dirname, 'banner.png');
+        const bannerData = fs.readFileSync(bannerPath);
+        const bannerBase64 = `data:image/png;base64,${bannerData.toString('base64')}`;
         await client.rest.patch('/users/@me', {
-            body: { bio: '⚡ Official RazorReaper bot — ticket management, server info & moderation. Visit rr.sellhub.cx' },
+            body: {
+                bio: '⚡ Official RazorReaper bot — ticket management, server info & moderation. Visit rr.sellhub.cx',
+                banner: bannerBase64,
+            },
         });
-    } catch (_) {}
+        console.log('[RazorReaper] Banner & bio set!');
+    } catch (err) {
+        console.error('[RazorReaper] Failed to set banner/bio:', err.message || err);
+    }
 });
 
 // ── Welcome new members ────────────────────────────────────────────────────────
