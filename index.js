@@ -28,7 +28,9 @@ const warns = {};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function isStaff(member) {
-    return member.roles.cache.some(r => STAFF_ROLES.includes(r.name));
+    return member.id === member.guild.ownerId ||
+           member.permissions.has(PermissionsBitField.Flags.Administrator) ||
+           member.roles.cache.some(r => STAFF_ROLES.includes(r.name));
 }
 
 function isTicketChannel(channel) {
