@@ -1,6 +1,10 @@
 const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder, PermissionsBitField, Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, AttachmentBuilder, SlashCommandBuilder, REST, Routes, ChannelType, ApplicationCommandOptionType } = require('discord.js');
 const https = require('https');
 const fs = require('fs');
+const path = require('path');
+const os = require('os');
+const { execFile } = require('child_process');
+const ffmpegPath = require('ffmpeg-static');
 
 const client = new Client({
     intents: [
@@ -50,6 +54,22 @@ function infoEmbed(desc, title)  { return embed(CYAN,   desc, title); }
 function errEmbed(desc)          { return embed(0xff4444, desc); }
 function okEmbed(desc)           { return embed(0x00cc66, desc); }
 
+function downloadFile(url, dest) {
+    return new Promise((resolve, reject) => {
+        const follow = (u) => {
+            https.get(u, res => {
+                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) return follow(res.headers.location);
+                if (res.statusCode !== 200) return reject(new Error(`Download failed: HTTP ${res.statusCode}`));
+                const file = fs.createWriteStream(dest);
+                res.pipe(file);
+                file.on('finish', () => file.close(resolve));
+                file.on('error', reject);
+            }).on('error', reject);
+        };
+        follow(url);
+    });
+}
+
 // ── Slash Command Definitions ─────────────────────────────────────────────────
 const slashCommands = [
     new SlashCommandBuilder().setName('ping').setDescription('Check bot latency and WebSocket ping'),
@@ -94,6 +114,8 @@ const slashCommands = [
         .addStringOption(o => o.setName('emojis').setDescription('Paste emojis here (up to 5, separated by spaces)').setRequired(true)),
     new SlashCommandBuilder().setName('stealsticker').setDescription('Steal a sticker — reply to a sticker message first, then use this command')
         .addStringOption(o => o.setName('name').setDescription('Custom name for the sticker').setRequired(false)),
+    new SlashCommandBuilder().setName('changeformat').setDescription('Convert an image or video file to a different format')
+        .addAttachmentOption(o => o.setName('file').setDescription('The image or video file to convert').setRequired(true)),
 ];
 
 // ── Ready ─────────────────────────────────────────────────────────────────────
@@ -1633,6 +1655,95 @@ client.on('interactionCreate', async (interaction) => {
             await reply.edit({ embeds: [okEmbed(results.join('\n'))], components: [], files });
         });
         collector.on('end', (_, reason) => { if (reason === 'time') reply.edit({ embeds: [errEmbed('⏰ Timed out.')], components: [] }).catch(() => {}); });
+        return;
+    }
+
+    // ── /changeformat ────────────────────────────────────────────────────────
+    if (commandName === 'changeformat') {
+        const attachment = interaction.options.getAttachment('file');
+        const ext = path.extname(attachment.name).toLowerCase().replace('.', '');
+        const imageExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff', 'tif'];
+        const videoExts = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv', 'mpeg', 'mpg', 'm4v'];
+
+        let fileType;
+        if (imageExts.includes(ext)) fileType = 'image';
+        else if (videoExts.includes(ext)) fileType = 'video';
+        else if (attachment.contentType?.startsWith('image/')) fileType = 'image';
+        else if (attachment.contentType?.startsWith('video/')) fileType = 'video';
+        else return interaction.reply({ embeds: [errEmbed('❌ Unsupported file type. Please upload an image or video.')], ephemeral: true });
+
+        const normalExt = ext === 'jpeg' ? 'jpg' : ext;
+        const imageFormats = ['png', 'jpg', 'webp', 'gif', 'bmp', 'tiff'].filter(f => f !== normalExt);
+        const videoFormats = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'gif'].filter(f => f !== normalExt);
+        const formats = fileType === 'image' ? imageFormats : videoFormats;
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId('fmt_select')
+            .setPlaceholder(`Choose ${fileType} output format…`)
+            .addOptions(formats.map(f => ({
+                label: f.toUpperCase(),
+                value: f,
+                description: fileType === 'video' && f === 'gif' ? 'Convert video to animated GIF' : `Convert to .${f}`,
+            })));
+
+        const row = new ActionRowBuilder().addComponents(menu);
+        const icon = fileType === 'image' ? '🖼️' : '🎬';
+        const sizeMB = (attachment.size / 1024 / 1024).toFixed(2);
+
+        const reply = await interaction.reply({
+            embeds: [infoEmbed(`${icon} **${fileType.charAt(0).toUpperCase() + fileType.slice(1)} detected:** \`${attachment.name}\` (${sizeMB} MB)\n\nSelect the format you want to convert to:`, '🔄 Format Converter')],
+            components: [row],
+            fetchReply: true,
+        });
+
+        const collector = reply.createMessageComponentCollector({ filter: i => i.user.id === interaction.user.id, time: 30_000 });
+
+        collector.on('collect', async (menuInt) => {
+            const target = menuInt.values[0];
+            collector.stop('selected');
+            await menuInt.update({ embeds: [infoEmbed(`⏳ Converting \`${attachment.name}\` → \`.${target}\`… please wait.`, '🔄 Converting')], components: [] });
+
+            const tmpDir = os.tmpdir();
+            const stamp = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const inputPath = path.join(tmpDir, `rr_in_${stamp}.${ext}`);
+            const outputPath = path.join(tmpDir, `rr_out_${stamp}.${target}`);
+            const outputName = `${path.basename(attachment.name, path.extname(attachment.name))}.${target}`;
+
+            try {
+                await downloadFile(attachment.url, inputPath);
+
+                const args = ['-i', inputPath, '-y'];
+                if (fileType === 'video' && target === 'gif') args.push('-vf', 'fps=15,scale=480:-1:flags=lanczos', '-loop', '0');
+                if (fileType === 'image' && (target === 'jpg' || target === 'jpeg')) args.push('-q:v', '2');
+                args.push(outputPath);
+
+                await new Promise((resolve, reject) => {
+                    execFile(ffmpegPath, args, { timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }, (err, _, stderr) => {
+                        if (err) reject(new Error(stderr?.split('\n').pop() || err.message));
+                        else resolve();
+                    });
+                });
+
+                const stats = fs.statSync(outputPath);
+                if (stats.size > 25 * 1024 * 1024) return reply.edit({ embeds: [errEmbed('❌ Output file exceeds 25 MB — too large to upload to Discord.')] });
+
+                const outMB = (stats.size / 1024 / 1024).toFixed(2);
+                const file = new AttachmentBuilder(outputPath, { name: outputName });
+                await reply.edit({ embeds: [okEmbed(`✅ **Converted!**\n\`${attachment.name}\` → \`${outputName}\`\nSize: ${sizeMB} MB → ${outMB} MB`)], files: [file] });
+            } catch (err) {
+                const msg = err.message.includes('ENOENT')
+                    ? '❌ **ffmpeg binary not found.** Try reinstalling with `npm install ffmpeg-static`.'
+                    : `❌ Conversion failed:\n\`\`\`${err.message.slice(0, 200)}\`\`\``;
+                await reply.edit({ embeds: [errEmbed(msg)] }).catch(() => {});
+            } finally {
+                if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            }
+        });
+
+        collector.on('end', (_, reason) => {
+            if (reason === 'time') reply.edit({ embeds: [errEmbed('⏰ Timed out — no format selected.')], components: [] }).catch(() => {});
+        });
         return;
     }
 });
