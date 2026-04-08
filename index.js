@@ -120,6 +120,8 @@ const slashCommands = [
 // ── Ready ─────────────────────────────────────────────────────────────────────
 client.once('ready', async () => {
     console.log(`[RazorReaper] Online as ${client.user.tag}`);
+    console.log(`[RazorReaper] Connected to ${client.guilds.cache.size} server(s):`);
+    client.guilds.cache.forEach(g => console.log(`  - ${g.name} (${g.id})`));
     client.user.setPresence({
           activities: [{ name: 'rr.sellhub.cx | /help', type: ActivityType.Watching }],
           status: 'online',
