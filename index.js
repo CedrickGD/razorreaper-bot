@@ -20,7 +20,6 @@ const client = new Client({
 });
 
 const PREFIX = '!';
-const GUILD_ID = '1487503515512475792';
 const ACCENT = 0x9b1a1a;
 const CYAN   = 0x00e5ff;
 
@@ -130,10 +129,10 @@ client.once('ready', async () => {
     try {
         const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         console.log('[RazorReaper] Registering slash commands...');
-        await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), {
+        await rest.put(Routes.applicationCommands(client.user.id), {
             body: slashCommands.map(c => c.toJSON()),
         });
-        console.log('[RazorReaper] Slash commands registered!');
+        console.log('[RazorReaper] Slash commands registered globally!');
     } catch (err) {
         console.error('[RazorReaper] Failed to register slash commands:', err);
     }
@@ -737,9 +736,10 @@ client.on('messageCreate', async (msg) => {
                   const target = msg.mentions.members.first();
                   if (!target) return msg.reply({ embeds: [errEmbed('❌ Mention a user.')] });
                   const reason = args.slice(1).join(' ') || 'No reason provided';
-                  if (!warns[target.id]) warns[target.id] = [];
-                  warns[target.id].push({ reason, mod: msg.author.tag, time: Date.now() });
-                  const count = warns[target.id].length;
+                  const warnKey = `${guild.id}:${target.id}`;
+                  if (!warns[warnKey]) warns[warnKey] = [];
+                  warns[warnKey].push({ reason, mod: msg.author.tag, time: Date.now() });
+                  const count = warns[warnKey].length;
                   const e = staffEmbed(
                           `⚠️ **${target.user.tag}** has been warned.\n**Reason:** ${reason}\n**Total Warnings:** ${count}`,
                           '⚠️ Member Warned'
@@ -755,7 +755,7 @@ client.on('messageCreate', async (msg) => {
             if (command === 'warns') {
                   if (!isStaff(member)) return msg.reply({ embeds: [errEmbed('❌ No permission.')] });
                   const target = msg.mentions.members.first() || member;
-                  const userWarns = warns[target.id] || [];
+                  const userWarns = warns[`${guild.id}:${target.id}`] || [];
                   if (userWarns.length === 0) {
                           return msg.reply({ embeds: [infoEmbed(`✅ **${target.user.tag}** has no warnings.`)] });
                   }
@@ -770,7 +770,7 @@ client.on('messageCreate', async (msg) => {
                   if (!isStaff(member)) return msg.reply({ embeds: [errEmbed('❌ No permission.')] });
                   const target = msg.mentions.members.first();
                   if (!target) return msg.reply({ embeds: [errEmbed('❌ Mention a user.')] });
-                  warns[target.id] = [];
+                  warns[`${guild.id}:${target.id}`] = [];
                   return msg.reply({ embeds: [okEmbed(`✅ Cleared all warnings for **${target.user.tag}**.`)] });
             }
 
@@ -1481,9 +1481,10 @@ client.on('interactionCreate', async (interaction) => {
         if (!isStaff(member)) return interaction.reply({ embeds: [errEmbed('❌ No permission.')], ephemeral: true });
         const target = interaction.options.getMember('user');
         const reason = interaction.options.getString('reason') || 'No reason provided';
-        if (!warns[target.id]) warns[target.id] = [];
-        warns[target.id].push({ reason, mod: interaction.user.tag, time: Date.now() });
-        const count = warns[target.id].length;
+        const warnKey = `${guild.id}:${target.id}`;
+        if (!warns[warnKey]) warns[warnKey] = [];
+        warns[warnKey].push({ reason, mod: interaction.user.tag, time: Date.now() });
+        const count = warns[warnKey].length;
         target.send({ embeds: [infoEmbed(`⚠️ You received a warning in **${guild.name}**\n**Reason:** ${reason}\n**Total Warnings:** ${count}`)] }).catch(() => {});
         return interaction.reply({ embeds: [staffEmbed(`⚠️ **${target.user.tag}** has been warned.\n**Reason:** ${reason}\n**Total Warnings:** ${count}`, '⚠️ Member Warned')] });
     }
@@ -1492,7 +1493,7 @@ client.on('interactionCreate', async (interaction) => {
     if (commandName === 'warns') {
         if (!isStaff(member)) return interaction.reply({ embeds: [errEmbed('❌ No permission.')], ephemeral: true });
         const target = interaction.options.getMember('user') || member;
-        const userWarns = warns[target.id] || [];
+        const userWarns = warns[`${guild.id}:${target.id}`] || [];
         if (userWarns.length === 0) return interaction.reply({ embeds: [infoEmbed(`✅ **${target.user.tag}** has no warnings.`)] });
         const list = userWarns.map((w, i) => `**${i + 1}.** ${w.reason} — *${w.mod}* — <t:${Math.floor(w.time / 1000)}:R>`).join('\n');
         return interaction.reply({ embeds: [staffEmbed(list, `⚠️ Warnings for ${target.user.tag} (${userWarns.length})`)] });
@@ -1502,7 +1503,7 @@ client.on('interactionCreate', async (interaction) => {
     if (commandName === 'clearwarns') {
         if (!isStaff(member)) return interaction.reply({ embeds: [errEmbed('❌ No permission.')], ephemeral: true });
         const target = interaction.options.getMember('user');
-        warns[target.id] = [];
+        warns[`${guild.id}:${target.id}`] = [];
         return interaction.reply({ embeds: [okEmbed(`✅ Cleared all warnings for **${target.user.tag}**.`)] });
     }
 
