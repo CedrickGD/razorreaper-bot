@@ -1728,7 +1728,9 @@ client.on('interactionCreate', async (interaction) => {
                 });
 
                 const stats = fs.statSync(outputPath);
-                if (stats.size > 25 * 1024 * 1024) return reply.edit({ embeds: [errEmbed('❌ Output file exceeds 25 MB — too large to upload to Discord.')] });
+                const boostTier = interaction.guild?.premiumTier ?? 0;
+                const uploadLimit = boostTier >= 3 ? 100 : boostTier >= 2 ? 50 : 25;
+                if (stats.size > uploadLimit * 1024 * 1024) return reply.edit({ embeds: [errEmbed(`❌ Output file is ${(stats.size / 1024 / 1024).toFixed(1)} MB — exceeds this server's ${uploadLimit} MB upload limit.`)] });
 
                 const outMB = (stats.size / 1024 / 1024).toFixed(2);
                 const file = new AttachmentBuilder(outputPath, { name: outputName });
