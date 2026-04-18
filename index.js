@@ -70,9 +70,12 @@ function downloadFile(url, dest) {
 }
 
 const OWNER_ID = process.env.OWNER_ID || '';
+console.log(`[DEBUG] OWNER_ID raw=${JSON.stringify(process.env.OWNER_ID)} parsed="${OWNER_ID}" length=${OWNER_ID.length}`);
 
 function isOwnerIdValid() {
-    return typeof OWNER_ID === 'string' && /^\d{15,20}$/.test(OWNER_ID);
+    const valid = typeof OWNER_ID === 'string' && /^\d{15,20}$/.test(OWNER_ID);
+    console.log(`[DEBUG] isOwnerIdValid() → ${valid}`);
+    return valid;
 }
 
 function getAssignableRoles(guild) {
