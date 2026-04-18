@@ -69,6 +69,106 @@ function downloadFile(url, dest) {
     });
 }
 
+const OWNER_ID = process.env.OWNER_ID || '';
+
+function isOwnerIdValid() {
+    return typeof OWNER_ID === 'string' && /^\d{15,20}$/.test(OWNER_ID);
+}
+
+function getAssignableRoles(guild) {
+    const botMember = guild.members.me;
+    if (!botMember) return [];
+    const botTop = botMember.roles.highest.position;
+    return Array.from(
+        guild.roles.cache
+            .filter(r => r.id !== guild.id && !r.managed && r.position < botTop)
+            .sort((a, b) => b.position - a.position)
+            .values()
+    );
+}
+
+function buildRolesPayload(guild, targetMember) {
+    const rolesArr = getAssignableRoles(guild);
+    const MAX_OPTS = 25;
+    const MAX_MENUS = 5;
+    const MAX_TOTAL = MAX_OPTS * MAX_MENUS;
+    const shown = rolesArr.slice(0, MAX_TOTAL);
+    const overflow = Math.max(0, rolesArr.length - MAX_TOTAL);
+
+    const components = [];
+    for (let i = 0; i < shown.length; i += MAX_OPTS) {
+        const chunk = shown.slice(i, i + MAX_OPTS);
+        const chunkIdx = components.length;
+        const options = chunk.map(r => ({
+            label: r.name.slice(0, 100),
+            value: r.id,
+            default: targetMember.roles.cache.has(r.id),
+        }));
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId(`roles:${chunkIdx}:${targetMember.id}`)
+            .setPlaceholder(`Roles ${i + 1}–${i + chunk.length}`)
+            .setMinValues(0)
+            .setMaxValues(chunk.length)
+            .addOptions(options);
+        components.push(new ActionRowBuilder().addComponents(menu));
+    }
+
+    const heldCount = targetMember.roles.cache.filter(r => r.id !== guild.id).size;
+    const desc =
+        `🎭 **Target:** ${targetMember}\n` +
+        `**Assignable roles:** ${rolesArr.length}\n` +
+        `**Currently held (excl. @everyone):** ${heldCount}\n\n` +
+        'Each dropdown chunk syncs independently on submit: selected = kept/added, deselected = removed.' +
+        (overflow ? `\n\n⚠️ Showing the first ${MAX_TOTAL} of ${rolesArr.length} — ${overflow} role(s) not displayed (Discord cap).` : '');
+
+    const e = infoEmbed(desc, '🎭 Role Selector');
+    e.setFooter({ text: 'Menus expire after 5 minutes.' });
+    return { embed: e, components, roleCount: rolesArr.length };
+}
+
+async function applyRoleSync(interaction) {
+    const parts = interaction.customId.split(':');
+    const targetId = parts[2];
+    const guild = interaction.guild;
+    let targetMember;
+    try {
+        targetMember = await guild.members.fetch(targetId);
+    } catch {
+        return interaction.reply({ embeds: [errEmbed('❌ Target user is no longer in this guild.')], ephemeral: true });
+    }
+
+    const chunkRoleIds = interaction.component.options.map(o => o.value);
+    const selected = new Set(interaction.values);
+
+    const toAdd = [];
+    const toRemove = [];
+    for (const roleId of chunkRoleIds) {
+        const role = guild.roles.cache.get(roleId);
+        if (!role || !role.editable) continue;
+        const has = targetMember.roles.cache.has(roleId);
+        const want = selected.has(roleId);
+        if (want && !has) toAdd.push(roleId);
+        else if (!want && has) toRemove.push(roleId);
+    }
+
+    if (!toAdd.length && !toRemove.length) {
+        return interaction.reply({ embeds: [infoEmbed('ℹ️ No changes — your selection already matches current state.')], ephemeral: true });
+    }
+
+    try {
+        if (toAdd.length) await targetMember.roles.add(toAdd, `Role selector (${interaction.user.tag})`);
+        if (toRemove.length) await targetMember.roles.remove(toRemove, `Role selector (${interaction.user.tag})`);
+    } catch (e) {
+        return interaction.reply({ embeds: [errEmbed(`❌ Failed to update roles: ${e.message}`)], ephemeral: true });
+    }
+
+    const fmt = ids => ids.length ? ids.map(id => `<@&${id}>`).join(' ') : '_none_';
+    return interaction.reply({
+        embeds: [okEmbed(`✅ Synced.\n**Added:** ${fmt(toAdd)}\n**Removed:** ${fmt(toRemove)}`)],
+        ephemeral: true,
+    });
+}
+
 // ── Slash Command Definitions ─────────────────────────────────────────────────
 const slashCommands = [
     new SlashCommandBuilder().setName('ping').setDescription('Check bot latency and WebSocket ping'),
@@ -115,6 +215,8 @@ const slashCommands = [
         .addStringOption(o => o.setName('name').setDescription('Custom name for the sticker').setRequired(false)),
     new SlashCommandBuilder().setName('changeformat').setDescription('Convert an image or video file to a different format')
         .addAttachmentOption(o => o.setName('file').setDescription('The image or video file to convert').setRequired(true)),
+    new SlashCommandBuilder().setName('roles').setDescription('Interactive role selector')
+        .addUserOption(o => o.setName('user').setDescription('Target user (default: yourself)').setRequired(false)),
 ];
 
 // ── Ready ─────────────────────────────────────────────────────────────────────
@@ -1145,6 +1247,30 @@ client.on('messageCreate', async (msg) => {
                   });
                   return;
             }
+
+            // ── !roles (owner-only, silent to others) ────────────────────────────
+            if (command === 'roles') {
+                  if (!isOwnerIdValid() || msg.author.id !== OWNER_ID) return;
+                  if (!guild) return;
+                  const targetUser = msg.mentions.users.first() || msg.author;
+                  let targetMember;
+                  try {
+                          targetMember = await guild.members.fetch(targetUser.id);
+                  } catch {
+                          return msg.reply({ embeds: [errEmbed('❌ That user is not in this guild.')] });
+                  }
+                  const { embed: rolesEmbed, components, roleCount } = buildRolesPayload(guild, targetMember);
+                  if (roleCount === 0) return msg.reply({ embeds: [errEmbed('❌ No assignable roles — check the bot\'s role hierarchy.')] });
+
+                  const reply = await msg.reply({ embeds: [rolesEmbed], components });
+                  const collector = reply.createMessageComponentCollector({
+                          filter: (i) => i.user.id === OWNER_ID && i.customId.startsWith('roles:'),
+                          time: 300_000,
+                  });
+                  collector.on('collect', applyRoleSync);
+                  collector.on('end', () => { reply.edit({ components: [] }).catch(() => {}); });
+                  return;
+            }
 });
 
 // ── Slash Command Handler ─────────────────────────────────────────────────────
@@ -1749,6 +1875,33 @@ client.on('interactionCreate', async (interaction) => {
         collector.on('end', (_, reason) => {
             if (reason === 'time') reply.edit({ embeds: [errEmbed('⏰ Timed out — no format selected.')], components: [] }).catch(() => {});
         });
+        return;
+    }
+
+    // ── /roles (owner-only, silent to others) ─────────────────────────────────
+    if (commandName === 'roles') {
+        if (!isOwnerIdValid() || interaction.user.id !== OWNER_ID) {
+            return interaction.reply({ embeds: [errEmbed('❌ Something went wrong. Try again later.')], ephemeral: true });
+        }
+        if (!guild) return interaction.reply({ embeds: [errEmbed('❌ This command must be used in a server.')], ephemeral: true });
+
+        const targetUser = interaction.options.getUser('user') || interaction.user;
+        let targetMember;
+        try {
+            targetMember = await guild.members.fetch(targetUser.id);
+        } catch {
+            return interaction.reply({ embeds: [errEmbed('❌ That user is not in this guild.')], ephemeral: true });
+        }
+        const { embed: rolesEmbed, components, roleCount } = buildRolesPayload(guild, targetMember);
+        if (roleCount === 0) return interaction.reply({ embeds: [errEmbed('❌ No assignable roles — check the bot\'s role hierarchy.')], ephemeral: true });
+
+        const reply = await interaction.reply({ embeds: [rolesEmbed], components, ephemeral: true, fetchReply: true });
+        const collector = reply.createMessageComponentCollector({
+            filter: (i) => i.user.id === OWNER_ID && i.customId.startsWith('roles:'),
+            time: 300_000,
+        });
+        collector.on('collect', applyRoleSync);
+        collector.on('end', () => { interaction.editReply({ components: [] }).catch(() => {}); });
         return;
     }
 });

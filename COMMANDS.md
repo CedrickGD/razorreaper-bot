@@ -25,6 +25,7 @@
 | `!clearwarns @user` | Clear all warnings for a member | `@user` (required) | Staff |
 | `!steal <emoji(s)>` | Steal or download emojis from other servers | `emoji(s)` (required), `name` (optional) | Staff (steal) / Everyone (download) |
 | `!stealsticker` | Steal or download a sticker (reply to a sticker message) | `name` (optional) | Staff (steal) / Everyone (download) |
+| `!roles [@user]` | Interactive role selector — dropdown to sync roles (multi-menu for >25) | `@user` (optional, default: self) | **Owner only** (hardcoded `OWNER_ID` — silent-ignore to others) |
 
 ## Slash Commands (`/`)
 
@@ -52,6 +53,7 @@
 | `/steal <emojis>` | Steal or download emojis (up to 5) | `emojis` (required) | Manage Expressions |
 | `/stealsticker [name]` | Steal a sticker (searches last 10 messages) | `name` (optional) | Manage Expressions |
 | `/changeformat <file>` | Convert image or video to a different format | `file` (required attachment) | Everyone |
+| `/roles [user]` | Interactive role selector — ephemeral dropdown(s) to sync roles | `user` (optional, default: self) | **Owner only** (hardcoded `OWNER_ID` — generic error to others) |
 
 ### Supported Formats for `/changeformat`
 
