@@ -69,15 +69,6 @@ function downloadFile(url, dest) {
     });
 }
 
-const OWNER_ID = process.env.OWNER_ID || '';
-console.log(`[DEBUG] OWNER_ID raw=${JSON.stringify(process.env.OWNER_ID)} parsed="${OWNER_ID}" length=${OWNER_ID.length}`);
-
-function isOwnerIdValid() {
-    const valid = typeof OWNER_ID === 'string' && /^\d{15,20}$/.test(OWNER_ID);
-    console.log(`[DEBUG] isOwnerIdValid() → ${valid}`);
-    return valid;
-}
-
 function getAssignableRoles(guild) {
     const botMember = guild.members.me;
     if (!botMember) return [];
@@ -1251,10 +1242,9 @@ client.on('messageCreate', async (msg) => {
                   return;
             }
 
-            // ── !roles (owner-only, silent to others) ────────────────────────────
+            // ── !roles (server owner only, silent to others) ─────────────────────
             if (command === 'roles') {
-                  if (!isOwnerIdValid() || msg.author.id !== OWNER_ID) return;
-                  if (!guild) return;
+                  if (!guild || msg.author.id !== guild.ownerId) return;
                   const targetUser = msg.mentions.users.first() || msg.author;
                   let targetMember;
                   try {
@@ -1267,7 +1257,7 @@ client.on('messageCreate', async (msg) => {
 
                   const reply = await msg.reply({ embeds: [rolesEmbed], components });
                   const collector = reply.createMessageComponentCollector({
-                          filter: (i) => i.user.id === OWNER_ID && i.customId.startsWith('roles:'),
+                          filter: (i) => i.user.id === guild.ownerId && i.customId.startsWith('roles:'),
                           time: 300_000,
                   });
                   collector.on('collect', applyRoleSync);
@@ -1881,12 +1871,12 @@ client.on('interactionCreate', async (interaction) => {
         return;
     }
 
-    // ── /roles (owner-only, silent to others) ─────────────────────────────────
+    // ── /roles (server owner only) ────────────────────────────────────────────
     if (commandName === 'roles') {
-        if (!isOwnerIdValid() || interaction.user.id !== OWNER_ID) {
-            return interaction.reply({ embeds: [errEmbed('❌ Something went wrong. Try again later.')], ephemeral: true });
-        }
         if (!guild) return interaction.reply({ embeds: [errEmbed('❌ This command must be used in a server.')], ephemeral: true });
+        if (interaction.user.id !== guild.ownerId) {
+            return interaction.reply({ embeds: [errEmbed('❌ Only the server owner can use this command.')], ephemeral: true });
+        }
 
         const targetUser = interaction.options.getUser('user') || interaction.user;
         let targetMember;
@@ -1900,7 +1890,7 @@ client.on('interactionCreate', async (interaction) => {
 
         const reply = await interaction.reply({ embeds: [rolesEmbed], components, ephemeral: true, fetchReply: true });
         const collector = reply.createMessageComponentCollector({
-            filter: (i) => i.user.id === OWNER_ID && i.customId.startsWith('roles:'),
+            filter: (i) => i.user.id === guild.ownerId && i.customId.startsWith('roles:'),
             time: 300_000,
         });
         collector.on('collect', applyRoleSync);
