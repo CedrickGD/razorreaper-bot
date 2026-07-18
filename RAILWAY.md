@@ -21,9 +21,9 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
    | Variable | Value | Notes |
    |---|---|---|
    | `TOKEN` | *(your bot token)* | Same one JustRunMy uses. |
-   | `NOTIFIER_SECRET` | *(a long random string)* | Clients must present this. Keep it private. |
+   | `NOTIFIER_TOKEN` | *(a long random string)* | Clients must present this. Keep it private. (`NOTIFIER_SECRET` works as a legacy alias.) |
    | `NOTIFIER_CHANNELS` | *(JSON, see below)* | Channels to watch. `{}` to start. |
-   | `NOTIFIER_MESSAGE_CONTENT` | `false` | Leave `false` unless you enable the privileged intent (see §3). |
+   | `NOTIFIER_MESSAGE_CONTENT` | `true` | Requires the privileged intent portal toggle FIRST (see §3) — without it, alert embeds arrive empty. |
    `PORT` is injected by Railway automatically — do **not** set it.
 4. **Settings → Networking → Generate Domain** to get a public URL like
    `https://razorreaper-bot-production.up.railway.app`. This is the base URL the
@@ -32,8 +32,8 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
    `[Notifier] HTTP/SSE server listening on :<port>` and the bot come online in
    Discord.
 6. Verify the stream is up:
-   `https://<your-domain>/health` → `ok`
-   `https://<your-domain>/notifier/test?secret=<NOTIFIER_SECRET>` → `{"ok":true,...}`
+   `https://<your-domain>/health` → `{"ok":true,"uptime":…,"clients":…,"watching":…}`
+   `https://<your-domain>/notifier/test?token=<NOTIFIER_TOKEN>` → `{"ok":true,...}`
 7. **Only after Railway is confirmed working**, turn off the old host so the bot
    isn't running twice (double slash-command replies): in the GitHub repo, disable
    or delete `.github/workflows/deploy.yml` (the JustRunMy auto-deploy), and stop
@@ -48,7 +48,7 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
 ## 2. Point RazorReaper at the backend
 
 In the app: **Notifier** page → Endpoint field →
-`https://<your-domain>/notifier/stream` and enter the `NOTIFIER_SECRET`. Use
+`https://<your-domain>/notifier/stream` and enter the `NOTIFIER_TOKEN`. Use
 **Test alert** (or hit `/notifier/test` above) to confirm alerts reach the HUD.
 
 ---
@@ -76,12 +76,16 @@ map of `channelId → { cluster, type }`:
 - `type` should match the app's alert types: `rare-dino`, `resource`, `osd`,
   `element-node` (free-form is allowed; the app filters on these).
 
-**Embeds vs. plain text:** most ARK alert bots post **embeds**, which the notifier
-reads with no privileged intent. If a source posts alerts as plain message text,
-set `NOTIFIER_MESSAGE_CONTENT=true` — but first enable **Message Content Intent**
-in the [Discord Developer Portal](https://discord.com/developers/applications) →
-your app → Bot → Privileged Gateway Intents. If you set the flag without enabling
-the intent, the bot fails to log in.
+**Reading alerts requires the Message Content intent:** Discord withholds the
+`content` **and** `embeds`/`attachments` of messages written by other users/bots
+unless the privileged **Message Content Intent** is enabled — and alert channels
+are exactly that. So for the notifier to see anything: first enable **Message
+Content Intent** in the [Discord Developer Portal](https://discord.com/developers/applications)
+→ your app → Bot → Privileged Gateway Intents, **then** set
+`NOTIFIER_MESSAGE_CONTENT=true`. If you set the flag without enabling the portal
+toggle, the bot fails to log in (that is why the flag is opt-in). With the flag
+off, the bot runs fine but watched-channel messages arrive empty and no alerts
+are relayed.
 
 ---
 
@@ -89,8 +93,10 @@ the intent, the bot fails to log in.
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/health` | none | Health check (returns `ok`). |
-| GET | `/notifier/stream?secret=…` | secret | SSE alert stream for clients. |
-| GET | `/notifier/test?secret=…` | secret | Inject a synthetic alert to all clients. |
+| GET | `/health` | none | Health check — `{"ok":true,"uptime":…,"clients":…,"watching":…}`. |
+| GET | `/notifier/stream?token=…` | token | SSE alert stream for clients (heartbeat comment every 25s; supports `Last-Event-ID` replay). |
+| GET | `/notifier/test?token=…` | token | Inject a synthetic alert to all clients. |
 
-Secret may be passed as `?secret=` or `Authorization: Bearer <secret>`.
+The token may be passed as `?token=` or `Authorization: Bearer <token>`
+(`?secret=` is accepted as a legacy alias). If `NOTIFIER_TOKEN` is not set on
+the server, the stream refuses every connection with 503 — fail closed.
