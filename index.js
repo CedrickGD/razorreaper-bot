@@ -5,13 +5,16 @@ const path = require('path');
 const os = require('os');
 const { execFile } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
-const { initNotifier } = require('./notifier');
+const { initNotifier, stopNotifier } = require('./notifier');
 
-// GuildMessages (non-privileged) lets the notifier receive messages in watched
-// channels; embeds are readable without MessageContent. MessageContent is a
-// PRIVILEGED intent — only request it when NOTIFIER_MESSAGE_CONTENT=true AND it is
-// enabled in the Discord Developer Portal, otherwise login fails with a disallowed
-// intent and the whole bot goes down.
+// GuildMessages (non-privileged) lets the notifier receive message events in
+// watched channels. NOTE: Discord withholds .content AND .embeds/.attachments of
+// messages authored by other users/bots unless the PRIVILEGED MessageContent
+// intent is enabled, so reading MESA-style alert embeds effectively requires
+// NOTIFIER_MESSAGE_CONTENT=true. Only set that flag AFTER enabling Message
+// Content Intent in the Discord Developer Portal (Bot → Privileged Gateway
+// Intents), otherwise login fails with a disallowed intent and the whole bot
+// goes down — which is why it stays opt-in instead of always-on.
 const intents = [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
@@ -28,6 +31,15 @@ const client = new Client({
     intents,
     partials: [Partials.Channel, Partials.GuildMember],
 });
+
+// Notifier backend (HTTP/SSE relay for RazorReaper desktop clients). Started
+// before Discord login so Railway's /health check answers even while the
+// gateway connection is still coming up (or Discord is having an outage).
+try {
+    initNotifier(client);
+} catch (err) {
+    console.error('[RazorReaper] Failed to start notifier backend:', err.message || err);
+}
 
 const ACCENT = 0x9b1a1a;
 const CYAN   = 0x00e5ff;
@@ -233,13 +245,6 @@ client.once('ready', async () => {
           activities: [{ name: 'rr.sellhub.cx | /help', type: ActivityType.Watching }],
           status: 'online',
     });
-
-    // Start the notifier backend (HTTP/SSE relay for RazorReaper desktop clients).
-    try {
-        initNotifier(client);
-    } catch (err) {
-        console.error('[RazorReaper] Failed to start notifier backend:', err.message || err);
-    }
 
     // Register slash commands
     try {
@@ -922,5 +927,18 @@ client.on('interactionCreate', async (interaction) => {
         return;
     }
 });
+
+// ── Graceful shutdown (Railway sends SIGTERM on redeploys/scale-downs) ────────
+let shuttingDown = false;
+function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[RazorReaper] ${signal} received — closing notifier and Discord connection.`);
+    try { stopNotifier(); } catch { /* best effort */ }
+    setTimeout(() => process.exit(0), 5000).unref(); // hard exit fallback
+    Promise.resolve(client.destroy()).catch(() => {}).then(() => process.exit(0));
+}
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));
 
 client.login(process.env.TOKEN);
