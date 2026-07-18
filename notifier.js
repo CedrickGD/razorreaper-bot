@@ -4,24 +4,28 @@
 // Server-Sent-Events (SSE) HTTP stream. Runs inside the same process as the bot so
 // the always-on host does double duty.
 //
-// Reading message EMBEDS needs no privileged intent (most ARK alert bots post
-// embeds). Reading plain message .content needs the privileged MessageContent
-// intent — enabled only when NOTIFIER_MESSAGE_CONTENT=true (see index.js), so the
-// bot never crash-loops on a disallowed intent.
+// IMPORTANT intent note: for messages authored by OTHER bots/users (which is what
+// alert channels are), Discord only delivers .content, .embeds, .attachments and
+// .components when the privileged MessageContent intent is enabled. That means
+// NOTIFIER_MESSAGE_CONTENT=true (plus the portal toggle) is effectively required
+// for the notifier to read MESA-style alert embeds. It stays opt-in so the bot
+// never crash-loops on a disallowed intent (see index.js).
 //
 // Env:
-//   NOTIFIER_SECRET    shared token clients must present (?secret= or Bearer). If
-//                      unset, the stream is disabled (returns 503) — fail closed.
+//   NOTIFIER_TOKEN     shared token clients must present (?token= or
+//                      Authorization: Bearer). If unset, the stream refuses all
+//                      connections with 503 — fail closed. (NOTIFIER_SECRET and
+//                      ?secret= are accepted as legacy aliases.)
 //   NOTIFIER_CHANNELS  JSON map of channelId -> { cluster, type }, e.g.
 //                      {"123":{"cluster":"Mesa","type":"rare-dino"},
 //                       "456":{"cluster":"Mesa","type":"resource"}}
 //                      If a channel isn't listed, its messages are ignored.
-//   PORT               HTTP port (Railway/justrunmy inject this; default 8080).
+//   PORT               HTTP port (Railway injects this; default 3000).
 
 const http = require('http');
+const crypto = require('crypto');
 
-const PORT = parseInt(process.env.PORT || '8080', 10);
-const SECRET = process.env.NOTIFIER_SECRET || '';
+const PORT = parseInt(process.env.PORT || '3000', 10);
 const MAX_CLIENTS = 500;
 const HEARTBEAT_MS = 25_000;
 const RECENT_KEEP = 50;
@@ -36,22 +40,47 @@ try {
 /** @type {Set<import('http').ServerResponse>} */
 const clients = new Set();
 const recent = []; // last N alerts, replayed to new subscribers so a fresh client isn't blank
+let server = null;
+let warnedNoToken = false;
 
-function presentedSecret(req, url) {
-    const q = url.searchParams.get('secret');
+function expectedToken() {
+    return process.env.NOTIFIER_TOKEN || process.env.NOTIFIER_SECRET || '';
+}
+
+function presentedToken(req, url) {
+    const q = url.searchParams.get('token') || url.searchParams.get('secret');
     if (q) return q;
     const auth = req.headers['authorization'] || '';
-    if (auth.startsWith('Bearer ')) return auth.slice(7);
+    if (/^Bearer\s/i.test(auth)) return auth.slice(auth.indexOf(' ') + 1).trim();
     return '';
+}
+
+// Constant-time comparison (hashing first equalises length so timingSafeEqual works).
+function tokensMatch(provided, expected) {
+    if (!provided || !expected) return false;
+    const a = crypto.createHash('sha256').update(provided).digest();
+    const b = crypto.createHash('sha256').update(expected).digest();
+    return crypto.timingSafeEqual(a, b);
+}
+
+function sseFrame(alert) {
+    return `id: ${alert.id}\ndata: ${JSON.stringify(alert)}\n\n`;
+}
+
+function dropClient(res) {
+    if (res._notifierHb) clearInterval(res._notifierHb);
+    clients.delete(res);
+    try { res.destroy(); } catch { /* already gone */ }
 }
 
 function broadcast(alert) {
     recent.push(alert);
     if (recent.length > RECENT_KEEP) recent.shift();
-    const line = `data: ${JSON.stringify(alert)}\n\n`;
+    const line = sseFrame(alert);
     for (const res of clients) {
-        try { res.write(line); } catch { /* dropped on next heartbeat */ }
+        try { res.write(line); } catch { dropClient(res); }
     }
+    return clients.size;
 }
 
 // Turn a Discord message into an alert (embed-first, content fallback).
@@ -61,7 +90,7 @@ function buildAlert(message, cfg) {
     let text = '';
 
     if (embed) {
-        subject = (embed.title || '').trim();
+        subject = (embed.title || (embed.author && embed.author.name) || '').trim();
         const parts = [];
         if (embed.description) parts.push(embed.description);
         if (Array.isArray(embed.fields)) {
@@ -74,7 +103,7 @@ function buildAlert(message, cfg) {
     if (!subject && message.content) subject = message.content.split('\n')[0].slice(0, 120).trim();
     if (!text && message.content) text = message.content.replace(/\s+/g, ' ').trim();
 
-    if (!subject && !text) return null; // nothing parseable (e.g. attachment-only)
+    if (!subject && !text) return null; // nothing parseable (yet) — e.g. attachment-only
 
     return {
         id: message.id,
@@ -82,31 +111,50 @@ function buildAlert(message, cfg) {
         type: cfg.type || 'alert',
         subject: subject || text.slice(0, 120),
         text: text.slice(0, 500),
+        channelId: message.channelId,
+        link: message.url || null,
         ts: message.createdTimestamp || Date.now(),
     };
 }
 
 function startHttpServer() {
-    const server = http.createServer((req, res) => {
-        const url = new URL(req.url, `http://localhost:${PORT}`);
-
-        // Health check (Railway/justrunmy) — no auth.
-        if (url.pathname === '/health' || url.pathname === '/') {
-            res.writeHead(200, { 'Content-Type': 'text/plain' });
-            res.end('ok');
+    server = http.createServer((req, res) => {
+        let url;
+        try {
+            url = new URL(req.url, `http://localhost:${PORT}`);
+        } catch {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'bad_request' }));
             return;
         }
 
-        // Everything else needs the shared secret and a configured secret.
+        // Health check (Railway) — no auth.
+        if (url.pathname === '/health' || url.pathname === '/') {
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+            res.end(JSON.stringify({
+                ok: true,
+                uptime: Math.round(process.uptime()),
+                clients: clients.size,
+                watching: Object.keys(channelMap).length,
+            }));
+            return;
+        }
+
+        // Everything else needs the shared token and a configured token.
         if (url.pathname === '/notifier/stream' || url.pathname === '/notifier/test') {
-            if (!SECRET) {
-                res.writeHead(503, { 'Content-Type': 'text/plain' });
-                res.end('notifier disabled: NOTIFIER_SECRET not set');
+            const expected = expectedToken();
+            if (!expected) {
+                if (!warnedNoToken) {
+                    console.warn('[Notifier] NOTIFIER_TOKEN is not set — refusing all notifier connections (fail closed).');
+                    warnedNoToken = true;
+                }
+                res.writeHead(503, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'notifier_disabled', message: 'NOTIFIER_TOKEN not set' }));
                 return;
             }
-            if (presentedSecret(req, url) !== SECRET) {
-                res.writeHead(401, { 'Content-Type': 'text/plain' });
-                res.end('unauthorized');
+            if (!tokensMatch(presentedToken(req, url), expected)) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'unauthorized' }));
                 return;
             }
 
@@ -118,69 +166,101 @@ function startHttpServer() {
                     type: url.searchParams.get('type') || 'rare-dino',
                     subject: url.searchParams.get('subject') || 'Test alert — Rare Dino',
                     text: 'This is a test alert from the RazorReaper notifier backend.',
+                    channelId: null,
+                    link: null,
                     ts: Date.now(),
                 };
-                broadcast(alert);
+                const delivered = broadcast(alert);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ ok: true, delivered: clients.size }));
+                res.end(JSON.stringify({ ok: true, delivered }));
                 return;
             }
 
             // SSE stream.
             if (clients.size >= MAX_CLIENTS) {
-                res.writeHead(503, { 'Content-Type': 'text/plain' });
-                res.end('too many subscribers');
+                res.writeHead(503, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'too_many_subscribers' }));
                 return;
             }
             res.writeHead(200, {
-                'Content-Type': 'text/event-stream',
+                'Content-Type': 'text/event-stream; charset=utf-8',
                 'Cache-Control': 'no-cache, no-transform',
                 'Connection': 'keep-alive',
                 'X-Accel-Buffering': 'no',
             });
+            req.socket.setKeepAlive(true);
+            req.socket.setNoDelay(true);
+            req.socket.setTimeout(0);
+
             res.write('retry: 5000\n\n');
             res.write(`event: ready\ndata: ${JSON.stringify({ watching: Object.keys(channelMap).length })}\n\n`);
-            for (const a of recent) res.write(`data: ${JSON.stringify(a)}\n\n`);
+
+            // Replay recent alerts. If the client reconnects with Last-Event-ID
+            // (or ?since=), only replay what it missed; otherwise send the lot.
+            const lastId = req.headers['last-event-id'] || url.searchParams.get('since');
+            const fromIdx = lastId ? recent.findIndex(a => String(a.id) === String(lastId)) : -1;
+            for (const a of recent.slice(fromIdx + 1)) res.write(sseFrame(a));
 
             clients.add(res);
-            const hb = setInterval(() => {
-                try { res.write(': ping\n\n'); } catch { /* handled by close */ }
+            res._notifierHb = setInterval(() => {
+                try { res.write(': ping\n\n'); } catch { dropClient(res); }
             }, HEARTBEAT_MS);
 
-            req.on('close', () => {
-                clearInterval(hb);
-                clients.delete(res);
-            });
+            req.on('close', () => dropClient(res));
+            res.on('error', () => dropClient(res));
             return;
         }
 
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('not found');
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'not_found' }));
     });
+
+    // SSE connections stay open indefinitely — never time them out server-side.
+    server.timeout = 0;
+    server.keepAliveTimeout = 75_000;
 
     server.listen(PORT, '0.0.0.0', () => {
         console.log(`[Notifier] HTTP/SSE server listening on :${PORT}`);
-        console.log(`[Notifier] secret ${SECRET ? 'set' : 'MISSING (stream disabled)'}, watching ${Object.keys(channelMap).length} channel(s)`);
+        console.log(`[Notifier] token ${expectedToken() ? 'set' : 'MISSING (stream disabled)'}, watching ${Object.keys(channelMap).length} channel(s)`);
     });
     server.on('error', (e) => console.error('[Notifier] HTTP server error:', e.message));
+}
+
+function handleMessage(client, message) {
+    try {
+        if (!message.guildId) return;
+        const cfg = channelMap[message.channelId];
+        if (!cfg) return;
+        if (client.user && message.author && message.author.id === client.user.id) return; // never relay ourselves
+        if (recent.some(a => a.id === message.id)) return; // already relayed (create/update race)
+        const alert = buildAlert(message, cfg);
+        if (alert) broadcast(alert);
+    } catch (e) {
+        console.error('[Notifier] message handler error:', e.message);
+    }
 }
 
 function initNotifier(client) {
     startHttpServer();
 
-    client.on('messageCreate', (message) => {
-        try {
-            if (!message.guildId) return;
-            const cfg = channelMap[message.channelId];
-            if (!cfg) return;
-            const alert = buildAlert(message, cfg);
-            if (alert) broadcast(alert);
-        } catch (e) {
-            console.error('[Notifier] messageCreate handler error:', e.message);
-        }
-    });
+    client.on('messageCreate', (message) => handleMessage(client, message));
+    // Some alert bots send an empty message first and edit the embed in — catch it.
+    client.on('messageUpdate', (_old, message) => handleMessage(client, message));
 
     console.log('[Notifier] initialized');
 }
 
-module.exports = { initNotifier };
+// Graceful shutdown: end every SSE client and stop accepting connections.
+function stopNotifier() {
+    for (const res of clients) {
+        if (res._notifierHb) clearInterval(res._notifierHb);
+        try { res.end(); } catch { /* already gone */ }
+    }
+    clients.clear();
+    if (server) {
+        try { server.close(); } catch { /* not listening */ }
+        server = null;
+    }
+}
+
+module.exports = { initNotifier, stopNotifier };
