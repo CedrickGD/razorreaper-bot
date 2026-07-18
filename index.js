@@ -5,15 +5,27 @@ const path = require('path');
 const os = require('os');
 const { execFile } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
+const { initNotifier } = require('./notifier');
+
+// GuildMessages (non-privileged) lets the notifier receive messages in watched
+// channels; embeds are readable without MessageContent. MessageContent is a
+// PRIVILEGED intent — only request it when NOTIFIER_MESSAGE_CONTENT=true AND it is
+// enabled in the Discord Developer Portal, otherwise login fails with a disallowed
+// intent and the whole bot goes down.
+const intents = [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildMessages,
+];
+if (process.env.NOTIFIER_MESSAGE_CONTENT === 'true') {
+    intents.push(GatewayIntentBits.MessageContent);
+}
 
 const client = new Client({
-    intents: [
-          GatewayIntentBits.Guilds,
-          GatewayIntentBits.GuildMembers,
-          GatewayIntentBits.GuildPresences,
-          GatewayIntentBits.GuildVoiceStates,
-          GatewayIntentBits.GuildModeration,
-        ],
+    intents,
     partials: [Partials.Channel, Partials.GuildMember],
 });
 
@@ -221,6 +233,13 @@ client.once('ready', async () => {
           activities: [{ name: 'rr.sellhub.cx | /help', type: ActivityType.Watching }],
           status: 'online',
     });
+
+    // Start the notifier backend (HTTP/SSE relay for RazorReaper desktop clients).
+    try {
+        initNotifier(client);
+    } catch (err) {
+        console.error('[RazorReaper] Failed to start notifier backend:', err.message || err);
+    }
 
     // Register slash commands
     try {
