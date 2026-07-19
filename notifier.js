@@ -24,6 +24,8 @@
 
 const http = require('http');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 const MAX_CLIENTS = 500;
@@ -35,6 +37,69 @@ try {
     channelMap = JSON.parse(process.env.NOTIFIER_CHANNELS || '{}');
 } catch (e) {
     console.error('[Notifier] NOTIFIER_CHANNELS is not valid JSON — no channels watched:', e.message);
+}
+
+// ── Persistent channel store ────────────────────────────────────────────────
+// channelMap is editable live from the app (see /notifier/channels). It is
+// persisted to a small JSON file on a Railway volume so in-app edits survive
+// restarts/redeploys. Persistence is best-effort: without a writable volume the
+// bot still works fully (edits just last until the next restart) — it never
+// crashes over storage. NOTIFIER_CHANNELS remains the first-boot seed.
+const CHANNELS_FILE = path.join(process.env.NOTIFIER_DATA_DIR || '/data', 'channels.json');
+
+function loadPersistedChannels() {
+    try {
+        const parsed = JSON.parse(fs.readFileSync(CHANNELS_FILE, 'utf8'));
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch { /* no store yet — caller falls back to the env seed */ }
+    return null;
+}
+
+function persistChannels() {
+    try {
+        fs.mkdirSync(path.dirname(CHANNELS_FILE), { recursive: true });
+        fs.writeFileSync(CHANNELS_FILE, JSON.stringify(channelMap, null, 2));
+        return true;
+    } catch (e) {
+        console.warn('[Notifier] could not persist channels (no writable volume?):', e.message);
+        return false;
+    }
+}
+
+// The persisted store wins over the env seed so in-app edits stick; on the very
+// first boot (no file yet) we write the env seed out so it carries over.
+{
+    const persisted = loadPersistedChannels();
+    if (persisted) channelMap = persisted;
+    else persistChannels();
+}
+
+const VALID_TYPES = new Set(['rare-dino', 'resource', 'element-node', 'osd', 'tribe-log']);
+
+/** channelMap -> a stable array the app binds to. */
+function channelList() {
+    return Object.entries(channelMap).map(([channelId, cfg]) => ({
+        channelId,
+        cluster: (cfg && cfg.cluster) || 'Unknown',
+        type: (cfg && cfg.type) || 'alert',
+    }));
+}
+
+/** Collect a small JSON request body (caps size, resolves null on bad/oversized input). */
+function readJsonBody(req) {
+    return new Promise((resolve) => {
+        let data = '';
+        let aborted = false;
+        req.on('data', (chunk) => {
+            data += chunk;
+            if (data.length > 10_000) { aborted = true; req.destroy(); }
+        });
+        req.on('end', () => {
+            if (aborted) return resolve(null);
+            try { resolve(JSON.parse(data || '{}')); } catch { resolve(null); }
+        });
+        req.on('error', () => resolve(null));
+    });
 }
 
 /** @type {Set<import('http').ServerResponse>} */
@@ -137,6 +202,64 @@ function startHttpServer() {
                 clients: clients.size,
                 watching: Object.keys(channelMap).length,
             }));
+            return;
+        }
+
+        // ── Channel management — token-gated (GET list / POST add / DELETE remove) ──
+        // Lets the RazorReaper app manage watched channels live, with no redeploy.
+        if (url.pathname === '/notifier/channels') {
+            const expected = expectedToken();
+            if (!expected) {
+                res.writeHead(503, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'notifier_disabled', message: 'NOTIFIER_TOKEN not set' }));
+                return;
+            }
+            if (!tokensMatch(presentedToken(req, url), expected)) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'unauthorized' }));
+                return;
+            }
+
+            if (req.method === 'GET') {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, channels: channelList() }));
+                return;
+            }
+
+            if (req.method === 'POST') {
+                readJsonBody(req).then((body) => {
+                    const channelId = String((body && body.channelId) || '').trim();
+                    const cluster = (String((body && body.cluster) || '').trim()) || 'Unknown';
+                    let type = (String((body && body.type) || '').trim()) || 'osd';
+                    if (!/^\d{5,25}$/.test(channelId)) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'invalid_channel_id', message: 'Channel ID must be a Discord snowflake (digits only).' }));
+                        return;
+                    }
+                    if (!VALID_TYPES.has(type)) type = 'osd';
+                    channelMap[channelId] = { cluster, type };
+                    persistChannels();
+                    console.log(`[Notifier] channel set: ${channelId} (${cluster}/${type}) — now watching ${Object.keys(channelMap).length}`);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ ok: true, channels: channelList() }));
+                });
+                return;
+            }
+
+            if (req.method === 'DELETE') {
+                const id = String(url.searchParams.get('id') || '').trim();
+                if (id && channelMap[id]) {
+                    delete channelMap[id];
+                    persistChannels();
+                    console.log(`[Notifier] channel removed: ${id} — now watching ${Object.keys(channelMap).length}`);
+                }
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ ok: true, channels: channelList() }));
+                return;
+            }
+
+            res.writeHead(405, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'method_not_allowed' }));
             return;
         }
 

@@ -95,8 +95,24 @@ are relayed.
 |---|---|---|---|
 | GET | `/health` | none | Health check — `{"ok":true,"uptime":…,"clients":…,"watching":…}`. |
 | GET | `/notifier/stream?token=…` | token | SSE alert stream for clients (heartbeat comment every 25s; supports `Last-Event-ID` replay). |
-| GET | `/notifier/test?token=…` | token | Inject a synthetic alert to all clients. |
+| GET | `/notifier/test?token=…` | token | Inject a synthetic alert to all clients. Accepts `&type=`, `&cluster=`, `&subject=`. |
+| GET | `/notifier/channels?token=…` | token | List watched channels — `{"ok":true,"channels":[{channelId,cluster,type}]}`. |
+| POST | `/notifier/channels?token=…` | token | Add/update a channel. JSON body `{channelId, cluster, type}`. Applies live. |
+| DELETE | `/notifier/channels?token=…&id=<channelId>` | token | Remove a channel. Applies live. |
 
 The token may be passed as `?token=` or `Authorization: Bearer <token>`
 (`?secret=` is accepted as a legacy alias). If `NOTIFIER_TOKEN` is not set on
 the server, the stream refuses every connection with 503 — fail closed.
+
+## Live channel management + persistence (Railway Volume)
+
+The watched-channel map is editable live from the RazorReaper app (the Notifier
+page's **Watched channels** card → the `/notifier/channels` endpoints above). No
+redeploy is needed — edits mutate the in-memory map the message handler reads.
+
+To make those edits **survive restarts/redeploys**, attach a **Railway Volume**
+(Service → Settings → Volumes) mounted at **`/data`** (or set `NOTIFIER_DATA_DIR`
+to the mount path). The bot persists `channels.json` there and, on first boot
+with an empty volume, seeds it from `NOTIFIER_CHANNELS`. Without a volume the
+feature still works — edits just reset to the `NOTIFIER_CHANNELS` seed on the
+next restart (persistence is best-effort and never fatal).
