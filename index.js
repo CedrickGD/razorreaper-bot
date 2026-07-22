@@ -74,6 +74,78 @@ function infoEmbed(desc, title)  { return embed(CYAN,   desc, title); }
 function errEmbed(desc)          { return embed(0xff4444, desc); }
 function okEmbed(desc)           { return embed(0x00cc66, desc); }
 
+// ── License-verified community gate ─────────────────────────────────────────────
+// Turns the server into a paid-only community: only members whose Discord is linked to a valid
+// RazorReaper license (checked against the admin panel) get the "Verified" role. Everything here
+// is inert unless VERIFY_API_BASE + VERIFY_SHARED_SECRET + VERIFIED_ROLE_ID are all configured,
+// so the bot keeps running normally on a server that hasn't opted in.
+const VERIFY_API_BASE = (process.env.VERIFY_API_BASE || '').replace(/\/+$/, '');
+const VERIFY_SECRET = process.env.VERIFY_SHARED_SECRET || '';
+const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '';
+const VERIFY_GUILD_ID = process.env.VERIFY_GUILD_ID || process.env.GUILD_ID || '';
+const RECONCILE_MINUTES = Number(process.env.VERIFY_RECONCILE_MINUTES || 30);
+
+function verifyConfigured() {
+    return Boolean(VERIFY_API_BASE && VERIFY_SECRET && VERIFIED_ROLE_ID);
+}
+
+// POST to the admin panel's Discord API with the shared secret. Returns { status, data }.
+async function verifyApi(pathname, body) {
+    const res = await fetch(`${VERIFY_API_BASE}${pathname}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${VERIFY_SECRET}` },
+        body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { status: res.status, data };
+}
+
+async function grantVerifiedRole(guild, userId) {
+    try {
+        if (!guild) return false;
+        const member = await guild.members.fetch(userId).catch(() => null);
+        if (!member) return false;
+        if (member.roles.cache.has(VERIFIED_ROLE_ID)) return true;
+        await member.roles.add(VERIFIED_ROLE_ID, 'RazorReaper license verified');
+        return true;
+    } catch (e) {
+        console.error('[verify] Failed to grant role:', e.message || e);
+        return false;
+    }
+}
+
+// Resolve the guild the gate operates on (explicit VERIFY_GUILD_ID, else the only guild).
+function verifyGuild() {
+    if (VERIFY_GUILD_ID) return client.guilds.cache.get(VERIFY_GUILD_ID) || null;
+    return client.guilds.cache.first() || null;
+}
+
+// Periodic sweep: strip the Verified role from anyone whose license no longer validates
+// (revoked / expired / suspended in the admin panel). Bounded and best-effort.
+async function reconcileVerifiedRoles() {
+    if (!verifyConfigured()) return;
+    const guild = verifyGuild();
+    if (!guild) return;
+    let stripped = 0;
+    try {
+        const members = await guild.members.fetch();
+        const holders = members.filter(m => !m.user.bot && m.roles.cache.has(VERIFIED_ROLE_ID));
+        for (const [, m] of holders) {
+            try {
+                const { data } = await verifyApi('/api/discord/status', { discord_id: m.id });
+                if (data && data.ok && !data.active) {
+                    await m.roles.remove(VERIFIED_ROLE_ID, 'License no longer valid (reconcile)').catch(() => {});
+                    stripped++;
+                }
+            } catch { /* skip this member on a transient error */ }
+        }
+    } catch (e) {
+        console.error('[verify] Reconcile sweep failed:', e.message || e);
+        return;
+    }
+    if (stripped) console.log(`[verify] Reconcile: stripped Verified role from ${stripped} member(s).`);
+}
+
 function downloadFile(url, dest) {
     return new Promise((resolve, reject) => {
         const follow = (u) => {
@@ -234,6 +306,8 @@ const slashCommands = [
         .addAttachmentOption(o => o.setName('file').setDescription('The image or video file to convert').setRequired(true)),
     new SlashCommandBuilder().setName('roles').setDescription('Interactive role selector')
         .addUserOption(o => o.setName('user').setDescription('Target user (default: yourself)').setRequired(false)),
+    new SlashCommandBuilder().setName('verify').setDescription('Verify your RazorReaper license to unlock the community')
+        .addStringOption(o => o.setName('key').setDescription('Your license key (XXXX-XXXX-XXXX-XXXX)').setRequired(true)),
 ];
 
 // ── Ready ─────────────────────────────────────────────────────────────────────
@@ -274,6 +348,17 @@ client.once('ready', async () => {
     } catch (err) {
         console.error('[RazorReaper] Failed to set banner/bio:', err.message || err);
     }
+
+    // License-verification reconcile: periodically strip the Verified role from members whose
+    // license has since lapsed (revoked/expired/suspended in the admin panel).
+    if (verifyConfigured() && RECONCILE_MINUTES > 0) {
+        const runReconcile = () => reconcileVerifiedRoles().catch(e => console.error('[verify] Reconcile error:', e.message || e));
+        setTimeout(runReconcile, 60_000);
+        setInterval(runReconcile, RECONCILE_MINUTES * 60_000);
+        console.log(`[verify] License gate ACTIVE — reconcile every ${RECONCILE_MINUTES} min.`);
+    } else if (!verifyConfigured()) {
+        console.log('[verify] License gate inactive (set VERIFY_API_BASE, VERIFY_SHARED_SECRET, VERIFIED_ROLE_ID to enable).');
+    }
 });
 
 // ── Welcome new members ────────────────────────────────────────────────────────
@@ -292,7 +377,37 @@ client.on('guildMemberAdd', async (member) => {
       .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
       .setFooter({ text: `Member #${member.guild.memberCount}`, iconURL: client.user.displayAvatarURL() })
       .setTimestamp();
-    ch.send({ embeds: [e] });
+    ch.send({ embeds: [e] }).catch(() => {});
+});
+
+// ── Gate new members behind license verification ────────────────────────────────
+// Independent listener so it runs whether or not a welcome channel exists. Verified joiners
+// (e.g. they linked earlier, or re-joined) get their role back automatically; everyone else is
+// DM'd how to verify. Inert unless the gate is configured.
+client.on('guildMemberAdd', async (member) => {
+    if (!verifyConfigured() || member.user.bot) return;
+    if (VERIFY_GUILD_ID && member.guild.id !== VERIFY_GUILD_ID) return;
+
+    try {
+        const { data } = await verifyApi('/api/discord/status', { discord_id: member.id });
+        if (data && data.ok && data.linked && data.active) {
+            await grantVerifiedRole(member.guild, member.id);
+            return;
+        }
+    } catch (e) {
+        console.error('[verify] Join status check failed:', e.message || e);
+    }
+
+    // Not verified yet — DM instructions (best-effort; many users have DMs closed).
+    const oauthHint = VERIFY_API_BASE
+        ? `\n\n**Prefer one-click linking?** Open:\n${VERIFY_API_BASE}/api/discord/oauth-start?key=YOUR-KEY`
+        : '';
+    member.send({
+        embeds: [infoEmbed(
+            `This community is for **RazorReaper license holders**. To unlock access, run **/verify** with your license key:\n\n\`/verify key:XXXX-XXXX-XXXX-XXXX\`${oauthHint}`,
+            '🔒 One step to unlock the community',
+        )],
+    }).catch(() => {});
 });
 
 // ── Message Commands ──────────────────────────────────────────────────────────
@@ -301,6 +416,42 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
     const { commandName, guild, member, channel } = interaction;
+
+    // ── /verify ─────────────────────────────────────────────────────────────────
+    if (commandName === 'verify') {
+        if (!verifyConfigured()) {
+            return interaction.reply({ embeds: [errEmbed('⚠️ Verification is not set up on this server yet.')], ephemeral: true });
+        }
+        const key = interaction.options.getString('key', true).trim();
+        await interaction.deferReply({ ephemeral: true });
+        try {
+            const { data } = await verifyApi('/api/discord/verify', {
+                discord_id: interaction.user.id,
+                discord_tag: interaction.user.tag,
+                license_key: key,
+            });
+
+            if (!data || !data.ok) {
+                return interaction.editReply({ embeds: [errEmbed('❌ Verification is temporarily unavailable. Please try again shortly.')] });
+            }
+            if (!data.verified) {
+                return interaction.editReply({ embeds: [errEmbed(`❌ ${data.message || 'That license could not be verified.'}`)] });
+            }
+
+            // License is valid + link recorded — grant the Verified role (in this guild, or the
+            // configured community guild if the command was used in a DM).
+            const targetGuild = guild || verifyGuild();
+            const granted = await grantVerifiedRole(targetGuild, interaction.user.id);
+            return interaction.editReply({
+                embeds: [okEmbed(granted
+                    ? '✅ **Verified!** Your license is linked and your access is unlocked. Welcome to the community.'
+                    : '✅ **License verified & linked.** I couldn\'t assign your role automatically — please ping a staff member.')],
+            });
+        } catch (e) {
+            console.error('[verify] Command failed:', e.message || e);
+            return interaction.editReply({ embeds: [errEmbed('❌ Verification is temporarily unavailable. Please try again shortly.')] });
+        }
+    }
 
     // ── /ping ─────────────────────────────────────────────────────────────────
     if (commandName === 'ping') {
@@ -348,6 +499,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/userinfo` `[user]`', value: 'Detailed user profile — roles, join date, account age' },
                     { name: '`/status`', value: 'Bot & server status — uptime, ping, open tickets' },
                     { name: '`/rules`', value: 'Display the server rules' },
+                    { name: '`/verify` `key`', value: 'Verify your RazorReaper license to unlock the community' },
                     { name: '`/ping`', value: 'Check bot latency and WebSocket ping' },
                 ).setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
             emoji: () => new EmbedBuilder()
@@ -940,5 +1092,9 @@ function shutdown(signal) {
 }
 process.once('SIGTERM', () => shutdown('SIGTERM'));
 process.once('SIGINT', () => shutdown('SIGINT'));
+
+process.on('unhandledRejection', (err) => {
+    console.error('[RazorReaper] Unhandled rejection:', err?.message || err);
+});
 
 client.login(process.env.TOKEN);
