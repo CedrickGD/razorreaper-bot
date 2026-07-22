@@ -24,7 +24,15 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
    | `NOTIFIER_TOKEN` | *(a long random string)* | Clients must present this. Keep it private. (`NOTIFIER_SECRET` works as a legacy alias.) |
    | `NOTIFIER_CHANNELS` | *(JSON, see below)* | Channels to watch. `{}` to start. |
    | `NOTIFIER_MESSAGE_CONTENT` | `true` | Requires the privileged intent portal toggle FIRST (see §3) — without it, alert embeds arrive empty. |
-   `PORT` is injected by Railway automatically — do **not** set it.
+   | `VERIFY_API_BASE` | `https://rr-admin-panel.pages.dev` | License‑community gate. Base URL of the admin panel. |
+   | `VERIFY_SHARED_SECRET` | *(long random string)* | Must MATCH the same var on Cloudflare Pages. |
+   | `VERIFIED_ROLE_ID` | *(role id)* | The `Verified` role granted to license holders. |
+   | `VERIFY_GUILD_ID` | *(guild id)* | Optional — defaults to the bot's only guild. |
+   | `VERIFY_RECONCILE_MINUTES` | `30` | Optional — how often lapsed licenses lose the role. |
+   `PORT` is injected by Railway automatically — do **not** set it. The four `VERIFY_*` role vars
+   are optional: without all of `VERIFY_API_BASE` + `VERIFY_SHARED_SECRET` + `VERIFIED_ROLE_ID`
+   the `/verify` gate stays dormant and the bot runs exactly as before. Full setup:
+   `RR-Admin-Panel/SETUP-ACCESS-DISCORD.md`.
 4. **Settings → Networking → Generate Domain** to get a public URL like
    `https://razorreaper-bot-production.up.railway.app`. This is the base URL the
    app's Notifier page uses.
