@@ -450,10 +450,10 @@ client.on('interactionCreate', async (interaction) => {
             }
             await interaction.deferReply({ ephemeral: true });
             try {
-                const { data } = await verifyApi('/api/discord/grant', {
+                const { data } = await verifyApi('/api/discord/verify', {
                     discord_id: targetUser.id,
                     discord_tag: targetUser.tag,
-                    granted_by: interaction.user.id,
+                    manual: true,
                 });
                 if (!data || !data.ok) {
                     return interaction.editReply({ embeds: [errEmbed('❌ Couldn\'t record the grant. Please try again shortly.')] });
