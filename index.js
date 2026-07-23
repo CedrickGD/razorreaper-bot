@@ -320,14 +320,25 @@ client.once('ready', async () => {
           status: 'online',
     });
 
-    // Register slash commands
+    // Register slash commands. The bot is a RazorReaper-server bot: with VERIFY_GUILD_ID set,
+    // commands are registered ONLY in that guild (and stale global ones are wiped), so in any
+    // other server it sits in (e.g. as the silent notifier listener) no commands exist at all.
     try {
         const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-        console.log('[RazorReaper] Registering slash commands...');
-        await rest.put(Routes.applicationCommands(client.user.id), {
-            body: slashCommands.map(c => c.toJSON()),
-        });
-        console.log('[RazorReaper] Slash commands registered globally!');
+        if (VERIFY_GUILD_ID) {
+            console.log('[RazorReaper] Registering slash commands (home guild only)...');
+            await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+            await rest.put(Routes.applicationGuildCommands(client.user.id, VERIFY_GUILD_ID), {
+                body: slashCommands.map(c => c.toJSON()),
+            });
+            console.log(`[RazorReaper] Slash commands registered for guild ${VERIFY_GUILD_ID}!`);
+        } else {
+            console.log('[RazorReaper] Registering slash commands globally (no VERIFY_GUILD_ID set)...');
+            await rest.put(Routes.applicationCommands(client.user.id), {
+                body: slashCommands.map(c => c.toJSON()),
+            });
+            console.log('[RazorReaper] Slash commands registered globally!');
+        }
     } catch (err) {
         console.error('[RazorReaper] Failed to register slash commands:', err);
     }
@@ -363,6 +374,8 @@ client.once('ready', async () => {
 
 // ── Welcome new members ────────────────────────────────────────────────────────
 client.on('guildMemberAdd', async (member) => {
+    // Home-guild only: never post welcomes into other servers the bot merely listens in.
+    if (VERIFY_GUILD_ID && member.guild.id !== VERIFY_GUILD_ID) return;
     const ch = member.guild.channels.cache.find(c => c.name.includes('welcome'));
     if (!ch) return;
     const e = new EmbedBuilder()
