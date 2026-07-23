@@ -308,7 +308,8 @@ const slashCommands = [
     new SlashCommandBuilder().setName('roles').setDescription('Interactive role selector')
         .addUserOption(o => o.setName('user').setDescription('Target user (default: yourself)').setRequired(false)),
     new SlashCommandBuilder().setName('verify').setDescription('Verify your RazorReaper license to unlock the community')
-        .addStringOption(o => o.setName('key').setDescription('Your license key (XXXX-XXXX-XXXX-XXXX)').setRequired(true)),
+        .addStringOption(o => o.setName('key').setDescription('Your license key (XXXX-XXXX-XXXX-XXXX)').setRequired(false))
+        .addUserOption(o => o.setName('user').setDescription('Staff only — permanently grant this member the Verified role').setRequired(false)),
 ];
 
 // ── Ready ─────────────────────────────────────────────────────────────────────
@@ -436,11 +437,48 @@ client.on('interactionCreate', async (interaction) => {
         if (!verifyConfigured()) {
             return interaction.reply({ embeds: [errEmbed('⚠️ Verification is not set up on this server yet.')], ephemeral: true });
         }
+
+        // ── Staff manual grant: /verify user:@member — permanently mark someone Verified,
+        // no license required, and immune to the reconcile sweep. Allowed from any channel.
+        const targetUser = interaction.options.getUser('user');
+        if (targetUser) {
+            if (!member || !isStaff(member)) {
+                return interaction.reply({ embeds: [errEmbed('❌ Only staff can grant Verified to another member.')], ephemeral: true });
+            }
+            if (targetUser.bot) {
+                return interaction.reply({ embeds: [errEmbed('❌ You can\'t verify a bot.')], ephemeral: true });
+            }
+            await interaction.deferReply({ ephemeral: true });
+            try {
+                const { data } = await verifyApi('/api/discord/grant', {
+                    discord_id: targetUser.id,
+                    discord_tag: targetUser.tag,
+                    granted_by: interaction.user.id,
+                });
+                if (!data || !data.ok) {
+                    return interaction.editReply({ embeds: [errEmbed('❌ Couldn\'t record the grant. Please try again shortly.')] });
+                }
+                const granted = await grantVerifiedRole(guild || verifyGuild(), targetUser.id);
+                console.log(`[verify] Manual grant: ${interaction.user.tag} -> ${targetUser.tag} (${targetUser.id}), role=${granted}`);
+                return interaction.editReply({
+                    embeds: [okEmbed(granted
+                        ? `✅ **${targetUser.tag}** is now permanently **Verified RR User** — the license sweep won't revoke it.`
+                        : `✅ Grant recorded for **${targetUser.tag}**, but I couldn't assign the role (check my role position). It'll apply on the next sweep.`)],
+                });
+            } catch (e) {
+                console.error('[verify] Manual grant failed:', e.message || e);
+                return interaction.editReply({ embeds: [errEmbed('❌ Couldn\'t record the grant. Please try again shortly.')] });
+            }
+        }
+
         // Keep /verify to its dedicated channel — running it in #general etc. just points there.
         if (VERIFY_CHANNEL_ID && interaction.channelId !== VERIFY_CHANNEL_ID) {
             return interaction.reply({ embeds: [errEmbed(`❌ Please use \`/verify\` in <#${VERIFY_CHANNEL_ID}>.`)], ephemeral: true });
         }
-        const key = interaction.options.getString('key', true).trim();
+        const key = (interaction.options.getString('key') || '').trim();
+        if (!key) {
+            return interaction.reply({ embeds: [errEmbed('❌ Please provide your license key: `/verify key:XXXX-XXXX-XXXX-XXXX`')], ephemeral: true });
+        }
         await interaction.deferReply({ ephemeral: true });
         try {
             const { data } = await verifyApi('/api/discord/verify', {
