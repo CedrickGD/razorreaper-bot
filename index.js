@@ -83,6 +83,7 @@ const VERIFY_API_BASE = (process.env.VERIFY_API_BASE || '').replace(/\/+$/, '');
 const VERIFY_SECRET = process.env.VERIFY_SHARED_SECRET || '';
 const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '';
 const VERIFY_GUILD_ID = process.env.VERIFY_GUILD_ID || process.env.GUILD_ID || '';
+const VERIFY_CHANNEL_ID = process.env.VERIFY_CHANNEL_ID || '';
 const RECONCILE_MINUTES = Number(process.env.VERIFY_RECONCILE_MINUTES || 30);
 
 function verifyConfigured() {
@@ -434,6 +435,10 @@ client.on('interactionCreate', async (interaction) => {
     if (commandName === 'verify') {
         if (!verifyConfigured()) {
             return interaction.reply({ embeds: [errEmbed('⚠️ Verification is not set up on this server yet.')], ephemeral: true });
+        }
+        // Keep /verify to its dedicated channel — running it in #general etc. just points there.
+        if (VERIFY_CHANNEL_ID && interaction.channelId !== VERIFY_CHANNEL_ID) {
+            return interaction.reply({ embeds: [errEmbed(`❌ Please use \`/verify\` in <#${VERIFY_CHANNEL_ID}>.`)], ephemeral: true });
         }
         const key = interaction.options.getString('key', true).trim();
         await interaction.deferReply({ ephemeral: true });
