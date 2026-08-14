@@ -26,8 +26,9 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
    | `NOTIFIER_MESSAGE_CONTENT` | `true` | Requires the privileged intent portal toggle FIRST (see §3) — without it, alert embeds arrive empty. |
    | `VERIFY_API_BASE` | `https://rr-admin-panel.pages.dev` | License‑community gate. Base URL of the admin panel. |
    | `VERIFY_SHARED_SECRET` | *(long random string)* | Must MATCH the same var on Cloudflare Pages. |
-   | `VERIFIED_ROLE_ID` | *(role id)* | The `Verified` role granted to license holders. |
-   | `VERIFY_GUILD_ID` | *(guild id)* | Optional — defaults to the bot's only guild. |
+   | `VERIFIED_ROLE_ID` | *(role id)* | The `Verified Customer` role granted to license holders. |
+   | `MEMBER_ROLE_ID` | *(role id)* | Optional — base `Member` role every human gets on join (hardcoded RazorReaper default). |
+   | `VERIFY_GUILD_ID` | *(guild id)* | Optional — hardcoded RazorReaper-server default in `index.js`. |
    | `VERIFY_RECONCILE_MINUTES` | `30` | Optional — how often lapsed licenses lose the role. |
    `PORT` is injected by Railway automatically — do **not** set it. The four `VERIFY_*` role vars
    are optional: without all of `VERIFY_API_BASE` + `VERIFY_SHARED_SECRET` + `VERIFIED_ROLE_ID`

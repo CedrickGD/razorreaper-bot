@@ -76,15 +76,19 @@ function okEmbed(desc)           { return embed(0x00cc66, desc); }
 
 // ── License-verified community gate ─────────────────────────────────────────────
 // Turns the server into a paid-only community: only members whose Discord is linked to a valid
-// RazorReaper license (checked against the admin panel) get the "Verified" role. Everything here
-// is inert unless VERIFY_API_BASE + VERIFY_SHARED_SECRET + VERIFIED_ROLE_ID are all configured,
-// so the bot keeps running normally on a server that hasn't opted in.
+// RazorReaper license (checked against the admin panel) get the "Verified Customer" role.
+// Everything here is inert unless VERIFY_API_BASE + VERIFY_SHARED_SECRET + VERIFIED_ROLE_ID are
+// all configured, so the bot keeps running normally on a server that hasn't opted in.
+// Non-secret IDs carry hardcoded RazorReaper-server defaults so the bot survives a host whose
+// env vars go missing; env vars still win when set.
 const VERIFY_API_BASE = (process.env.VERIFY_API_BASE || '').replace(/\/+$/, '');
 const VERIFY_SECRET = process.env.VERIFY_SHARED_SECRET || '';
-const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '';
-const VERIFY_GUILD_ID = process.env.VERIFY_GUILD_ID || process.env.GUILD_ID || '';
-const VERIFY_CHANNEL_ID = process.env.VERIFY_CHANNEL_ID || '';
+const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1529566161900146689'; // ✅ Verified Customer
+const VERIFY_GUILD_ID = process.env.VERIFY_GUILD_ID || process.env.GUILD_ID || '1487503515512475792';
+const VERIFY_CHANNEL_ID = process.env.VERIFY_CHANNEL_ID || '1529936856307863653'; // #verify
+const MEMBER_ROLE_ID = process.env.MEMBER_ROLE_ID || '1487508255050567690'; // Member — every human gets this on join
 const RECONCILE_MINUTES = Number(process.env.VERIFY_RECONCILE_MINUTES || 30);
+const verifiedRoleMention = () => `<@&${VERIFIED_ROLE_ID}>`;
 
 function verifyConfigured() {
     return Boolean(VERIFY_API_BASE && VERIFY_SECRET && VERIFIED_ROLE_ID);
@@ -144,7 +148,97 @@ async function reconcileVerifiedRoles() {
         console.error('[verify] Reconcile sweep failed:', e.message || e);
         return;
     }
-    if (stripped) console.log(`[verify] Reconcile: stripped Verified role from ${stripped} member(s).`);
+    if (stripped) console.log(`[verify] Reconcile: stripped Verified Customer role from ${stripped} member(s).`);
+}
+
+// ── Member auto-role ──────────────────────────────────────────────────────────
+// Every human in the community holds the base Member role: granted instantly on join
+// (see guildMemberAdd below) and backfilled here for anyone who slipped through
+// (e.g. joined while the bot was down). Idempotent and best-effort.
+async function backfillMemberRole() {
+    if (!MEMBER_ROLE_ID) return;
+    const guild = verifyGuild();
+    if (!guild) return;
+    const role = guild.roles.cache.get(MEMBER_ROLE_ID);
+    if (!role) { console.error('[member-role] Member role not found — check MEMBER_ROLE_ID.'); return; }
+    if (!role.editable) { console.error('[member-role] Member role is above my highest role — cannot assign it.'); return; }
+    try {
+        const members = await guild.members.fetch();
+        const missing = members.filter(m => !m.user.bot && !m.roles.cache.has(MEMBER_ROLE_ID));
+        let added = 0;
+        for (const [, m] of missing) {
+            try { await m.roles.add(MEMBER_ROLE_ID, 'Member auto-role (backfill)'); added++; }
+            catch (e) { console.error(`[member-role] Backfill failed for ${m.user.tag}:`, e.message || e); }
+        }
+        if (added) console.log(`[member-role] Backfilled Member role for ${added} member(s).`);
+    } catch (e) {
+        console.error('[member-role] Backfill sweep failed:', e.message || e);
+    }
+}
+
+// ── Verify-panel sync ─────────────────────────────────────────────────────────
+// The #verify channel holds a bot-authored "Unlock the Community" panel. On startup the bot
+// re-syncs it: stale hardcoded role names in the description are swapped for a live role
+// mention (renders as the current role name, so future renames need no edit here), and if the
+// panel vanished entirely a fresh one is posted.
+const VERIFY_PANEL_TITLE = 'Unlock the Community';
+
+function buildVerifyPanelEmbed(guild) {
+    const chanRef = (part) => {
+        const c = guild.channels.cache.find(ch =>
+            (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) && ch.name.includes(part));
+        return c ? `<#${c.id}>` : `#${part}`;
+    };
+    const e = new EmbedBuilder()
+        .setColor(0x5b2d8e)
+        .setTitle(VERIFY_PANEL_TITLE)
+        .setDescription(
+            '🔒 This server is for **RazorReaper license holders**.\n\n' +
+            'Verify your license once to unlock the members-only side of the community — early releases, full changelog, and more.\n\n' +
+            '**How to verify**\n🔑 Run `/verify` right here and paste your license key:\n' +
+            '```/verify key:XXXX-XXXX-XXXX-XXXX```\n' +
+            'Your reply is private — nobody else sees your key.\n\n' +
+            `You instantly get the ${verifiedRoleMention()} role.`
+        )
+        .addFields(
+            { name: 'What you unlock', value: `✨ ${chanRef('releases')} — new builds first\n\n${chanRef('changelog')} — full patch notes\n\nverified-only areas`, inline: true },
+            { name: "Where's my key?", value: '🛒 In your purchase confirmation from [rr.sellhub.cx](https://rr.sellhub.cx).\n\nNo key yet? Grab RazorReaper there.', inline: true },
+        )
+        .setFooter({ text: 'RazorReaper • rr.sellhub.cx' });
+    if (VERIFY_API_BASE) {
+        e.addFields({ name: 'Prefer one click?', value: `🔗 Open [this link](${VERIFY_API_BASE}/api/discord/oauth-start?key=YOUR-KEY) (replace \`YOUR-KEY\`) to link Discord directly — no command needed.` });
+    }
+    const thumb = guild.iconURL({ size: 256 }) || client.user.displayAvatarURL({ size: 256 });
+    if (thumb) e.setThumbnail(thumb);
+    return e;
+}
+
+async function syncVerifyPanel() {
+    if (!VERIFY_CHANNEL_ID || !VERIFIED_ROLE_ID) return;
+    const guild = verifyGuild();
+    if (!guild) return;
+    const ch = guild.channels.cache.get(VERIFY_CHANNEL_ID);
+    if (!ch || !ch.isTextBased()) return;
+    try {
+        const msgs = await ch.messages.fetch({ limit: 100 });
+        const panel = msgs.find(m => m.author.id === client.user.id && m.embeds[0]?.title === VERIFY_PANEL_TITLE);
+        if (!panel) {
+            await ch.send({ embeds: [buildVerifyPanelEmbed(guild)] });
+            console.log('[verify] Panel not found — posted a fresh one.');
+            return;
+        }
+        const desc = panel.embeds[0].description || '';
+        // Swap any stale hardcoded role wording for the live mention; edit only when needed.
+        const updated = desc
+            .replace(/the \*\*Verified RR User\*\* role/g, `the ${verifiedRoleMention()} role`)
+            .replace(/the \*\*Verified\*\* role/g, `the ${verifiedRoleMention()} role`);
+        if (updated !== desc) {
+            await panel.edit({ embeds: [EmbedBuilder.from(panel.embeds[0]).setDescription(updated)] });
+            console.log('[verify] Panel updated to the current verified role.');
+        }
+    } catch (e) {
+        console.error('[verify] Panel sync failed:', e.message || e);
+    }
 }
 
 function downloadFile(url, dest) {
@@ -309,7 +403,7 @@ const slashCommands = [
         .addUserOption(o => o.setName('user').setDescription('Target user (default: yourself)').setRequired(false)),
     new SlashCommandBuilder().setName('verify').setDescription('Verify your RazorReaper license to unlock the community')
         .addStringOption(o => o.setName('key').setDescription('Your license key (XXXX-XXXX-XXXX-XXXX)').setRequired(false))
-        .addUserOption(o => o.setName('user').setDescription('Staff only — permanently grant this member the Verified role').setRequired(false)),
+        .addUserOption(o => o.setName('user').setDescription('Staff only — permanently grant this member the Verified Customer role').setRequired(false)),
 ];
 
 // ── Ready ─────────────────────────────────────────────────────────────────────
@@ -362,8 +456,8 @@ client.once('ready', async () => {
         console.error('[RazorReaper] Failed to set banner/bio:', err.message || err);
     }
 
-    // License-verification reconcile: periodically strip the Verified role from members whose
-    // license has since lapsed (revoked/expired/suspended in the admin panel).
+    // License-verification reconcile: periodically strip the Verified Customer role from members
+    // whose license has since lapsed (revoked/expired/suspended in the admin panel).
     if (verifyConfigured() && RECONCILE_MINUTES > 0) {
         const runReconcile = () => reconcileVerifiedRoles().catch(e => console.error('[verify] Reconcile error:', e.message || e));
         setTimeout(runReconcile, 60_000);
@@ -371,6 +465,25 @@ client.once('ready', async () => {
         console.log(`[verify] License gate ACTIVE — reconcile every ${RECONCILE_MINUTES} min.`);
     } else if (!verifyConfigured()) {
         console.log('[verify] License gate inactive (set VERIFY_API_BASE, VERIFY_SHARED_SECRET, VERIFIED_ROLE_ID to enable).');
+    }
+
+    // Keep the #verify panel current, and make sure every human holds the Member base role
+    // (instant grant on join + startup/periodic backfill for anyone missed while offline).
+    syncVerifyPanel().catch(e => console.error('[verify] Panel sync error:', e.message || e));
+    const runBackfill = () => backfillMemberRole().catch(e => console.error('[member-role] Backfill error:', e.message || e));
+    setTimeout(runBackfill, 30_000);
+    setInterval(runBackfill, 6 * 60 * 60_000);
+});
+
+// ── Member auto-role on join ──────────────────────────────────────────────────
+// Every human joiner is a Member from the moment they arrive — verification only adds on top.
+client.on('guildMemberAdd', async (member) => {
+    if (!MEMBER_ROLE_ID || member.user.bot) return;
+    if (VERIFY_GUILD_ID && member.guild.id !== VERIFY_GUILD_ID) return;
+    try {
+        await member.roles.add(MEMBER_ROLE_ID, 'Member auto-role (join)');
+    } catch (e) {
+        console.error(`[member-role] Failed to grant Member to ${member.user.tag} on join:`, e.message || e);
     }
 });
 
@@ -462,7 +575,7 @@ client.on('interactionCreate', async (interaction) => {
                 console.log(`[verify] Manual grant: ${interaction.user.tag} -> ${targetUser.tag} (${targetUser.id}), role=${granted}`);
                 return interaction.editReply({
                     embeds: [okEmbed(granted
-                        ? `✅ **${targetUser.tag}** is now permanently **Verified RR User** — the license sweep won't revoke it.`
+                        ? `✅ **${targetUser.tag}** now permanently holds the ${verifiedRoleMention()} role — the license sweep won't revoke it.`
                         : `✅ Grant recorded for **${targetUser.tag}**, but I couldn't assign the role (check my role position). It'll apply on the next sweep.`)],
                 });
             } catch (e) {
