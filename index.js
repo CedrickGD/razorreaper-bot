@@ -228,13 +228,18 @@ async function syncVerifyPanel() {
             return;
         }
         const desc = panel.embeds[0].description || '';
-        // Swap any stale hardcoded role wording for the live mention; edit only when needed.
-        const updated = desc
-            .replace(/the \*\*Verified RR User\*\* role/g, `the ${verifiedRoleMention()} role`)
-            .replace(/the \*\*Verified\*\* role/g, `the ${verifiedRoleMention()} role`);
+        // Swap the whole role line for the live mention — markdown-agnostic, so it works no
+        // matter how the stale role name was formatted. Idempotent: once the line already
+        // carries the mention, the replacement is a no-op.
+        const updated = desc.replace(/You instantly get the [^\n]*? role\./, `You instantly get the ${verifiedRoleMention()} role.`);
         if (updated !== desc) {
             await panel.edit({ embeds: [EmbedBuilder.from(panel.embeds[0]).setDescription(updated)] });
             console.log('[verify] Panel updated to the current verified role.');
+        } else if (desc.includes(verifiedRoleMention())) {
+            console.log('[verify] Panel already current.');
+        } else {
+            const i = desc.indexOf('instantly');
+            console.log('[verify] Panel found but role line not matched. Raw context:', JSON.stringify(desc.slice(Math.max(0, i - 40), i + 90)));
         }
     } catch (e) {
         console.error('[verify] Panel sync failed:', e.message || e);
