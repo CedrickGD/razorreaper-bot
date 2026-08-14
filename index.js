@@ -270,6 +270,231 @@ async function syncVerifyPanel() {
     }
 }
 
+// ── Ticket transcripts → opener's DMs ─────────────────────────────────────────
+// Ticket Tool's free tier never DMs transcripts, so this bot does it instead: when a
+// ticket closes (Ticket Tool's Close button — and our /close — rename ticket-XXXX to
+// closed-XXXX), the full channel history is rendered into a self-contained HTML file
+// and DM'd to whoever opened the ticket. Disable with TICKET_TRANSCRIPT_DM=false.
+const TICKET_TRANSCRIPT_DM = process.env.TICKET_TRANSCRIPT_DM !== 'false';
+const ticketOwners = new Map();        // channelId -> userId, learned while the ticket is open
+const transcribedTickets = new Set();  // channels already transcribed this session
+const ticketMessageCache = new Map();  // channelId -> snapshot[], live capture for delete races
+const TICKET_CACHE_CAP = 500;
+const USER_MENTION_RE = /<@!?(\d+)>/;
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Minimal message snapshot — transcripts are built from these so they can outlive the
+// channel (Ticket Tool deletes ticket channels seconds after staff hit Delete).
+function snapshotMessage(m) {
+    return {
+        author: m.author?.username || 'unknown',
+        avatar: m.author?.displayAvatarURL({ extension: 'png', size: 64 }) || '',
+        bot: Boolean(m.author?.bot),
+        ts: m.createdTimestamp,
+        content: m.content || '',
+        embeds: (m.embeds || []).map(e => ({ title: e.title || '', desc: e.description || '' })),
+        attachments: [...(m.attachments?.values() || [])].map(a => ({ name: a.name, url: a.url })),
+    };
+}
+
+// Who opened this ticket? Most reliable first: what we recorded while the ticket was
+// open; Ticket Tool's intro message (it pings the opener — in content or embed); the
+// member-type permission overwrite. The overwrite scan is last because a claimer or an
+// /adduser guest also holds one, and Ticket Tool strips the opener's on close.
+async function resolveTicketOwner(channel) {
+    if (ticketOwners.has(channel.id)) return ticketOwners.get(channel.id);
+    try {
+        const firstMsgs = await channel.messages.fetch({ after: channel.id, limit: 25 });
+        const sorted = [...firstMsgs.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+        for (const m of sorted) {
+            if (!m.author.bot) continue;
+            let id = m.mentions.users.find(u => !u.bot)?.id;
+            if (!id) {
+                const src = [m.content, ...m.embeds.map(e => e.description || '')].join('\n');
+                id = src.match(USER_MENTION_RE)?.[1];
+            }
+            if (!id) continue;
+            const user = await client.users.fetch(id).catch(() => null);
+            if (user && !user.bot) { ticketOwners.set(channel.id, user.id); return user.id; }
+        }
+    } catch { /* channel gone or history unreadable — fall through */ }
+    for (const [, ow] of channel.permissionOverwrites?.cache || []) {
+        if (ow.type !== 1 || !ow.allow.has(PermissionsBitField.Flags.ViewChannel)) continue;
+        const user = await client.users.fetch(ow.id).catch(() => null);
+        if (user && !user.bot) { ticketOwners.set(channel.id, user.id); return user.id; }
+    }
+    return null;
+}
+
+async function fetchTicketSnapshots(channel, cap = TICKET_CACHE_CAP) {
+    const all = [];
+    let before;
+    while (all.length < cap) {
+        const batch = await channel.messages.fetch({ limit: 100, ...(before ? { before } : {}) });
+        if (!batch.size) break;
+        all.push(...batch.values());
+        before = batch.last().id;
+        if (batch.size < 100) break;
+    }
+    return all.sort((a, b) => a.createdTimestamp - b.createdTimestamp).map(snapshotMessage);
+}
+
+function renderTranscriptHtml(guildName, ticketName, snaps) {
+    const fmt = ts => new Date(ts).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+    const rows = snaps.map(m => {
+        const content = m.content ? `<div class="text">${escapeHtml(m.content).replace(/\n/g, '<br>')}</div>` : '';
+        const embeds = m.embeds.map(e => {
+            const t = e.title ? `<div class="et">${escapeHtml(e.title)}</div>` : '';
+            const d = e.desc ? `<div>${escapeHtml(e.desc).slice(0, 1500).replace(/\n/g, '<br>')}</div>` : '';
+            return (t || d) ? `<div class="embed">${t}${d}</div>` : '';
+        }).join('');
+        const atts = m.attachments.map(a =>
+            `<div class="att">📎 <a href="${escapeHtml(a.url)}">${escapeHtml(a.name)}</a></div>`).join('');
+        return `<div class="msg"><img class="av" src="${escapeHtml(m.avatar)}" alt=""><div class="body">` +
+            `<div class="meta"><span class="name">${escapeHtml(m.author)}</span>` +
+            `${m.bot ? '<span class="bot">BOT</span>' : ''}<span class="time">${fmt(m.ts)}</span></div>` +
+            `${content}${embeds}${atts}</div></div>`;
+    }).join('\n');
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${escapeHtml(ticketName)} — RazorReaper transcript</title><style>
+body{background:#1a1a1e;color:#dcddde;font:15px/1.5 'Segoe UI',system-ui,sans-serif;margin:0;padding:24px}
+.head{border-bottom:2px solid #9b1a1a;padding-bottom:14px;margin-bottom:20px}
+.head h1{margin:0;font-size:20px;color:#fff}.head .sub{color:#8e9297;font-size:13px;margin-top:4px}
+.msg{display:flex;gap:12px;padding:8px 0}
+.av{width:40px;height:40px;border-radius:50%;flex:none}
+.meta{display:flex;gap:8px;align-items:baseline}
+.name{font-weight:600;color:#fff}
+.bot{background:#9b1a1a;color:#fff;font-size:10px;font-weight:700;border-radius:3px;padding:1px 4px}
+.time{color:#72767d;font-size:12px}
+.text{white-space:pre-wrap;overflow-wrap:anywhere}
+.embed{border-left:4px solid #9b1a1a;background:#232327;border-radius:4px;padding:8px 12px;margin-top:4px;max-width:520px}
+.et{font-weight:600;color:#fff;margin-bottom:2px}
+.att a{color:#00b0f4}
+.foot{color:#72767d;font-size:12px;border-top:1px solid #2f3136;margin-top:20px;padding-top:10px}
+</style></head><body>
+<div class="head"><h1>🎟️ ${escapeHtml(ticketName)}</h1>
+<div class="sub">${escapeHtml(guildName)} • ${snaps.length} message(s) • generated ${fmt(Date.now())} • RazorReaper Support</div></div>
+${rows}
+<div class="foot">Attachment links are Discord CDN URLs and may expire after a while — save anything important. • rr.sellhub.cx</div>
+</body></html>`;
+}
+
+async function dmTicketTranscript(guild, ticketName, ownerId, snaps) {
+    if (!ownerId) {
+        console.log(`[transcript] No opener found for ${ticketName} — no DM sent.`);
+        return;
+    }
+    if (!snaps || !snaps.length) {
+        console.log(`[transcript] No messages captured for ${ticketName} — no DM sent.`);
+        return;
+    }
+    const user = await client.users.fetch(ownerId).catch(() => null);
+    if (!user || user.bot) return;
+    const html = renderTranscriptHtml(guild.name, ticketName, snaps);
+    const file = new AttachmentBuilder(Buffer.from(html, 'utf8'), { name: `${ticketName}-transcript.html` });
+    try {
+        await user.send({
+            embeds: [infoEmbed(
+                `Your ticket **#${ticketName}** in **${guild.name}** was closed.\n` +
+                'The full conversation is attached — open the file in your browser to read it.\n\n' +
+                'Need anything else? Just open a new ticket. 🎟️',
+                '📑 Ticket Transcript',
+            )],
+            files: [file],
+        });
+        console.log(`[transcript] DM'd ${ticketName} (${snaps.length} messages) to ${user.tag}.`);
+    } catch (e) {
+        console.log(`[transcript] Could not DM ${user.tag} for ${ticketName} (${e.message || e}) — DMs closed?`);
+    }
+}
+
+// Learn the opener the moment Ticket Tool creates the channel — by close time the
+// opener's overwrite may already be stripped, so early beats late here.
+client.on('channelCreate', (ch) => {
+    if (!TICKET_TRANSCRIPT_DM || !ch.guild) return;
+    if (VERIFY_GUILD_ID && ch.guild.id !== VERIFY_GUILD_ID) return;
+    if (!/^ticket-/i.test(ch.name || '')) return;
+    setTimeout(() => { resolveTicketOwner(ch).catch(() => {}); }, 3000);
+});
+
+// Live capture: every message in a ticket goes into a bounded snapshot cache, so a
+// transcript survives even when the channel is deleted without (or right after) a
+// close. Also resolves the opener early after bot restarts mid-ticket.
+client.on('messageCreate', (m) => {
+    if (!TICKET_TRANSCRIPT_DM || !m.guild) return;
+    if (VERIFY_GUILD_ID && m.guild.id !== VERIFY_GUILD_ID) return;
+    if (!/^(ticket|closed)-/i.test(m.channel?.name || '')) return;
+    let arr = ticketMessageCache.get(m.channelId);
+    if (!arr) { arr = []; ticketMessageCache.set(m.channelId, arr); }
+    arr.push(snapshotMessage(m));
+    if (arr.length > TICKET_CACHE_CAP) arr.shift();
+    if (arr.length === 1 && !ticketOwners.has(m.channelId)) {
+        resolveTicketOwner(m.channel).catch(() => {});
+    }
+});
+
+// A close (from Ticket Tool's button or /close) renames ticket-XXXX → closed-XXXX.
+// Owner and history are captured IMMEDIATELY — the settle delay only tops up trailing
+// messages (Ticket Tool's own "closed by …" post) and must never cost us the capture.
+client.on('channelUpdate', async (oldCh, newCh) => {
+    try {
+        if (!TICKET_TRANSCRIPT_DM || !newCh.guild) return;
+        if (VERIFY_GUILD_ID && newCh.guild.id !== VERIFY_GUILD_ID) return;
+        const oldName = oldCh?.name || '';
+        const newName = newCh.name || '';
+        // Reopened ticket → allow a fresh transcript on its next close.
+        if (/^closed-/i.test(oldName) && /^ticket-/i.test(newName)) {
+            transcribedTickets.delete(newCh.id);
+            return;
+        }
+        if (!/^ticket-/i.test(oldName) || !/^closed-/i.test(newName)) return;
+        if (transcribedTickets.has(newCh.id)) return;
+        transcribedTickets.add(newCh.id);
+        const ownerId = await resolveTicketOwner(newCh);
+        let snaps = null;
+        try { snaps = await fetchTicketSnapshots(newCh); } catch { /* keep null, try again below */ }
+        await new Promise(r => setTimeout(r, 4000));
+        try {
+            const settled = await fetchTicketSnapshots(newCh);
+            if (settled.length >= (snaps?.length || 0)) snaps = settled;
+        } catch { /* channel deleted during the wait — the first capture stands */ }
+        if (!snaps || !snaps.length) snaps = ticketMessageCache.get(newCh.id) || null;
+        await dmTicketTranscript(newCh.guild, oldName, ownerId, snaps);
+        ticketMessageCache.delete(newCh.id);
+    } catch (e) {
+        console.error('[transcript] channelUpdate handler failed:', e.message || e);
+    }
+});
+
+// Deleted without a close (Ticket Tool's Close & Delete, or a straight delete): the
+// channel is gone, so the transcript comes from the live capture cache.
+client.on('channelDelete', async (ch) => {
+    try {
+        if (!TICKET_TRANSCRIPT_DM || !ch.guild) return;
+        if (VERIFY_GUILD_ID && ch.guild.id !== VERIFY_GUILD_ID) return;
+        const name = ch.name || '';
+        if (!/^(ticket|closed)-/i.test(name)) return;
+        const snaps = ticketMessageCache.get(ch.id) || null;
+        ticketMessageCache.delete(ch.id);
+        if (transcribedTickets.has(ch.id)) { ticketOwners.delete(ch.id); return; }
+        transcribedTickets.add(ch.id);
+        let ownerId = ticketOwners.get(ch.id) || null;
+        if (!ownerId) ownerId = await resolveTicketOwner(ch); // overwrites are still cached
+        if (!snaps || !snaps.length) {
+            console.log(`[transcript] ${name} was deleted with no capturable history — no DM.`);
+            ticketOwners.delete(ch.id);
+            return;
+        }
+        await dmTicketTranscript(ch.guild, name, ownerId, snaps);
+        ticketOwners.delete(ch.id);
+    } catch (e) {
+        console.error('[transcript] channelDelete handler failed:', e.message || e);
+    }
+});
+
 function downloadFile(url, dest) {
     return new Promise((resolve, reject) => {
         const follow = (u) => {

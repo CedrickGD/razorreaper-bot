@@ -30,6 +30,7 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
    | `MEMBER_ROLE_ID` | *(role id)* | Optional — base `Member` role every human gets on join (hardcoded RazorReaper default). |
    | `VERIFY_GUILD_ID` | *(guild id)* | Optional — hardcoded RazorReaper-server default in `index.js`. |
    | `VERIFY_RECONCILE_MINUTES` | `30` | Optional — how often lapsed licenses lose the role. |
+   | `TICKET_TRANSCRIPT_DM` | `true` | Optional — set `false` to stop DM'ing HTML transcripts to ticket openers on close. |
    `PORT` is injected by Railway automatically — do **not** set it. The four `VERIFY_*` role vars
    are optional: without all of `VERIFY_API_BASE` + `VERIFY_SHARED_SECRET` + `VERIFIED_ROLE_ID`
    the `/verify` gate stays dormant and the bot runs exactly as before. Full setup:
