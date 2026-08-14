@@ -227,19 +227,30 @@ async function syncVerifyPanel() {
             console.log('[verify] Panel not found — posted a fresh one.');
             return;
         }
-        const desc = panel.embeds[0].description || '';
-        // Swap the whole role line for the live mention — markdown-agnostic, so it works no
-        // matter how the stale role name was formatted. Idempotent: once the line already
-        // carries the mention, the replacement is a no-op.
-        const updated = desc.replace(/You instantly get the [^\n]*? role\./, `You instantly get the ${verifiedRoleMention()} role.`);
-        if (updated !== desc) {
-            await panel.edit({ embeds: [EmbedBuilder.from(panel.embeds[0]).setDescription(updated)] });
+        // Swap the whole role line for the live mention wherever it lives (the panel keeps it
+        // in an embed FIELD, not the description) — markdown-agnostic, so it works no matter
+        // how the stale role name was formatted. Idempotent: once the line already carries the
+        // mention, the replacement is a no-op.
+        const stale = /You instantly get the [^\n]*? role\./;
+        const fresh = `You instantly get the ${verifiedRoleMention()} role.`;
+        const old = panel.embeds[0];
+        let changed = false;
+        const swap = (text) => {
+            const next = (text || '').replace(stale, fresh);
+            if (next !== (text || '')) changed = true;
+            return next;
+        };
+        const eb = EmbedBuilder.from(old);
+        const newDesc = swap(old.description);
+        const newFields = (old.fields || []).map(f => ({ name: f.name, value: swap(f.value), inline: f.inline }));
+        if (changed) {
+            eb.setDescription(newDesc || null).setFields(newFields);
+            await panel.edit({ embeds: [eb] });
             console.log('[verify] Panel updated to the current verified role.');
-        } else if (desc.includes(verifiedRoleMention())) {
+        } else if ([old.description, ...(old.fields || []).map(f => f.value)].join('\n').includes(verifiedRoleMention())) {
             console.log('[verify] Panel already current.');
         } else {
-            const i = desc.indexOf('instantly');
-            console.log('[verify] Panel found but role line not matched. Raw context:', JSON.stringify(desc.slice(Math.max(0, i - 40), i + 90)));
+            console.log('[verify] Panel found but role line not matched anywhere. Fields:', JSON.stringify((old.fields || []).map(f => f.value.slice(0, 120))));
         }
     } catch (e) {
         console.error('[verify] Panel sync failed:', e.message || e);
