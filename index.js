@@ -198,7 +198,7 @@ function buildVerifyPanelEmbed(guild) {
             '**How to verify**\n🔑 Run `/verify` right here and paste your license key:\n' +
             '```/verify key:XXXX-XXXX-XXXX-XXXX```\n' +
             'Your reply is private — nobody else sees your key.\n\n' +
-            `You instantly get the ${verifiedRoleMention()} role.`
+            `You instantly get the **${guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'Verified Customer'}** role.`
         )
         .addFields(
             { name: 'What you unlock', value: `✨ ${chanRef('releases')} — new builds first\n\n${chanRef('changelog')} — full patch notes\n\nverified-only areas`, inline: true },
@@ -220,6 +220,7 @@ async function syncVerifyPanel() {
     const ch = guild.channels.cache.get(VERIFY_CHANNEL_ID);
     if (!ch || !ch.isTextBased()) return;
     try {
+        const roleName = guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'Verified Customer';
         const msgs = await ch.messages.fetch({ limit: 100 });
         const panel = msgs.find(m => m.author.id === client.user.id && m.embeds[0]?.title === VERIFY_PANEL_TITLE);
         if (!panel) {
@@ -227,12 +228,11 @@ async function syncVerifyPanel() {
             console.log('[verify] Panel not found — posted a fresh one.');
             return;
         }
-        // Swap the whole role line for the live mention wherever it lives (the panel keeps it
-        // in an embed FIELD, not the description) — markdown-agnostic, so it works no matter
-        // how the stale role name was formatted. Idempotent: once the line already carries the
-        // mention, the replacement is a no-op.
+        // Swap the whole role line for the CURRENT role name in the panel's original bold
+        // style, wherever the line lives (the panel keeps it in an embed field). Markdown-
+        // agnostic and idempotent: once the line matches, later restarts edit nothing.
         const stale = /You instantly get the [^\n]*? role\./;
-        const fresh = `You instantly get the ${verifiedRoleMention()} role.`;
+        const fresh = `You instantly get the **${roleName}** role.`;
         const old = panel.embeds[0];
         let changed = false;
         const swap = (text) => {
@@ -243,15 +243,28 @@ async function syncVerifyPanel() {
         const eb = EmbedBuilder.from(old);
         const newDesc = swap(old.description);
         const newFields = (old.fields || []).map(f => ({ name: f.name, value: swap(f.value), inline: f.inline }));
-        if (changed) {
-            eb.setDescription(newDesc || null).setFields(newFields);
-            await panel.edit({ embeds: [eb] });
-            console.log('[verify] Panel updated to the current verified role.');
-        } else if ([old.description, ...(old.fields || []).map(f => f.value)].join('\n').includes(verifiedRoleMention())) {
+        if (!changed) {
             console.log('[verify] Panel already current.');
-        } else {
-            console.log('[verify] Panel found but role line not matched anywhere. Fields:', JSON.stringify((old.fields || []).map(f => f.value.slice(0, 120))));
+            return;
         }
+        eb.setDescription(newDesc || null).setFields(newFields);
+        const edit = { embeds: [eb] };
+        // The logo lives as a message attachment shown ONLY as the embed thumbnail. An edit
+        // must re-upload it and point the thumbnail at attachment://<name> — otherwise
+        // Discord orphans the file (it renders as a huge bare image above the embed) and the
+        // copied CDN link rots as its signature expires.
+        const logo = panel.attachments.find(a => (a.contentType || '').startsWith('image/'));
+        if (logo) {
+            const res = await fetch(logo.url);
+            if (res.ok) {
+                const buf = Buffer.from(await res.arrayBuffer());
+                eb.setThumbnail(`attachment://${logo.name}`);
+                edit.files = [new AttachmentBuilder(buf, { name: logo.name })];
+                edit.attachments = [];
+            }
+        }
+        await panel.edit(edit);
+        console.log(`[verify] Panel updated — role line now names "${roleName}".`);
     } catch (e) {
         console.error('[verify] Panel sync failed:', e.message || e);
     }
