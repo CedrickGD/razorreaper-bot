@@ -209,9 +209,9 @@ function buildVerifyPanelEmbed(guild) {
         )
         .addFields(
             { name: 'What you unlock', value: `✨ ${chanRef('releases')} — new builds first\n\n${chanRef('changelog')} — full patch notes\n\nverified-only areas`, inline: true },
-            { name: "Where's my key?", value: '🛒 In your purchase confirmation from [rr.sellhub.cx](https://rr.sellhub.cx).\n\nNo key yet? Grab RazorReaper there.', inline: true },
+            { name: "Where's my key?", value: '🛒 In your purchase confirmation from [razorreaper.app](https://razorreaper.app).\n\nNo key yet? Grab RazorReaper there.', inline: true },
         )
-        .setFooter({ text: 'RazorReaper • rr.sellhub.cx' });
+        .setFooter({ text: 'RazorReaper • razorreaper.app' });
     if (VERIFY_API_BASE) {
         e.addFields({ name: 'Prefer one click?', value: `🔗 Open [this link](${VERIFY_API_BASE}/api/discord/oauth-start?key=YOUR-KEY) (replace \`YOUR-KEY\`) to link Discord directly — no command needed.` });
     }
@@ -385,7 +385,7 @@ body{background:#1a1a1e;color:#dcddde;font:15px/1.5 'Segoe UI',system-ui,sans-se
 <div class="head"><h1>🎟️ ${escapeHtml(ticketName)}</h1>
 <div class="sub">${escapeHtml(guildName)} • ${snaps.length} message(s) • generated ${fmt(Date.now())} • RazorReaper Support</div></div>
 ${rows}
-<div class="foot">Attachment links are Discord CDN URLs and may expire after a while — save anything important. • rr.sellhub.cx</div>
+<div class="foot">Attachment links are Discord CDN URLs and may expire after a while — save anything important. • razorreaper.app</div>
 </body></html>`;
 }
 
@@ -673,7 +673,7 @@ client.once('ready', async () => {
     console.log(`[RazorReaper] Connected to ${client.guilds.cache.size} server(s):`);
     client.guilds.cache.forEach(g => console.log(`  - ${g.name} (${g.id})`));
     client.user.setPresence({
-          activities: [{ name: 'rr.sellhub.cx | /help', type: ActivityType.Watching }],
+          activities: [{ name: 'razorreaper.app | /help', type: ActivityType.Watching }],
           status: 'online',
     });
 
@@ -708,7 +708,7 @@ client.once('ready', async () => {
         const bannerBase64 = `data:image/png;base64,${bannerData.toString('base64')}`;
         await client.rest.patch('/users/@me', {
             body: {
-                bio: '⚡ Official RazorReaper bot — ticket management, server info & moderation. Visit rr.sellhub.cx',
+                bio: '⚡ Official RazorReaper bot — ticket management, server info & moderation. Visit razorreaper.app',
                 banner: bannerBase64,
             },
         });
@@ -761,7 +761,7 @@ client.on('guildMemberAdd', async (member) => {
               `Hey ${member}, welcome to the community!\n\n` +
               `📋 Read the rules in <#${member.guild.channels.cache.find(c=>c.name.includes('rules'))?.id || 'rules'}>\n` +
               `🎟️ Need help? Open a ticket in create-ticket\n` +
-              `🌐 Visit us at **rr.sellhub.cx**`
+              `🌐 Visit us at **razorreaper.app**`
             )
       .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
       .setFooter({ text: `Member #${member.guild.memberCount}`, iconURL: client.user.displayAvatarURL() })
@@ -901,7 +901,7 @@ client.on('interactionCreate', async (interaction) => {
                     'Welcome to the **RazorReaper** help menu!\n\n' +
                     'Use the dropdown below to browse command categories.\n\n' +
                     '**Slash Commands:** `/command`\n' +
-                    '**Website:** [rr.sellhub.cx](https://rr.sellhub.cx)'
+                    '**Website:** [razorreaper.app](https://razorreaper.app)'
                 )
                 .setThumbnail(client.user.displayAvatarURL({ dynamic: true, size: 256 }))
                 .addFields({ name: '📂 Categories', value:
@@ -910,7 +910,7 @@ client.on('interactionCreate', async (interaction) => {
                     '😎 **Emoji** — Steal emojis & stickers\n' +
                     (isS ? '🛡️ **Admin** — Channel management & tools\n🔨 **Staff** — Moderation & member management\n' : '')
                 })
-                .setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() })
+                .setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() })
                 .setTimestamp(),
             tickets: () => new EmbedBuilder()
                 .setColor(ACCENT).setTitle('🎟️ Ticket Commands')
@@ -920,7 +920,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/queue`', value: 'See how many tickets are open' },
                     { name: '`/ticketinfo`', value: 'Info about current ticket *(use inside a ticket channel)*' },
                     { name: '`/adduser` `user`', value: 'Add someone to current ticket *(use inside a ticket channel)*' },
-                ).setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
+                ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
             server: () => new EmbedBuilder()
                 .setColor(CYAN).setTitle('📊 Server Commands')
                 .setDescription('View server info and utilities.')
@@ -931,7 +931,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/rules`', value: 'Display the server rules' },
                     { name: '`/verify` `key`', value: 'Verify your RazorReaper license to unlock the community' },
                     { name: '`/ping`', value: 'Check bot latency and WebSocket ping' },
-                ).setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
+                ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
             emoji: () => new EmbedBuilder()
                 .setColor(0xffcc00).setTitle('😎 Emoji & Sticker Commands')
                 .setDescription('Steal emojis and stickers from other servers!')
@@ -947,7 +947,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/purge` `amount`', value: 'Quick bulk-delete messages' },
                     { name: '`/say` `message` `[channel]`', value: 'Send an announcement as the bot' },
                     { name: '`/close` `[reason]`', value: 'Close a ticket channel *(use inside a ticket channel)*' },
-                ).setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
+                ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
             staff: () => new EmbedBuilder()
                 .setColor(0xff4444).setTitle('🔨 Staff Commands')
                 .setDescription('Member moderation and management. Staff only.')
@@ -957,7 +957,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/warn` `user` `[reason]`', value: 'Issue a warning — member gets a DM' },
                     { name: '`/warns` `[user]`', value: 'View all warnings for a member' },
                     { name: '`/clearwarns` `user`', value: 'Clear all warnings for a member' },
-                ).setFooter({ text: 'RazorReaper Bot | rr.sellhub.cx', iconURL: client.user.displayAvatarURL() }),
+                ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
         };
 
         const options = [
@@ -1001,7 +1001,7 @@ client.on('interactionCreate', async (interaction) => {
                 { name: '🚀 Boost', value: boostTier, inline: true },
                 { name: '📅 Created', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:R>`, inline: true },
                 { name: '👑 Owner', value: `<@${guild.ownerId}>`, inline: true },
-                { name: '🌐 Website', value: '[rr.sellhub.cx](https://rr.sellhub.cx)', inline: true },
+                { name: '🌐 Website', value: '[razorreaper.app](https://razorreaper.app)', inline: true },
             ).setFooter({ text: 'RazorReaper', iconURL: client.user.displayAvatarURL() }).setTimestamp();
         return interaction.reply({ embeds: [e] });
     }
@@ -1036,7 +1036,7 @@ client.on('interactionCreate', async (interaction) => {
             { name: '📡 Ping', value: `${client.ws.ping}ms`, inline: true },
             { name: '🎟️ Open Tickets', value: `${openTickets}`, inline: true },
             { name: '👥 Members', value: `${guild.memberCount}`, inline: true },
-            { name: '🌐 Website', value: '[rr.sellhub.cx](https://rr.sellhub.cx)', inline: true },
+            { name: '🌐 Website', value: '[razorreaper.app](https://razorreaper.app)', inline: true },
         ).setTimestamp();
         return interaction.reply({ embeds: [e] });
     }
@@ -1049,7 +1049,7 @@ client.on('interactionCreate', async (interaction) => {
                 '**3.** No NSFW content.\n**4.** No doxxing or sharing personal info.\n' +
                 '**5.** Follow Discord\'s Terms of Service.\n**6.** Use channels for their intended purpose.\n' +
                 '**7.** All disputes go through the ticket system — do not DM staff.\n\n*Violations may result in a warn, kick or ban.*'
-            ).setFooter({ text: 'RazorReaper | rr.sellhub.cx' });
+            ).setFooter({ text: 'RazorReaper | razorreaper.app' });
         return interaction.reply({ embeds: [e] });
     }
 
