@@ -1,3 +1,10 @@
+// Redirect-shell mode (migration): with REDIRECT_TO set this process only forwards the old public
+// URL to the new host and never touches Discord. See redirect.js.
+if (process.env.REDIRECT_TO) {
+    require('./redirect');
+    return;
+}
+
 const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder, PermissionsBitField, Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, AttachmentBuilder, SlashCommandBuilder, REST, Routes, ChannelType, ApplicationCommandOptionType } = require('discord.js');
 const https = require('https');
 const fs = require('fs');
