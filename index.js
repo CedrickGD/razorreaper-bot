@@ -962,7 +962,13 @@ async function hydrateTicket(channel) {
     })));
     // Only a hand-off actually seen in the history moves this: "no evidence" is not "on", or a
     // billing ticket — created ai=off, with no Re-enable button anywhere — would start answering.
-    if (!live.ai) setTicketAi(channel.id, false);
+    // A FULL window is not evidence either: the hand-off may have scrolled out of the scan, and an
+    // AI that resumes talking over the human who took the ticket is the worse way to be wrong.
+    const wholeTicket = ordered.length < TICKET_SCAN;
+    if (!live.ai || !wholeTicket) setTicketAi(channel.id, false);
+    if (live.ai && !wholeTicket) {
+        console.log(`[support] ${channel.name}: over ${TICKET_SCAN} messages and no hand-off inside the scan — leaving the AI off.`);
+    }
     aiReplyCount.set(channel.id, Math.max(aiReplyCount.get(channel.id) || 0, live.replies));
     if (live.reportAsked) reportAsked.add(channel.id);
     if (live.waitingSince) reportWaiting.start(channel.id, live.waitingSince);
@@ -1593,12 +1599,14 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         // ── Delete ticket ─────────────────────────────────────────────────────
-        // No "close it first" check: this button exists on exactly one message, the bot's own
-        // "Ticket closed", so pressing it IS the proof that the ticket is closed. Asking the
-        // channel NAME instead is what refused the owner's delete while the rename sat in
-        // Discord's queue, with no way to close a ticket that was already closed.
+        // The button rides on the bot's own "Ticket closed" message, but that message STAYS on
+        // screen when a ticket is re-opened (channelUpdate below un-closes it), so the button
+        // alone is not proof. It is gated on the same evidence as everything above — the close
+        // this process recorded, or the name — and never on the name alone: asking the NAME is
+        // what refused the owner's delete while the rename sat in Discord's edit queue.
         if (interaction.customId === TICKET_BUTTONS.del) {
             if (!staff) return refuse('Only staff can delete a ticket channel.');
+            if (!isClosed) return refuse('This ticket is open again — close it before deleting it.');
             await interaction.reply({ embeds: [rrEmbed({ title: 'Deleting this channel', blocks: ['The transcript is already saved.'], colour: BRAND_BAD })] });
             return channel.delete(`RazorReaper: ticket deleted by ${interaction.user.tag}`)
                 .catch(e => console.error('[support] Ticket delete failed:', e.message || e));
