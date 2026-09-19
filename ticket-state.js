@@ -1,8 +1,13 @@
 // ── Ticket state: the pure part ───────────────────────────────────────────────
-// Everything the AI ticket flow has to remember lives in the ticket channel's TOPIC, because this
-// repo has no database and every timer/Map in index.js is lost on restart (see the warns object).
-// A topic survives restarts, redeploys and the container being rebuilt, and Discord hands it to us
-// for free on every channel object — so there is nothing to load, migrate or back up.
+// A ticket channel's TOPIC holds the facts that never change — who opened it, which category, and
+// (once) that it was closed. It is written exactly twice in a ticket's life, by channels.create
+// and by the close, because Discord allows a channel TWO edits per 10 minutes: a topic written on
+// a hot path (the AI stepping aside, a reply counter) sits in discord.js's queue for minutes and
+// drags everything awaiting it along, which is what made a close look half-done.
+//
+// Everything that DOES change while a ticket is open lives in index.js's Maps and is rebuilt after
+// a restart by rebuildTicketState() below, out of the bot's own control messages — the buttons it
+// posted are the record of what it asked for and whether that was answered.
 //
 // index.js logs into Discord at require time, so all of this lives here instead: unit-testable
 // without a gateway connection, the same split role-plan.js already uses.
@@ -17,9 +22,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * channel settings can see (and correct) it, and there is no JSON to break on a manual edit.
  *
  * `from` and `closed` are epoch SECONDS and are written only when they exist, so an ordinary open
- * ticket's topic is exactly what it always was. `from` is stamped when the AI is switched back on
- * and marks where the reply cap starts counting again; `closed` is stamped by the close path in
- * the same channel edit as the rename, and is what lets the auto-delete sweep survive a restart.
+ * ticket's topic is exactly what it always was. `from` is no longer written by anything — it is
+ * still parsed so topics from before the in-memory rebuild keep reading; `closed` is stamped by
+ * the close path in the same channel edit as the rename, and is what lets the auto-delete sweep
+ * survive a restart.
  * @param {{opener: string, cat: string, ai?: boolean, replies?: number, from?: number, closed?: number}} state
  */
 function buildTopic({ opener, cat, ai = true, replies = 0, from = 0, closed = 0 }) {
@@ -49,6 +55,64 @@ function parseTopic(topic) {
         from: num('from'),
         closed: num('closed'),
     };
+}
+
+// ── What a restart lost ───────────────────────────────────────────────────────
+/**
+ * The custom ids the rebuild below reads. index.js builds those rows, and a button is only ever
+ * ENABLED while the thing it asks for is still open: pressing it (or the member answering another
+ * way) disables it, so the row itself says whether the bot is still waiting for an answer.
+ */
+const TICKET_BUTTONS = {
+    aiOn: 'ticket:ai-on',           // rides on every "handed to a human" message
+    reportSent: 'ticket:report-sent',  // rides on the "Send your report" message
+    del: 'ticket:delete',           // rides on the one "Ticket closed" message, staff only
+};
+
+/**
+ * Rebuild what index.js's Maps knew about a ticket from the ticket's own recent history. The bot
+ * restarts on every deploy — one happened in the middle of the owner's first real ticket — and
+ * nothing here may cost a channel edit, so the control messages ARE the record:
+ *
+ *   • a live "Re-enable AI" button  ⇒ the AI stepped aside and nobody brought it back
+ *   • a disabled one               ⇒ it was brought back, and the reply cap started over there
+ *   • a live "I've sent it" button ⇒ the ticket is still waiting for the support report
+ *   • a "Ticket closed" message    ⇒ closed at that message's timestamp, whatever the name says
+ *   • the bot's PLAIN messages are its answers — every notice it posts is an embed
+ *
+ * @param {{bot: boolean, text: boolean, buttons?: {id: string, disabled?: boolean}[], ts: number}[]} messages
+ *        the channel's recent messages, OLDEST FIRST.
+ * @returns {{ai: boolean, replies: number, reportAsked: boolean, waitingSince: number, closedAt: number}}
+ */
+function rebuildTicketState(messages = []) {
+    const out = { ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0 };
+    for (const m of messages || []) {
+        if (!m || !m.bot) continue;
+        const button = (id) => (m.buttons || []).find(b => b && b.id === id);
+        if (m.text) {
+            // An answer. It also ends a report wait: the second pass is what the ticket waited for.
+            out.replies++;
+            out.waitingSince = 0;
+            continue;
+        }
+        const handoff = button(TICKET_BUTTONS.aiOn);
+        if (handoff) {
+            out.ai = Boolean(handoff.disabled);
+            // A re-enable resets the cap — the eight answers already standing there are the round
+            // that ended, not this one.
+            if (out.ai) out.replies = 0;
+        }
+        const report = button(TICKET_BUTTONS.reportSent);
+        if (report) {
+            out.reportAsked = true;
+            out.waitingSince = report.disabled ? 0 : m.ts;
+        }
+        if (button(TICKET_BUTTONS.del)) {
+            out.closedAt = m.ts;
+            out.ai = false;
+        }
+    }
+    return out;
 }
 
 /**
@@ -128,16 +192,21 @@ function slowmodeSeconds(value, fallback = 45) {
  * the name must be a CLOSED ticket, the topic must be one of ours, and it must carry a `closed=`
  * stamp — so a hand-made "closed-shop" channel, an open ticket and every ticket closed before
  * this feature existed are all invisible to the sweep.
+ * `closedAt(id)` is the bot's own bookkeeping for this process, consulted when the topic carries
+ * no stamp — the close writes the stamp and the rename in ONE edit that is no longer awaited, so
+ * a sweep running before that edit lands would otherwise forget the ticket it just closed.
  * @param {{id?: string, name: string, topic: string|null}[]} channels
- * @param {{now?: number, hours?: number}} opts  hours = 0 means never delete
+ * @param {{now?: number, hours?: number, closedAt?: (id: string) => number|undefined}} opts
+ *        hours = 0 means never delete
  */
-function deletableTickets(channels, { now = Date.now(), hours = 24 } = {}) {
+function deletableTickets(channels, { now = Date.now(), hours = 24, closedAt } = {}) {
     if (!(hours > 0)) return [];
     const cutoff = now - hours * 60 * 60 * 1000;
     return (channels || []).filter((ch) => {
         if (!/^closed-\d+$/i.test(ch?.name || '')) return false;
-        const state = parseTopic(ch.topic);
-        return Boolean(state?.closed) && state.closed * 1000 <= cutoff;
+        const stamped = parseTopic(ch.topic)?.closed;
+        const closed = stamped ? stamped * 1000 : (closedAt ? closedAt(ch.id) : 0);
+        return Boolean(closed) && closed <= cutoff;
     });
 }
 
@@ -152,7 +221,9 @@ function makeWaiting(ttlMs = 30 * 60 * 1000, now = () => Date.now()) {
     const waiting = new Map();
     return {
         /** @returns {number} the moment the report was asked for, used as the `since` filter. */
-        start(id, since = now()) { waiting.set(id, { since, until: now() + ttlMs }); return since; },
+        // The window is measured from `since`, so a wait rebuilt out of the ticket's history after
+        // a restart expires when it was always going to, not 30 minutes after the restart.
+        start(id, since = now()) { waiting.set(id, { since, until: since + ttlMs }); return since; },
         /** @returns {{since: number, until: number}|null} — expired waits clean themselves up. */
         active(id) {
             const w = waiting.get(id);
@@ -166,7 +237,7 @@ function makeWaiting(ttlMs = 30 * 60 * 1000, now = () => Date.now()) {
 }
 
 module.exports = {
-    buildTopic, parseTopic, nextTicketNumber, ticketChannelName, checkLimits,
+    buildTopic, parseTopic, rebuildTicketState, nextTicketNumber, ticketChannelName, checkLimits,
     slowmodeSeconds, deletableTickets, makeWaiting,
-    TOPIC_TAG, SLOWMODE_MAX,
+    TOPIC_TAG, SLOWMODE_MAX, TICKET_BUTTONS,
 };

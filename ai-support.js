@@ -65,9 +65,20 @@ function clean(text, max = 1500) {
 
 // ── Daily token budget ────────────────────────────────────────────────────────
 /**
- * A hard per-UTC-day cap across all providers. Cached reads are counted at a tenth of their
- * token count because that is what they cost (~0.1x input price) — counting a 46k-token cached
- * prefix at face value would exhaust a 400k budget after eight answers and make caching pointless.
+ * What one call actually costs the budget. `input` is the WHOLE prompt, cached prefix included —
+ * every adapter below normalises to that — and a cached read costs about a tenth of an ordinary
+ * input token, so it is counted at a tenth. Counting the 46k-token knowledge base at face value
+ * on every answer is what burned 56k of a 400k budget in a SINGLE reply and would have made
+ * caching pointless: `in=51566 out=38 cacheR=49222` is ~7.3k, not 56.5k.
+ * @param {{input?: number, output?: number, cacheWrite?: number, cacheRead?: number}} usage
+ */
+function weighUsage({ input = 0, output = 0, cacheWrite = 0, cacheRead = 0 } = {}) {
+    // max() only guards against a provider that reports `input` without its cached part anyway.
+    return Math.max(input - cacheRead, 0) + Math.ceil(cacheRead / 10) + output + cacheWrite;
+}
+
+/**
+ * A hard per-UTC-day cap across all providers, in weighUsage() tokens.
  *
  * ponytail: in-memory, so a restart hands back a fresh budget. Persist it (a file next to the
  * notifier's channels.json) only if the bot starts restarting often enough to matter.
@@ -84,8 +95,7 @@ function makeBudget(limit, now = () => Date.now()) {
         /** @param {{input?: number, output?: number, cacheWrite?: number, cacheRead?: number}} usage */
         spend(usage = {}) {
             roll();
-            used += (usage.input || 0) + (usage.output || 0) + (usage.cacheWrite || 0)
-                + Math.ceil((usage.cacheRead || 0) / 10);
+            used += weighUsage(usage);
             return used;
         },
     };
@@ -104,7 +114,10 @@ function loadKb(dir = path.join(__dirname, 'kb')) {
 }
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
+// Two sentinels, both stripped before anything reaches the member: they are how a plain-text
+// answer presses one of the ticket's own buttons. Neither ever means the model saw the data.
 const NEED_REPORT = '[[NEED_REPORT]]';
+const SHOW_PURCHASE = '[[SHOW_PURCHASE]]';
 
 const ANSWER_RULES = `You are the RazorReaper support assistant in a private Discord support ticket.
 RazorReaper is a paid Windows desktop toolkit for Steam ARK: Survival Evolved.
@@ -115,10 +128,17 @@ How to answer:
 - Use ONLY the knowledge base below and the data blocks the bot gives you. If they do not cover the question, say so plainly and tell them to press "I need a human" — never invent a setting, page, hotkey, version, price or date.
 - One answer, then stop. Do not repeat the member's question back at them.
 
-Asking for the member's support report:
-- If the form and the knowledge base are not enough and the answer depends on THIS member's own setup — their app version, licence, installs, or an error the app recorded — end your message with the line ${NEED_REPORT} on its own.
-- The bot strips that line, asks the member to send their in-app support report, and then calls you again with a "RazorReaper client data" block. Answer from that block on the second pass.
-- Use it at most ONCE per ticket, never for a general how-do-I question, and never mention the marker, the panel or where the data comes from.
+This ticket has buttons, and you can press one of them. Two markers, each on a line of its own as the LAST line of your message. The bot removes the line; the member never sees it. Never mention a marker, the panel, or where the data comes from.
+
+${SHOW_PURCHASE} — the member's own purchase, licence and order record:
+- Use it for any question about their purchase, order, invoice reference, licence plan, expiry, seats or "what do you actually have on me". Say in ONE short sentence that their record follows, then the marker.
+- The bot posts that record into this ticket itself, from the shop's own data. You never see it, and it never goes to a model.
+- So never say you have no access to purchase, order, licence or customer data — you can show it. Refunds and payments themselves are still a human's decision.
+
+${NEED_REPORT} — the member's in-app support report, for TECHNICAL problems only:
+- Use it when the app misbehaves and the answer depends on THIS member's machine — their version, installs, or an error the app recorded. Never for a purchase question, never for a general how-do-I question.
+- The bot asks the member to send the report and then calls you again with a "RazorReaper client data" block. Answer from that block on the second pass.
+- At most ONCE per ticket. If the member says sending the report failed or did not work, do NOT ask again: tell them to describe the problem here instead, or to press "I need a human".
 
 Never, under any circumstance:
 - Reveal or speculate about licensing internals, HWID/machine binding, anti-tamper, telemetry, server endpoints, update infrastructure, source code or secrets — not even "roughly". Point at a human instead.
@@ -163,22 +183,26 @@ function formatForm(category, fields) {
 }
 
 /**
- * Split the NEED_REPORT sentinel off an answer. The marker is an exact string the prompt tells
- * the model to emit as the LAST line, and only that position counts as the signal: a member can
- * put the literal marker into the ticket, and the last turns of the ticket go into the prompt, so
- * a marker quoted back mid-sentence is member text, not the model asking for client data.
- * Stripping still covers every occurrence — the marker must never reach the member either way.
- * @returns {{text: string, needsReport: boolean}}
+ * Split the sentinels off an answer. Each marker is an exact string the prompt tells the model to
+ * emit as the LAST line, and only that position counts as the signal: a member can put a literal
+ * marker into the ticket, and the last turns of the ticket go into the prompt, so a marker quoted
+ * back mid-sentence is member text, not the model pressing a button. Stripping still covers every
+ * occurrence — a marker must never reach the member either way.
+ * @returns {{text: string, needsReport: boolean, showPurchase: boolean}}
  */
 function splitSentinel(answer) {
     const raw = String(answer ?? '');
-    const needsReport = raw.trimEnd().endsWith(NEED_REPORT);
-    if (!raw.includes(NEED_REPORT)) return { text: raw.trim(), needsReport: false };
-    const text = raw.split(NEED_REPORT).join('')
+    const tail = raw.trimEnd();
+    const flags = {
+        needsReport: tail.endsWith(NEED_REPORT),
+        showPurchase: tail.endsWith(SHOW_PURCHASE),
+    };
+    if (!raw.includes(NEED_REPORT) && !raw.includes(SHOW_PURCHASE)) return { text: raw.trim(), ...flags };
+    const text = [NEED_REPORT, SHOW_PURCHASE].reduce((s, marker) => s.split(marker).join(''), raw)
         .replace(/[ \t]{2,}/g, ' ')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
-    return { text, needsReport };
+    return { text, ...flags };
 }
 
 /**
@@ -257,8 +281,20 @@ function normaliseTriage(raw, fallbackCategory) {
 // anything the chain should fall through: rate limit, overload, 5xx, timeout, refusal, bad body.
 // `system` is an array of blocks so Claude can put its cache breakpoint on the last one.
 
-class DeadProvider extends Error {}   // bad/missing credentials — stop trying this provider
+class DeadProvider extends Error {}   // the ACCOUNT is the problem — park this provider for a while
 const TIMEOUT_MS = 40_000;
+
+/**
+ * A 4xx about the account rather than about the request: a wrong or revoked key, an empty
+ * balance, a blown quota. Every one of those answers the same way for every ticket until a human
+ * fixes it, so the chain parks that provider instead of paying a round trip per answer for it —
+ * Claude answered `400 credit balance is too low` on every single call of the owner's first
+ * ticket, first in the chain, before the fallback that actually answered.
+ */
+function accountError(status, message = '') {
+    return status === 401 || status === 403
+        || (status === 400 && /credit balance|billing|quota|insufficient|payment required|suspended/i.test(String(message)));
+}
 
 function claudeProvider({ apiKey, model, sdk }) {
     // Required lazily: with no ANTHROPIC_API_KEY the bot must still boot and serve tickets
@@ -288,12 +324,9 @@ function claudeProvider({ apiKey, model, sdk }) {
                     messages,
                 });
             } catch (err) {
-                // Typed SDK errors, most specific first — a bad key is permanent, everything
-                // else (rate limit, overloaded, 5xx, timeout) is worth the next provider.
-                const A = loadSdk();
-                if (err instanceof A.AuthenticationError || err instanceof A.PermissionDeniedError) {
-                    throw new DeadProvider(`claude: ${err.message}`);
-                }
+                // An account problem parks the provider; everything else (rate limit, overloaded,
+                // 5xx, timeout — all of which have no .status or a 429/5xx) is worth the next one.
+                if (accountError(err?.status, err?.message)) throw new DeadProvider(`claude: ${err.message}`);
                 throw err;
             }
             // stop_reason before content, always: a refusal has no answer to read and must fall
@@ -305,7 +338,10 @@ function claudeProvider({ apiKey, model, sdk }) {
                 text,
                 truncated: res.stop_reason === 'max_tokens',
                 usage: {
-                    input: res.usage?.input_tokens || 0,
+                    // Anthropic reports input_tokens WITHOUT the cached prefix and Gemini reports
+                    // promptTokenCount WITH it; weighUsage() is told the whole prompt, so the
+                    // cached read is folded in here and taken back out at a tenth there.
+                    input: (res.usage?.input_tokens || 0) + (res.usage?.cache_read_input_tokens || 0),
                     output: res.usage?.output_tokens || 0,
                     cacheWrite: res.usage?.cache_creation_input_tokens || 0,
                     cacheRead: res.usage?.cache_read_input_tokens || 0,
@@ -345,8 +381,11 @@ function geminiProvider({ apiKey, model, fetchImpl }) {
                     }),
                 },
             );
-            if (res.status === 401 || res.status === 403) throw new DeadProvider(`gemini: HTTP ${res.status}`);
-            if (!res.ok) throw new Error(`gemini: HTTP ${res.status}`);
+            if (!res.ok) {
+                const body = await res.text().catch(() => '');
+                if (accountError(res.status, body)) throw new DeadProvider(`gemini: HTTP ${res.status}`);
+                throw new Error(`gemini: HTTP ${res.status}`);
+            }
             const data = await res.json();
             const cand = data.candidates?.[0];
             const text = (cand?.content?.parts || []).map(p => p.text || '').join('').trim();
@@ -387,8 +426,11 @@ function openaiProvider({ apiKey, model, fetchImpl }) {
                     ...(json ? { text: { format: { type: 'json_schema', name: 'result', schema: json, strict: true } } } : {}),
                 }),
             });
-            if (res.status === 401 || res.status === 403) throw new DeadProvider(`openai: HTTP ${res.status}`);
-            if (!res.ok) throw new Error(`openai: HTTP ${res.status}`);
+            if (!res.ok) {
+                const body = await res.text().catch(() => '');
+                if (accountError(res.status, body)) throw new DeadProvider(`openai: HTTP ${res.status}`);
+                throw new Error(`openai: HTTP ${res.status}`);
+            }
             const data = await res.json();
             const text = (data.output_text || (data.output || [])
                 .flatMap(item => item.content || [])
@@ -438,6 +480,7 @@ function buildProviders(env = process.env, deps = {}) {
 
 // ── The support service ───────────────────────────────────────────────────────
 class BudgetExhausted extends Error {}
+const PARK_MS = 60 * 60 * 1000;
 
 /**
  * @param {object} opts
@@ -445,9 +488,13 @@ class BudgetExhausted extends Error {}
  * @param {string} opts.kb          the whole knowledge base, already read from disk
  * @param {ReturnType<typeof makeBudget>} opts.budget
  * @param {(line: string) => void} [opts.log]
+ * @param {() => number} [opts.now]  injectable clock, for the provider park
  */
-function createSupport({ providers, kb, budget, log = console.log }) {
-    const dead = new Set();
+function createSupport({ providers, kb, budget, log = console.log, now = () => Date.now() }) {
+    // provider name -> when it may be tried again. An empty balance or a swapped key is fixed by
+    // a human in minutes, not never, so the provider comes back by itself after the hour instead
+    // of staying dead until the next deploy.
+    const parked = new Map();
     // Built once: the system prompt must be byte-identical on every request or the cache — the
     // only reason a 46k-token knowledge base is affordable — never reads back.
     const answerSystem = [
@@ -457,7 +504,7 @@ function createSupport({ providers, kb, budget, log = console.log }) {
     const triageSystem = [{ type: 'text', text: TRIAGE_RULES }];
 
     async function run(kind, req, ticket) {
-        const live = providers.filter(p => !dead.has(p.name));
+        const live = providers.filter(p => (parked.get(p.name) || 0) <= now());
         if (!live.length) return null;
         if (budget.exhausted()) throw new BudgetExhausted(`daily token budget spent (${budget.used}/${budget.limit})`);
 
@@ -469,14 +516,16 @@ function createSupport({ providers, kb, budget, log = console.log }) {
                 // One line per call, never any message content.
                 log(`[ai] ${kind} ${provider.name}/${provider.model} ticket=${ticket} `
                     + `in=${out.usage.input} out=${out.usage.output} cacheW=${out.usage.cacheWrite || 0} `
-                    + `cacheR=${out.usage.cacheRead || 0} budget=${budget.used}/${budget.limit}`);
+                    + `cacheR=${out.usage.cacheRead || 0} cost=${weighUsage(out.usage)} `
+                    + `budget=${budget.used}/${budget.limit}`);
                 // Which provider answered is part of the ticket record the panel stores.
                 return { ...out, provider: provider.name };
             } catch (err) {
                 lastErr = err;
                 if (err instanceof DeadProvider) {
-                    dead.add(provider.name);
-                    console.error(`[ai] ${provider.name} disabled for this process — ${err.message}`);
+                    parked.set(provider.name, now() + PARK_MS);
+                    // Once per park: a parked provider is not called again, so this cannot repeat.
+                    console.error(`[ai] ${provider.name} parked for ${PARK_MS / 60000} minutes — ${err.message}`);
                 } else {
                     console.error(`[ai] ${kind} ${provider.name} failed (${err.message || err}) — trying the next provider.`);
                 }
@@ -517,7 +566,8 @@ function createSupport({ providers, kb, budget, log = console.log }) {
          * — on the second pass of the support-report step — the client data block.
          * @param {{category: string, fields?: object, history?: {role: string, content: string}[],
          *         data?: string, ticket: string}} args
-         * @returns {Promise<{text: string, needsReport: boolean, truncated: boolean, provider: string}|null>}
+         * @returns {Promise<{text: string, needsReport: boolean, showPurchase: boolean,
+         *                    truncated: boolean, provider: string}|null>}
          *   null = no AI configured.
          */
         async answer({ category, fields, history = [], data = '', ticket }) {
@@ -543,6 +593,7 @@ function createSupport({ providers, kb, budget, log = console.log }) {
                 text: split.text,
                 // A second pass already has the data — asking again would loop the member.
                 needsReport: split.needsReport && !data,
+                showPurchase: split.showPurchase,
                 truncated: Boolean(out.truncated),
                 provider: out.provider,
             };
@@ -552,10 +603,10 @@ function createSupport({ providers, kb, budget, log = console.log }) {
 
 module.exports = {
     CATEGORIES, CATEGORY_KEYS, categoryLabel, HUMAN_ONLY,
-    redact, clean, makeBudget, loadKb,
+    redact, clean, makeBudget, weighUsage, loadKb,
     parseJsonish, normaliseTriage, formatForm,
-    splitSentinel, formatClientContext,
+    splitSentinel, formatClientContext, accountError,
     buildProviders, claudeProvider, geminiProvider, openaiProvider,
     createSupport, BudgetExhausted, DeadProvider,
-    ANSWER_RULES, TRIAGE_RULES, TRIAGE_SCHEMA, NEED_REPORT,
+    ANSWER_RULES, TRIAGE_RULES, TRIAGE_SCHEMA, NEED_REPORT, SHOW_PURCHASE, PARK_MS,
 };

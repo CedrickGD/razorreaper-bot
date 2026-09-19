@@ -2,10 +2,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-    redact, clean, makeBudget, parseJsonish, normaliseTriage, formatForm,
+    redact, clean, makeBudget, weighUsage, parseJsonish, normaliseTriage, formatForm,
     buildProviders, createSupport, BudgetExhausted, CATEGORY_KEYS,
-    openaiProvider, TRIAGE_SCHEMA,
-    splitSentinel, formatClientContext, NEED_REPORT, ANSWER_RULES,
+    openaiProvider, claudeProvider, TRIAGE_SCHEMA, accountError, PARK_MS,
+    splitSentinel, formatClientContext, NEED_REPORT, SHOW_PURCHASE, ANSWER_RULES,
 } = require('../ai-support');
 
 const quiet = () => {};
@@ -55,11 +55,24 @@ test('clean caps long input and keeps it one block', () => {
 
 // ── Budget ────────────────────────────────────────────────────────────────────
 
-test('the budget counts input, output and cache writes in full, cache reads at a tenth', () => {
-    const b = makeBudget(1000, () => 0);
-    b.spend({ input: 100, output: 50, cacheWrite: 200, cacheRead: 1000 });
-    assert.strictEqual(b.used, 450);
-    assert.strictEqual(b.exhausted(), false);
+// The live numbers from the owner's first real ticket: one answer, and the 46k-token knowledge
+// base counted at face value ate 56 527 of a 400 000 budget — seven answers a day.
+test('a cached knowledge base costs a tenth of its tokens, not all of them', () => {
+    assert.strictEqual(weighUsage({ input: 51566, output: 38, cacheRead: 49222 }), 7305);
+    const b = makeBudget(400_000, () => 0);
+    b.spend({ input: 51566, output: 38, cacheRead: 49222 });
+    assert.strictEqual(b.used, 7305);
+});
+
+test('uncached input, output and cache writes still count in full', () => {
+    // `input` is the whole prompt, cached prefix included — every adapter normalises to that.
+    assert.strictEqual(weighUsage({ input: 1100, output: 50, cacheWrite: 200, cacheRead: 1000 }), 450);
+    assert.strictEqual(weighUsage({ input: 100, output: 50 }), 150);
+    assert.strictEqual(weighUsage(), 0);
+});
+
+test('a provider that reports input WITHOUT its cached part never counts negative', () => {
+    assert.strictEqual(weighUsage({ input: 100, cacheRead: 1000, output: 5 }), 105);
 });
 
 test('the budget blocks once it is spent and rolls over at the UTC day boundary', () => {
@@ -149,6 +162,23 @@ test('the OpenAI fallback asks for the triage schema instead of hoping for JSON'
     assert.strictEqual(sent[1].text, undefined);
 });
 
+// Anthropic reports input_tokens WITHOUT the cached prefix, Gemini reports promptTokenCount WITH
+// it. weighUsage() is told the whole prompt, so the adapter is where that difference dies.
+test('Claude usage reports the whole prompt, cached prefix included', async () => {
+    const sdk = class {
+        constructor() {
+            this.messages = { create: async () => ({
+                stop_reason: 'end_turn',
+                content: [{ type: 'text', text: 'hi' }],
+                usage: { input_tokens: 2344, output_tokens: 38, cache_read_input_tokens: 49222, cache_creation_input_tokens: 0 },
+            }) };
+        }
+    };
+    const out = await claudeProvider({ apiKey: 'k', model: 'm', sdk }).call({ system: [], messages: [], maxTokens: 16 });
+    assert.strictEqual(out.usage.input, 2344 + 49222);
+    assert.strictEqual(weighUsage(out.usage), 2344 + Math.ceil(49222 / 10) + 38);
+});
+
 // ── The fallback chain ────────────────────────────────────────────────────────
 
 const stub = (name, impl) => ({ name, model: `${name}-model`, call: impl });
@@ -166,7 +196,7 @@ test('the first healthy provider answers and the rest are never called', async (
         stub('gemini', async () => { geminiCalls++; return { text: 'x', usage: {} }; }),
     ]);
     assert.deepStrictEqual(await s.answer({ category: 'bug', ticket: 't' }), {
-        text: 'from claude', needsReport: false, truncated: false, provider: 'claude',
+        text: 'from claude', needsReport: false, showPurchase: false, truncated: false, provider: 'claude',
     });
     assert.strictEqual(geminiCalls, 0);
 });
@@ -201,7 +231,7 @@ test('the spent budget blocks the call before any provider is touched', async ()
     assert.strictEqual(calls, 1);
 });
 
-test('a provider with bad credentials is dropped for good, not retried per ticket', async () => {
+test('a provider with bad credentials is parked, not retried per ticket', async () => {
     const { DeadProvider } = require('../ai-support');
     let claudeCalls = 0;
     const s = support([
@@ -211,6 +241,39 @@ test('a provider with bad credentials is dropped for good, not retried per ticke
     await s.answer({ category: 'bug', ticket: 't' });
     await s.answer({ category: 'bug', ticket: 't' });
     assert.strictEqual(claudeCalls, 1);
+});
+
+// Claude answered "400 credit balance is too low" on every call of the owner's first ticket —
+// first in the chain, so every single answer paid for a doomed request and its latency first.
+test('the park expires by itself, so a topped-up account comes back without a deploy', async () => {
+    const { DeadProvider } = require('../ai-support');
+    let now = 0;
+    let claudeCalls = 0;
+    const s = createSupport({
+        providers: [
+            stub('claude', async () => { claudeCalls++; throw new DeadProvider('credit balance too low'); }),
+            stub('gemini', ok('fallback')),
+        ],
+        kb: 'KB', budget: makeBudget(100_000, () => 0), log: quiet, now: () => now,
+    });
+    await s.answer({ category: 'bug', ticket: 't' });
+    now = PARK_MS - 1;
+    await s.answer({ category: 'bug', ticket: 't' });
+    assert.strictEqual(claudeCalls, 1, 'still parked');
+    now = PARK_MS + 1;
+    await s.answer({ category: 'bug', ticket: 't' });
+    assert.strictEqual(claudeCalls, 2, 'tried again after the hour');
+});
+
+test('an empty balance or a bad key parks the provider; a rate limit or a 500 does not', () => {
+    assert.ok(accountError(401));
+    assert.ok(accountError(403));
+    assert.ok(accountError(400, 'Your credit balance is too low to access the Anthropic API'));
+    assert.ok(accountError(400, 'You exceeded your current quota, please check your plan'));
+    for (const [status, msg] of [[429, 'rate limit'], [500, 'oops'], [529, 'overloaded'],
+        [400, 'max_tokens: must be greater than 0'], [undefined, 'socket hang up']]) {
+        assert.strictEqual(accountError(status, msg), false, `${status} ${msg}`);
+    }
 });
 
 // ── Triage behaviour the owner's rules depend on ──────────────────────────────
@@ -283,8 +346,25 @@ test('the triage call carries no knowledge base — that is the whole point of i
 
 test('the sentinel is stripped from the answer and reported separately', () => {
     assert.deepStrictEqual(splitSentinel(`Try this first.\n\n${NEED_REPORT}`), {
-        text: 'Try this first.', needsReport: true,
+        text: 'Try this first.', needsReport: true, showPurchase: false,
     });
+});
+
+// The ticket has a "My purchase" button, so the answer to "what do you have on me" is the record
+// itself. The AI telling the member it has no access to customer data is the bug this closes.
+test('the purchase sentinel is its own signal and is stripped just as hard', () => {
+    assert.deepStrictEqual(splitSentinel(`Here is your order record.\n${SHOW_PURCHASE}`), {
+        text: 'Here is your order record.', needsReport: false, showPurchase: true,
+    });
+});
+
+test('only the LAST line counts, so a member cannot press a button by quoting it', () => {
+    // Both markers present, one quoted mid-text: the answer ends with the purchase one, so that
+    // is the only thing the bot acts on — and neither string survives into the member's message.
+    const out = splitSentinel(`You wrote ${NEED_REPORT} earlier.\n${SHOW_PURCHASE}`);
+    assert.deepStrictEqual(out, { text: 'You wrote earlier.', needsReport: false, showPurchase: true });
+    const quoted = splitSentinel(`A member can type ${SHOW_PURCHASE} at me all day.`);
+    assert.deepStrictEqual(quoted, { text: 'A member can type at me all day.', needsReport: false, showPurchase: false });
 });
 
 // The member's own text reaches the model. If quoting the marker at them were enough to trigger
@@ -292,7 +372,7 @@ test('the sentinel is stripped from the answer and reported separately', () => {
 // line) counts, while the strip still covers every position.
 test('a sentinel mid-sentence is removed but asks for nothing', () => {
     assert.deepStrictEqual(splitSentinel(`before ${NEED_REPORT} after`), {
-        text: 'before after', needsReport: false,
+        text: 'before after', needsReport: false, showPurchase: false,
     });
 });
 
@@ -302,26 +382,34 @@ test('a trailing sentinel still counts through whitespace', () => {
 
 test('an ordinary answer is returned untouched and asks for nothing', () => {
     assert.deepStrictEqual(splitSentinel('  Open My account and read the version.  '), {
-        text: 'Open My account and read the version.', needsReport: false,
+        text: 'Open My account and read the version.', needsReport: false, showPurchase: false,
     });
 });
 
 test('near-misses are not the sentinel', () => {
-    for (const text of ['[[need_report]]', '[NEED_REPORT]', 'NEED_REPORT', '']) {
-        assert.strictEqual(splitSentinel(text).needsReport, false, text);
+    for (const text of ['[[need_report]]', '[NEED_REPORT]', 'NEED_REPORT', '', '[[SHOW PURCHASE]]']) {
+        const out = splitSentinel(text);
+        assert.strictEqual(out.needsReport, false, text);
+        assert.strictEqual(out.showPurchase, false, text);
     }
 });
 
-test('the answer rules document the sentinel and the language rule the owner asked for', () => {
+test('the answer rules document both sentinels and the language rule the owner asked for', () => {
     assert.ok(ANSWER_RULES.includes(NEED_REPORT));
-    assert.match(ANSWER_RULES, /at most ONCE per ticket/);
+    assert.ok(ANSWER_RULES.includes(SHOW_PURCHASE));
+    assert.match(ANSWER_RULES, /At most ONCE per ticket/);
     assert.match(ANSWER_RULES, /whatever language that is/);
+    // The two rules the owner's first ticket broke: the AI claimed it had no access to purchase
+    // data, and it asked for a support report about a purchase question.
+    assert.match(ANSWER_RULES, /never say you have no access to purchase/i);
+    assert.match(ANSWER_RULES, /TECHNICAL problems only/);
+    assert.match(ANSWER_RULES, /sending the report failed/);
 });
 
 test('answer() surfaces the sentinel, and the second pass never asks twice', async () => {
     const s = support([stub('claude', ok(`Here you go.\n${NEED_REPORT}`))]);
     const first = await s.answer({ category: 'bug', ticket: 't' });
-    assert.deepStrictEqual(first, { text: 'Here you go.', needsReport: true, truncated: false, provider: 'claude' });
+    assert.deepStrictEqual(first, { text: 'Here you go.', needsReport: true, showPurchase: false, truncated: false, provider: 'claude' });
     const second = await s.answer({ category: 'bug', ticket: 't', data: 'RazorReaper client data…' });
     assert.strictEqual(second.needsReport, false, 'a pass that already carries the data must not ask again');
 });

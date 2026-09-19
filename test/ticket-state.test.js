@@ -1,8 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-    buildTopic, parseTopic, nextTicketNumber, ticketChannelName, checkLimits,
-    slowmodeSeconds, deletableTickets, makeWaiting, SLOWMODE_MAX,
+    buildTopic, parseTopic, rebuildTicketState, nextTicketNumber, ticketChannelName, checkLimits,
+    slowmodeSeconds, deletableTickets, makeWaiting, SLOWMODE_MAX, TICKET_BUTTONS,
 } = require('../ticket-state');
 
 const HOUR = 60 * 60 * 1000;
@@ -46,6 +46,82 @@ test('a hand-mangled replies counter falls back to 0 instead of NaN', () => {
 test('an unknown key in the topic is ignored, the rest still reads', () => {
     const state = parseTopic('rr-ticket opener=7 cat=bug ai=off replies=2 claimed=9');
     assert.deepStrictEqual(state, { opener: '7', cat: 'bug', ai: false, replies: 2, from: 0, closed: 0 });
+});
+
+// ── what a restart lost ───────────────────────────────────────────────────────
+// A deploy restarted the bot in the middle of the owner's first real ticket. Nothing that changes
+// while a ticket is open may cost a channel edit any more, so it is read back out of the bot's
+// own control messages — and a button is only live while what it asks for is still open.
+
+let clock = NOW;
+const botSays = (buttons = [], ts = (clock += 1000)) => ({ bot: true, text: false, buttons, ts });
+const botAnswer = (ts = (clock += 1000)) => ({ bot: true, text: true, buttons: [], ts });
+const member = (ts = (clock += 1000)) => ({ bot: false, text: true, buttons: [], ts });
+const btn = (id, disabled = false) => ({ id, disabled });
+
+test('a ticket nobody interrupted is AI-on, with its answers counted', () => {
+    assert.deepStrictEqual(rebuildTicketState([botSays(), member(), botAnswer(), member(), botAnswer()]), {
+        ai: true, replies: 2, reportAsked: false, waitingSince: 0, closedAt: 0,
+    });
+});
+
+test('nothing at all is a fresh ticket, not a broken one', () => {
+    assert.deepStrictEqual(rebuildTicketState(), {
+        ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0,
+    });
+});
+
+test('a live "Re-enable AI" button means the AI stepped aside', () => {
+    const state = rebuildTicketState([botAnswer(), botSays([btn(TICKET_BUTTONS.aiOn)])]);
+    assert.strictEqual(state.ai, false);
+});
+
+test('a greyed-out one means it was brought back, and the reply cap started over', () => {
+    const state = rebuildTicketState([
+        ...Array.from({ length: 8 }, () => botAnswer()),
+        botSays([btn(TICKET_BUTTONS.aiOn, true)]),   // pressed: the hand-off is spent
+        member(), botAnswer(),
+    ]);
+    assert.strictEqual(state.ai, true);
+    assert.strictEqual(state.replies, 1, 'the eight answers before the re-enable are a closed round');
+});
+
+test('the newest hand-off wins, however often the AI went off and on', () => {
+    const state = rebuildTicketState([
+        botSays([btn(TICKET_BUTTONS.aiOn, true)]), botAnswer(),
+        botSays([btn(TICKET_BUTTONS.aiOn)]),
+    ]);
+    assert.strictEqual(state.ai, false);
+});
+
+test('a live "I\'ve sent it" button means the ticket is still waiting for the report', () => {
+    const asked = botSays([btn(TICKET_BUTTONS.reportSent)]);
+    const state = rebuildTicketState([botAnswer(), asked]);
+    assert.deepStrictEqual([state.reportAsked, state.waitingSince], [true, asked.ts]);
+});
+
+test('an answered report prompt is remembered as asked, but waits for nothing', () => {
+    const skipped = rebuildTicketState([botSays([btn(TICKET_BUTTONS.reportSent, true)])]);
+    assert.deepStrictEqual([skipped.reportAsked, skipped.waitingSince], [true, 0]);
+    // The Report ID route never touches the buttons — the answer that followed it is the proof.
+    const answered = rebuildTicketState([botSays([btn(TICKET_BUTTONS.reportSent)]), botAnswer()]);
+    assert.deepStrictEqual([answered.reportAsked, answered.waitingSince], [true, 0]);
+});
+
+// The close renames the channel in an edit that is deliberately not awaited, so for a while a
+// closed ticket is still called ticket-NNNN. The bot's own close message is what knows better.
+test('the "Ticket closed" message is the close, whatever the channel is still called', () => {
+    const closed = botSays([btn(TICKET_BUTTONS.del)]);
+    const state = rebuildTicketState([botAnswer(), closed]);
+    assert.deepStrictEqual([state.closedAt, state.ai], [closed.ts, false]);
+});
+
+test('members and other bots write no state at all', () => {
+    const state = rebuildTicketState([
+        member(), { bot: false, text: false, buttons: [btn(TICKET_BUTTONS.aiOn)], ts: NOW },
+        { bot: true, text: false, buttons: [btn('verify:start')], ts: NOW + 1 },
+    ]);
+    assert.deepStrictEqual(state, { ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0 });
 });
 
 // ── numbering ─────────────────────────────────────────────────────────────────
@@ -152,6 +228,16 @@ test('0 hours means never, whatever is due', () => {
     assert.deepStrictEqual(deletableTickets([closedCh('closed-0003', 999 * 3600)], { now: NOW, hours: 0 }), []);
 });
 
+// The close writes its stamp in the same edit as the rename, and that edit is no longer awaited:
+// until it lands, the only thing that knows when the ticket closed is the bot itself.
+test('a close this process remembers counts even before the stamp lands', () => {
+    const channels = [{ id: 'c1', name: 'closed-0008', topic: buildTopic({ opener: '1', cat: 'bug' }) }];
+    const closedAt = () => NOW - 25 * HOUR;
+    assert.deepStrictEqual(deletableTickets(channels, { now: NOW, hours: 24 }), [], 'no stamp, nothing known');
+    assert.deepStrictEqual(deletableTickets(channels, { now: NOW, hours: 24, closedAt }).map(c => c.id), ['c1']);
+    assert.deepStrictEqual(deletableTickets(channels, { now: NOW, hours: 48, closedAt }), [], 'still inside the window');
+});
+
 test('the sweep only ever touches closed-NNNN channels carrying one of our topics', () => {
     const old = Math.floor(NOW / 1000) - 99 * 3600;
     const channels = [
@@ -185,6 +271,16 @@ test('a wait expires by itself and cleans up after the 30 minutes', () => {
     now = NOW + 31 * 60 * 1000;
     assert.strictEqual(w.active('c1'), null);
     assert.strictEqual(w.size, 0);
+});
+
+// A wait read back out of the history after a restart has already been running for a while.
+test('a rebuilt wait expires when it was always going to, not 30 minutes later', () => {
+    let now = NOW;
+    const w = makeWaiting(30 * 60 * 1000, () => now);
+    w.start('c1', NOW - 29 * 60 * 1000);
+    assert.ok(w.active('c1'), 'one minute left');
+    now = NOW + 2 * 60 * 1000;
+    assert.strictEqual(w.active('c1'), null);
 });
 
 test('waiting is per ticket — one member waiting never silences another ticket', () => {
