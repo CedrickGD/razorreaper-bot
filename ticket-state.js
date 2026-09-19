@@ -70,6 +70,21 @@ const TICKET_BUTTONS = {
 };
 
 /**
+ * The one rule for "this bot message is an automatic answer": the bot's PLAIN messages are its
+ * answers, because every notice it posts is an embed. Both readers hand it their own shape — the
+ * rebuild below its `text` flag, the close its transcript snapshots' `content` + `embeds`.
+ */
+const isAutoAnswer = (m) => Boolean(m?.bot) && Boolean(m.text ?? m.content) && !(m.embeds || []).length;
+
+/**
+ * How many automatic answers a ticket got in TOTAL, from the transcript snapshots the close
+ * already has. The live counter cannot say: a "Re-enable AI" resets it by design — it is the cap —
+ * so a ticket the AI answered five times in and that staff then re-enabled reports zero.
+ * @param {{bot?: boolean, content?: string, embeds?: unknown[]}[]} snaps  transcript snapshots
+ */
+const countAutoAnswers = (snaps) => (snaps || []).filter(isAutoAnswer).length;
+
+/**
  * Rebuild what index.js's Maps knew about a ticket from the ticket's own recent history. The bot
  * restarts on every deploy — one happened in the middle of the owner's first real ticket — and
  * nothing here may cost a channel edit, so the control messages ARE the record:
@@ -93,7 +108,7 @@ function rebuildTicketState(messages = []) {
     for (const m of messages || []) {
         if (!m || !m.bot) continue;
         const button = (id) => (m.buttons || []).find(b => b && b.id === id);
-        if (m.text) {
+        if (isAutoAnswer(m)) {
             // An answer. It also ends a report wait: the second pass is what the ticket waited for.
             out.replies++;
             out.waitingSince = 0;
@@ -277,7 +292,7 @@ function makeWaiting(ttlMs = 30 * 60 * 1000, now = () => Date.now()) {
 }
 
 module.exports = {
-    buildTopic, parseTopic, rebuildTicketState, nextTicketNumber, ticketChannelName, checkLimits,
+    buildTopic, parseTopic, rebuildTicketState, countAutoAnswers, nextTicketNumber, ticketChannelName, checkLimits,
     slowmodeSeconds, deletableTickets, makeWaiting, parseBotCommand,
     TOPIC_TAG, SLOWMODE_MAX, TICKET_BUTTONS, TICKET_COMMANDS,
 };

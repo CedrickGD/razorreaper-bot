@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-    buildTopic, parseTopic, rebuildTicketState, nextTicketNumber, ticketChannelName, checkLimits,
+    buildTopic, parseTopic, rebuildTicketState, countAutoAnswers, nextTicketNumber, ticketChannelName, checkLimits,
     slowmodeSeconds, deletableTickets, makeWaiting, parseBotCommand,
     SLOWMODE_MAX, TICKET_BUTTONS, TICKET_COMMANDS,
 } = require('../ticket-state');
@@ -133,6 +133,34 @@ test('a hand-off that was seen says so, so a full window is not distrusted twice
     assert.strictEqual(rebuildTicketState([botSays([btn(TICKET_BUTTONS.aiOn)])]).sawHandoff, true);
     const back = rebuildTicketState([botSays([btn(TICKET_BUTTONS.aiOn, true)]), member(), botAnswer()]);
     assert.deepStrictEqual([back.ai, back.sawHandoff], [true, true], 're-enabled, and on evidence');
+});
+
+// ── what the close reports ────────────────────────────────────────────────────
+// #ticket-log said "0 AI replies" for a ticket the AI had answered: the cap counter it reported
+// is reset by a "Re-enable AI", on purpose. The transcript the close already holds knows better,
+// and it is read by the SAME rule the rebuild uses — a bot message with text and no embed.
+const snap = (bot, content, embeds = []) => ({ bot, content, embeds, ts: (clock += 1000) });
+
+test('the close counts every automatic answer, including the ones before a re-enable', () => {
+    assert.strictEqual(countAutoAnswers([
+        snap(true, '', [{ title: 'Bug' }]),          // the opening embed
+        snap(false, 'it crashes'), snap(true, 'try this'),
+        snap(true, '', [{ title: 'Handed to a human' }]),   // a notice, not an answer
+        snap(false, 'still broken'), snap(true, 'and this'),
+    ]), 2);
+});
+
+test('nothing to count is zero, not a throw', () => {
+    assert.strictEqual(countAutoAnswers(), 0);
+    assert.strictEqual(countAutoAnswers([null, snap(true, ''), snap(false, 'hi')]), 0);
+});
+
+test('one rule: the rebuild and the close agree on what an answer is', () => {
+    const history = [snap(true, '', [{ title: 'Ticket' }]), snap(false, 'help'), snap(true, 'here you go')];
+    assert.strictEqual(
+        rebuildTicketState(history.map(m => ({ ...m, text: Boolean(m.content) && !m.embeds.length, buttons: [] }))).replies,
+        countAutoAnswers(history),
+    );
 });
 
 // ── numbering ─────────────────────────────────────────────────────────────────

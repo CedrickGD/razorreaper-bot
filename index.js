@@ -15,7 +15,7 @@ const ffmpegPath = require('ffmpeg-static');
 const { initNotifier, stopNotifier } = require('./notifier');
 const { planRoleChanges } = require('./role-plan');
 const {
-    buildTopic, parseTopic, rebuildTicketState, nextTicketNumber, ticketChannelName, checkLimits,
+    buildTopic, parseTopic, rebuildTicketState, countAutoAnswers, nextTicketNumber, ticketChannelName, checkLimits,
     slowmodeSeconds, deletableTickets, makeWaiting, parseBotCommand, TICKET_BUTTONS, TICKET_COMMANDS,
 } = require('./ticket-state');
 const ai = require('./ai-support');
@@ -696,7 +696,7 @@ function buildSupportPanel(guild) {
         blocks: [
             'Pick the category that fits, then fill the short form.\nA good form is answered in seconds.',
             'Have ready: what goes wrong, what you already tried, and your version (**My account**).',
-            '_One open ticket at a time. Never post your full licence key._',
+            '_One open ticket per category. Never post your full licence key._',
         ],
         fields: CATEGORY_FIELDS,
         thumb: brandThumb(guild, client.user),
@@ -808,36 +808,45 @@ async function humanPing(guild, channelId = null) {
 }
 
 // ── Opening a ticket ──────────────────────────────────────────────────────────
+/**
+ * The member's limits, straight off the channel list — no counter to keep, no counter to lose,
+ * and no await, which is what lets the select menu ask before it opens the form (a modal cannot
+ * be deferred). One open ticket PER CATEGORY: a License question and a bug report are two
+ * conversations, and making the member close one to ask the other is what the owner asked us to
+ * stop doing.
+ */
+const ticketLimits = (guild, userId, categoryKey) => checkLimits(
+    guild.channels.cache.map(c => ({
+        name: c.name,
+        topic: c.topic,
+        createdTimestamp: c.createdTimestamp,
+        // Not the name: the close rename is no longer awaited, so a ticket this process closed
+        // a minute ago can still be called ticket-NNNN while Discord works through its queue.
+        closed: closedTickets.has(c.id) || transcribedTickets.has(c.id),
+    })),
+    userId,
+    Date.now(),
+    { cat: categoryKey, maxPerDay: TICKET_MAX_PER_DAY },
+);
+
+/** The one refusal, whichever door asked: the select menu before the form, the submit after it. */
+const ticketLimitEmbed = (categoryKey, limit) => rrEmbed({
+    title: 'Ticket not opened',
+    blocks: [limit.reason === 'open'
+        ? `You already have an open **${ai.categoryLabel(categoryKey)}** ticket: **${limit.open}**.\nContinue there, or close it first.`
+        : `You opened ${limit.count} tickets in the last 24 hours.\nContinue in one of those, or wait a little.`],
+    colour: BRAND_BAD,
+});
+
 async function openTicket(interaction, categoryKey, fields) {
     const guild = interaction.guild;
     const user = interaction.user;
 
-    // 1. Limits, straight off the channel list — no counter to keep, no counter to lose.
-    // Checked twice: cheaply here, so a member over the limit never costs a triage call, and again
-    // inside the creation chain below, where the cache can actually see a ticket another submission
-    // from the same member is in the middle of creating.
-    // One open ticket PER CATEGORY: a License question and a bug report are two conversations,
-    // and making the member close one to ask the other is what the owner asked us to stop doing.
-    const checkTicketLimits = () => checkLimits(
-        guild.channels.cache.map(c => ({
-            name: c.name,
-            topic: c.topic,
-            createdTimestamp: c.createdTimestamp,
-            // Not the name: the close rename is no longer awaited, so a ticket this process closed
-            // a minute ago can still be called ticket-NNNN while Discord works through its queue.
-            closed: closedTickets.has(c.id) || transcribedTickets.has(c.id),
-        })),
-        user.id,
-        Date.now(),
-        { cat: categoryKey, maxPerDay: TICKET_MAX_PER_DAY },
-    );
-    const limitEmbed = (limit) => rrEmbed({
-        title: 'Ticket not opened',
-        blocks: [limit.reason === 'open'
-            ? `You already have an open **${ai.categoryLabel(categoryKey)}** ticket: **${limit.open}**.\nContinue there, or close it first.`
-            : `You opened ${limit.count} tickets in the last 24 hours.\nContinue in one of those, or wait a little.`],
-        colour: BRAND_BAD,
-    });
+    // 1. Checked twice here as well as before the form: cheaply now, so a member over the limit
+    // never costs a triage call, and again inside the creation chain below, where the cache can
+    // actually see a ticket another submission from the same member is in the middle of creating.
+    const checkTicketLimits = () => ticketLimits(guild, user.id, categoryKey);
+    const limitEmbed = (limit) => ticketLimitEmbed(categoryKey, limit);
     let limit = checkTicketLimits();
     // "You already have an open ticket" is answered out of Maps a restart emptied, and the close
     // rename that would have renamed the channel may never have landed — so the ticket named here
@@ -1115,11 +1124,12 @@ async function runAiReply(channel, { category, fields, history, data = '', opene
             });
             aiReplyCount.set(channel.id, (aiReplyCount.get(channel.id) || 0) + 1);
         }
+        let posted = Boolean(out.text);
         // The model pressed "My purchase": the bot posts the shop's own record, the same embed
         // the button posts. The model never sees it — it only knows the ticket has one.
         if (out.showPurchase && opener) {
             const purchase = await purchaseEmbed(channel.guild, opener);
-            if (purchase) await channel.send({ embeds: [purchase] });
+            if (purchase) { await channel.send({ embeds: [purchase] }); posted = true; }
         }
         // The model says it needs this member's own setup. Ask once, then wait — and never on the
         // last answer this ticket has: a report the bot has no reply left to read would be asked
@@ -1127,6 +1137,15 @@ async function runAiReply(channel, { category, fields, history, data = '', opene
         if (out.needsReport && panelConfigured() && !reportAsked.has(channel.id)
             && (aiReplyCount.get(channel.id) || 0) < AI_MAX_REPLIES) {
             await askForSupportReport(channel);
+            posted = true;
+        }
+        // An answer that was nothing but sentinels, and neither of them had anything left to post:
+        // the member's message cost budget and got silence. One line instead — an embed, so it is
+        // a notice and not one of the ticket's automatic answers.
+        if (!posted) {
+            await channel.send({
+                embeds: [rrEmbed({ title: 'Still with you', blocks: ['Tell me a bit more about the problem, or press **I need a human**.'] })],
+            }).catch(e => console.error('[support] Could not post the empty-answer line:', e.message || e));
         }
     } catch (e) {
         console.error(`[support] ${channel.name}: no AI answer (${e.message || e}).`);
@@ -1513,7 +1532,11 @@ async function runClose(channel, closedBy = null) {
     if (!snaps.length) snaps = ticketMessageCache.get(channel.id) || [];
     const html = snaps.length ? renderTranscriptHtml(guild.name, ticketName, snaps) : '';
 
-    const replies = Math.max(aiReplyCount.get(channel.id) || 0, state?.replies || 0);
+    // What staff and the panel are told is the ticket's TOTAL automatic answers, counted off the
+    // transcript that is already in hand. aiReplyCount is the CAP counter — a "Re-enable AI"
+    // resets it by design — and reporting that made an answered ticket close with "0 AI replies".
+    // It stays as the floor for the close whose history could not be read at all.
+    const replies = Math.max(countAutoAnswers(snaps), aiReplyCount.get(channel.id) || 0, state?.replies || 0);
     const provider = ticketProvider.get(channel.id) || null;
     // Cache only: the opener wrote in this channel minutes ago, and a tag is not worth a fetch.
     const openerTag = (ownerId && client.users.cache.get(ownerId)?.tag) || null;
@@ -1777,10 +1800,16 @@ async function runTicketAction(action, channel, member, respond, { reason = '', 
         }
         setTicketAi(channel.id, false);
         reportWaiting.stop(channel.id);
+        // A staff member who switches the AI off IS the human — pinging the team about themselves
+        // is noise — but the ticket has one, and that is written down either way. Every other door
+        // (the opener's /disableai, "@bot disableai", "I need a human") still calls somebody.
+        let call = {};
+        if (staff) humanPinged.add(channel.id);
+        else call = await humanPing(channel.guild, channel.id);
         // Into the CHANNEL, not through `respond`: this message and its live Re-enable button are
         // what a restarted bot reads the AI's state back from (rebuildTicketState).
         await channel.send({
-            ...(await humanPing(channel.guild, channel.id)),
+            ...call,
             embeds: [rrEmbed({ title: 'AI is off', blocks: ['A human takes it from here.'] })],
             components: [aiBackRow()],
         });
@@ -1800,7 +1829,26 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.isStringSelectMenu() && interaction.customId === 'support:new') {
             const category = interaction.values[0];
             if (!ai.CATEGORY_KEYS.includes(category)) return;
-            return interaction.showModal(buildTicketModal(category));
+            // The limit BEFORE the form: being refused after typing out the whole problem is the
+            // rudest order to do this in. Synchronous off the channel cache — a modal cannot be
+            // deferred and has three seconds. The checks after the submit stay, and stay the
+            // authoritative ones: this one cannot ask a stale-looking blocker for its history.
+            const limit = ticketLimits(interaction.guild, interaction.user.id, category);
+            if (limit.ok) await interaction.showModal(buildTicketModal(category));
+            else {
+                await interaction.reply({ embeds: [ticketLimitEmbed(category, limit)], ephemeral: true });
+                // …so it asks now, after the refusal: the Maps a restart emptied can name a ticket
+                // that is visibly closed, and the member's next pick then gets the truth.
+                const blocker = limit.reason === 'open' && interaction.guild.channels.cache.find(c => c.name === limit.open);
+                if (blocker) hydrateTicket(blocker).catch(() => {});
+            }
+            // Discord's client keeps the picked option selected, and picking the SAME one again
+            // fires nothing — a member who was refused could never retry that category. Re-sending
+            // the unchanged components resets every client's menu. A MESSAGE edit, not a channel
+            // edit, fire-and-forget, and only ever after the modal is on its way.
+            interaction.message?.edit({ components: buildSupportPanel(interaction.guild).components })
+                .catch(e => console.error('[support] Could not reset the panel menu:', e.message || e));
+            return;
         }
 
         if (interaction.isModalSubmit() && interaction.customId.startsWith('support:form:')) {
