@@ -80,12 +80,16 @@ const TICKET_BUTTONS = {
  *   • a "Ticket closed" message    ⇒ closed at that message's timestamp, whatever the name says
  *   • the bot's PLAIN messages are its answers — every notice it posts is an embed
  *
+ * `sawHandoff` separates "on because a hand-off said so" from "on because nothing said otherwise":
+ * the fetch returns the NEWEST messages, so a hand-off inside the window is the newest one in the
+ * channel and decides the state on its own — only the no-evidence case needs the caller's caution.
+ *
  * @param {{bot: boolean, text: boolean, buttons?: {id: string, disabled?: boolean}[], ts: number}[]} messages
  *        the channel's recent messages, OLDEST FIRST.
- * @returns {{ai: boolean, replies: number, reportAsked: boolean, waitingSince: number, closedAt: number}}
+ * @returns {{ai: boolean, replies: number, reportAsked: boolean, waitingSince: number, closedAt: number, sawHandoff: boolean}}
  */
 function rebuildTicketState(messages = []) {
-    const out = { ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0 };
+    const out = { ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0, sawHandoff: false };
     for (const m of messages || []) {
         if (!m || !m.bot) continue;
         const button = (id) => (m.buttons || []).find(b => b && b.id === id);
@@ -97,6 +101,7 @@ function rebuildTicketState(messages = []) {
         }
         const handoff = button(TICKET_BUTTONS.aiOn);
         if (handoff) {
+            out.sawHandoff = true;
             out.ai = Boolean(handoff.disabled);
             // A re-enable resets the cap — the eight answers already standing there are the round
             // that ended, not this one.
@@ -186,15 +191,20 @@ const TICKET_COMMANDS = ['close', 'transcript', 'delete', 'enableai', 'disableai
  * A ticket command typed at the bot instead of picked from the slash menu. The message must START
  * with the mention: "ask @RazorReaper to close this" is a sentence about the bot, not an order to
  * it, and a member quoting the bot mid-sentence must never trigger anything.
+ * Discord auto-creates a managed ROLE named after the bot, and anyone allowed to mention roles —
+ * staff, i.e. exactly the people who type "@bot close" — gets it offered next to the user in the
+ * autocomplete. Picking it inserts `<@&roleId>`, so that id counts as us too.
  * @param {string} content  the raw message text
  * @param {string} botId    this bot's user id — another bot's mention is not our command
+ * @param {string|null} botRoleId  the bot's own managed role, when the caller can see one
  * @returns {{action: string, reason: string}|null}  null when the message is not addressed to us;
  *          `action: ''` when it is but the word after the mention is not one of ours (the caller
  *          then lists them), otherwise the command and everything after it as the reason.
  */
-function parseBotCommand(content, botId) {
-    const m = /^<@!?(\d+)>([\s\S]*)$/.exec(String(content ?? '').trim());
-    if (!m || !botId || m[1] !== String(botId)) return null;
+function parseBotCommand(content, botId, botRoleId = null) {
+    const m = /^<@[!&]?(\d+)>([\s\S]*)$/.exec(String(content ?? '').trim());
+    // String(null) is never all digits, so a missing id can never be the one that matched.
+    if (!m || !botId || (m[1] !== String(botId) && m[1] !== String(botRoleId))) return null;
     const [word = '', ...rest] = m[2].trim().split(/\s+/);
     const action = word.replace(/^\//, '').toLowerCase();
     return TICKET_COMMANDS.includes(action) ? { action, reason: rest.join(' ') } : { action: '', reason: '' };

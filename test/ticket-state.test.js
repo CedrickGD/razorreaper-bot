@@ -62,13 +62,13 @@ const btn = (id, disabled = false) => ({ id, disabled });
 
 test('a ticket nobody interrupted is AI-on, with its answers counted', () => {
     assert.deepStrictEqual(rebuildTicketState([botSays(), member(), botAnswer(), member(), botAnswer()]), {
-        ai: true, replies: 2, reportAsked: false, waitingSince: 0, closedAt: 0,
+        ai: true, replies: 2, reportAsked: false, waitingSince: 0, closedAt: 0, sawHandoff: false,
     });
 });
 
 test('nothing at all is a fresh ticket, not a broken one', () => {
     assert.deepStrictEqual(rebuildTicketState(), {
-        ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0,
+        ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0, sawHandoff: false,
     });
 });
 
@@ -122,7 +122,17 @@ test('members and other bots write no state at all', () => {
         member(), { bot: false, text: false, buttons: [btn(TICKET_BUTTONS.aiOn)], ts: NOW },
         { bot: true, text: false, buttons: [btn('verify:start')], ts: NOW + 1 },
     ]);
-    assert.deepStrictEqual(state, { ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0 });
+    assert.deepStrictEqual(state, { ai: true, replies: 0, reportAsked: false, waitingSince: 0, closedAt: 0, sawHandoff: false });
+});
+
+// hydrateTicket may not trust a FULL window of messages on its own — the hand-off could have
+// scrolled out of it. It may trust one it can see: the scan returns the newest messages, so a
+// hand-off inside it is the newest in the channel. That difference is this flag.
+test('a hand-off that was seen says so, so a full window is not distrusted twice', () => {
+    assert.strictEqual(rebuildTicketState([botAnswer(), member()]).sawHandoff, false);
+    assert.strictEqual(rebuildTicketState([botSays([btn(TICKET_BUTTONS.aiOn)])]).sawHandoff, true);
+    const back = rebuildTicketState([botSays([btn(TICKET_BUTTONS.aiOn, true)]), member(), botAnswer()]);
+    assert.deepStrictEqual([back.ai, back.sawHandoff], [true, true], 're-enabled, and on evidence');
 });
 
 // ── numbering ─────────────────────────────────────────────────────────────────
@@ -258,6 +268,14 @@ test('a mention that is not at the start is a sentence about the bot, not an ord
     for (const text of ['ask <@42> close', 'close <@42>', 'please <@42> delete this']) {
         assert.strictEqual(parseBotCommand(text, '42'), null, text);
     }
+});
+
+// Staff picking "@RazorReaper" out of the autocomplete usually get the bot's MANAGED ROLE, not
+// its user — same name, different mention — and a close that silently does nothing is the result.
+test('the bot\'s own role mention is the bot', () => {
+    assert.deepStrictEqual(parseBotCommand('<@&7> close', '42', '7'), { action: 'close', reason: '' });
+    assert.strictEqual(parseBotCommand('<@&8> close', '42', '7'), null, 'somebody else\'s role');
+    assert.strictEqual(parseBotCommand('<@&7> close', '42'), null, 'no role to compare against');
 });
 
 test('another bot\'s mention, or none at all, is none of our business', () => {
