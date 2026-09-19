@@ -1102,6 +1102,9 @@ Zip file also saved as:
 - changelink: Change in Global Hotkeys
 - clear: Clear this hotkey
 - presskey: Press a key…
+- notactive: not active
+- notactive.hint: Windows would not give this key to RazorReaper — another program is already holding it. Pick a different key here.
+- notactive.conflict: This key is already taken inside RazorReaper by {0}, so it never got registered here. Pick a different key here.
 
 ## Global Hotkeys (hotkeys)
 - subtitle: Every system-wide hotkey, set in one place. They work even while ARK has focus.
@@ -2347,6 +2350,7 @@ Path: {1}
 - toast.quota: Free monthly limit reached ({0} input-script starts across all scripts). Resets next month — Premium is unlimited.
 - toast.hotkey.invalid: '{0}' can't be used as a hotkey.
 - toast.hotkey.inuse: Could not register {0} — it may be in use by another app.
+- toast.hotkey.conflict: Could not register {0} — {1} already uses that key.
 - toast.regionset: Region set — now capture a reference with the target visible.
 - toast.regionfailed: Failed to capture the region.
 - toast.needregion: Calibrate the region first.

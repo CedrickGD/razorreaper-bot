@@ -5,7 +5,7 @@ if (process.env.REDIRECT_TO) {
     return;
 }
 
-const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder, PermissionsBitField, Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder, SlashCommandBuilder, REST, Routes, ChannelType, ApplicationCommandOptionType, OverwriteType } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder, PermissionsBitField, Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, AttachmentBuilder, SlashCommandBuilder, REST, Routes, ChannelType, ApplicationCommandOptionType, OverwriteType, MessageFlags } = require('discord.js');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
@@ -503,6 +503,11 @@ const support = ai.createSupport({
     budget: ai.makeBudget(Number(process.env.AI_DAILY_TOKEN_BUDGET || 400_000)),
 });
 const aiInFlight = new Set();        // channelIds with a call in the air — one per ticket
+// channelId -> answers this process has posted there. The scan below can only see the last
+// TICKET_SCAN messages, so a member who keeps chatting pushes earlier answers out of the window and
+// the derived count walks back toward zero — the cap has to survive that. Lost on restart, like the
+// budget; the scan is what recovers an approximate count after one, and the topic keeps ai=off.
+const aiReplyCount = new Map();
 let ticketCreateChain = Promise.resolve();  // serialises ticket numbering + creation
 let warnedNoMessageContent = false;
 
@@ -549,7 +554,7 @@ function buildSupportPanel(guild) {
             'Pick the category that fits your problem. You then get a short form — fill it in\n'
             + 'properly and your ticket is answered straight away, usually within seconds.\n\n'
             + '**Please have ready:** what exactly goes wrong, what you already tried, and your\n'
-            + 'RazorReaper version (in the app under **Settings → About**).\n\n'
+            + 'RazorReaper version (in the app under **My account**).\n\n'
             + '_One open ticket at a time. Never post your full licence key — the last 4 characters are enough._'
         )
         .addFields(CATEGORY_FIELDS)
@@ -605,7 +610,7 @@ function buildTicketModal(categoryKey) {
                 min: 10, max: 600, placeholder: 'Restarted, reinstalled, recalibrated, changed a setting…',
             }),
             input('version', 'App version', TextInputStyle.Short, true, {
-                min: 3, max: 20, placeholder: 'Settings → About, e.g. 1.5.2',
+                min: 3, max: 20, placeholder: 'My account → your installation, e.g. 1.5.2',
             }),
             input('errcode', 'Error code / message (optional)', TextInputStyle.Short, false, {
                 max: 200, placeholder: 'e.g. RR-E1003, or the exact text shown',
@@ -632,14 +637,18 @@ async function openTicket(interaction, categoryKey, fields) {
     const user = interaction.user;
 
     // 1. Limits, straight off the channel list — no counter to keep, no counter to lose.
-    const snapshot = guild.channels.cache.map(c => ({ name: c.name, topic: c.topic, createdTimestamp: c.createdTimestamp }));
-    const limit = checkLimits(snapshot, user.id);
-    if (!limit.ok) {
-        const msg = limit.reason === 'open'
-            ? `❌ You already have an open ticket (**${limit.open}**). Continue there — or close it first.`
-            : '❌ You have opened 3 tickets in the last 24 hours. Please continue in one of those, or wait a little.';
-        return interaction.editReply({ embeds: [errEmbed(msg)] });
-    }
+    // Checked twice: cheaply here, so a member over the limit never costs a triage call, and again
+    // inside the creation chain below, where the cache can actually see a ticket another submission
+    // from the same member is in the middle of creating.
+    const checkTicketLimits = () => checkLimits(
+        guild.channels.cache.map(c => ({ name: c.name, topic: c.topic, createdTimestamp: c.createdTimestamp })),
+        user.id,
+    );
+    const limitMessage = (limit) => limit.reason === 'open'
+        ? `❌ You already have an open ticket (**${limit.open}**). Continue there — or close it first.`
+        : '❌ You have opened 3 tickets in the last 24 hours. Please continue in one of those, or wait a little.';
+    const limit = checkTicketLimits();
+    if (!limit.ok) return interaction.editReply({ embeds: [errEmbed(limitMessage(limit))] });
 
     // 2. Triage BEFORE a channel exists. Billing never goes to a model: refunds and payments are
     // the owner's call, so those tickets are created straight away and he is pinged.
@@ -666,26 +675,37 @@ async function openTicket(interaction, categoryKey, fields) {
     const staffRoles = guild.roles.cache.filter(r => STAFF_ROLES.includes(r.name));
     let channel;
     try {
-        channel = await (ticketCreateChain = ticketCreateChain.then(() => guild.channels.create({
-            name: ticketChannelName(nextTicketNumber(guild.channels.cache.map(c => c.name))),
-            type: ChannelType.GuildText,
-            parent: (TICKETS_CATEGORY_ID && guild.channels.cache.get(TICKETS_CATEGORY_ID)?.id)
-                || guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === 'tickets')?.id
-                || null,
-            topic: buildTopic({ opener: user.id, cat: categoryKey, ai: true, replies: 0 }),
-            // Explicit OverwriteTypes for the same reason ensureCommunityChannels needs them:
-            // without them discord.js resolves ids through its caches and the create throws.
-            permissionOverwrites: [
-                { id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] },
-                { id: user.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks] },
-                ...(guild.members.me ? [{ id: guild.members.me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.ManageChannels, P.EmbedLinks] }] : []),
-                ...staffRoles.map(r => ({ id: r.id, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] })),
-            ],
-            reason: `RazorReaper support ticket for ${user.tag}`,
-        })));
+        const link = ticketCreateChain.then(() => {
+            // The limit check above ran before triage — seconds ago, against a cache that could not
+            // yet show a ticket a second submission from this member was still creating. Here it can.
+            const again = checkTicketLimits();
+            if (!again.ok) throw Object.assign(new Error('ticket limit'), { ticketLimit: again });
+            return guild.channels.create({
+                name: ticketChannelName(nextTicketNumber(guild.channels.cache.map(c => c.name))),
+                type: ChannelType.GuildText,
+                parent: (TICKETS_CATEGORY_ID && guild.channels.cache.get(TICKETS_CATEGORY_ID)?.id)
+                    || guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === 'tickets')?.id
+                    || null,
+                topic: buildTopic({ opener: user.id, cat: categoryKey, ai: true, replies: 0 }),
+                // Explicit OverwriteTypes for the same reason ensureCommunityChannels needs them:
+                // without them discord.js resolves ids through its caches and the create throws.
+                permissionOverwrites: [
+                    { id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] },
+                    { id: user.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks] },
+                    ...(guild.members.me ? [{ id: guild.members.me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.ManageChannels, P.EmbedLinks] }] : []),
+                    ...staffRoles.map(r => ({ id: r.id, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] })),
+                ],
+                reason: `RazorReaper support ticket for ${user.tag}`,
+            });
+        });
+        // What the NEXT member in the queue waits for is this one's TURN, never its result: chaining
+        // the raw promise hands a transient Discord error to everybody already queued behind it, who
+        // then never even call create(). Same reason ensureLifetimeRole clears its shared promise on
+        // failure instead of leaving a rejected one where a sibling awaiter can find it.
+        ticketCreateChain = link.catch(() => {});
+        channel = await link;
     } catch (e) {
-        // A failed create must not poison the chain for the next member.
-        ticketCreateChain = Promise.resolve();
+        if (e?.ticketLimit) return interaction.editReply({ embeds: [errEmbed(limitMessage(e.ticketLimit))] });
         console.error('[support] Could not create the ticket channel:', e.message || e);
         return interaction.editReply({ embeds: [errEmbed('❌ I could not create your ticket channel — please ping a staff member.')] });
     }
@@ -755,7 +775,17 @@ async function runAiReply(channel, { category, fields, history }) {
         // null means every provider has been disabled (bad credentials) — the member must not be
         // left staring at silence, so it takes the same hand-off path as an outright failure.
         if (!out) throw new Error('every provider is disabled');
-        await channel.send(out.text.slice(0, 1900) + (out.truncated ? '\n\n_(cut short — ask me to continue)_' : ''));
+        await channel.send({
+            content: out.text.slice(0, 1900) + (out.truncated ? '\n\n_(cut short — ask me to continue)_' : ''),
+            // Model output is member-influenced text. Without this, a member who talks the model into
+            // echoing a `<@&…>` it saw really does ping that staff role.
+            allowedMentions: { parse: [] },
+            // The knowledge base is full of bare links the model is told to quote, and Discord
+            // unfurls one into an embed a moment after posting — which would make this answer look
+            // like a bot notice to countAiReplies and drop it out of the history filter below.
+            flags: MessageFlags.SuppressEmbeds,
+        });
+        aiReplyCount.set(channel.id, (aiReplyCount.get(channel.id) || 0) + 1);
     } catch (e) {
         console.error(`[support] ${channel.name}: no AI answer (${e.message || e}).`);
         await setTicketAi(channel, false);
@@ -779,7 +809,7 @@ client.on('messageCreate', async (m) => {
         if (VERIFY_GUILD_ID && m.guild.id !== VERIFY_GUILD_ID) return;
         // Only OPEN tickets: a closed-NNNN channel keeps its topic, and a member still typing in
         // one must not get more answers out of it.
-        if (!/^ticket-\d+$/i.test(m.channel.name || '')) return;
+        if (!isTicketChannel(m.channel)) return;
         const state = parseTopic(m.channel.topic);
         if (!state) return;
 
@@ -805,7 +835,9 @@ client.on('messageCreate', async (m) => {
 
         const recent = await m.channel.messages.fetch({ limit: TICKET_SCAN });
         const ordered = [...recent.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
-        const replies = countAiReplies(ordered);
+        // Whichever knows more: the counter this process kept, or what is still visible in the scan
+        // (the only source that survives a restart).
+        const replies = Math.max(countAiReplies(ordered), aiReplyCount.get(m.channelId) || 0);
         if (replies >= AI_MAX_REPLIES) {
             await setTicketAi(m.channel, false, replies);
             await m.channel.send({
@@ -835,6 +867,7 @@ client.on('messageCreate', async (m) => {
 // The rename IS the close: channelUpdate above sees ticket-NNNN → closed-NNNN and DMs the
 // transcript. /close and the Solved button both come through here so there is one close path.
 async function closeTicketChannel(channel) {
+    aiReplyCount.delete(channel.id);
     const num = channel.name.replace(/[^0-9]/g, '');
     await channel.setName(`closed-${num || '0000'}`).catch(e => console.error('[support] Close rename failed:', e.message || e));
     await channel.permissionOverwrites.edit(channel.guild.id, { ViewChannel: false }).catch(() => {});

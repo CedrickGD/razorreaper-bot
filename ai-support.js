@@ -299,7 +299,7 @@ function openaiProvider({ apiKey, model, fetchImpl }) {
     return {
         name: 'openai',
         model,
-        async call({ system, messages, maxTokens }) {
+        async call({ system, messages, maxTokens, json }) {
             const doFetch = fetchImpl || fetch;
             const res = await doFetch('https://api.openai.com/v1/responses', {
                 method: 'POST',
@@ -310,6 +310,11 @@ function openaiProvider({ apiKey, model, fetchImpl }) {
                     instructions: flattenSystem(system),
                     input: messages.map(m => ({ role: m.role, content: m.content })),
                     max_output_tokens: maxTokens,
+                    // `json` is the same contract the other two adapters honour, in this API's
+                    // dialect. Dropping it would leave triage asking for a verdict in prose, which
+                    // parseJsonish cannot read — and an unreadable verdict is "let it through", so
+                    // the False-Topic gate would be silently off whenever OpenAI is the one up.
+                    ...(json ? { text: { format: { type: 'json_schema', name: 'result', schema: json, strict: true } } } : {}),
                 }),
             });
             if (res.status === 401 || res.status === 403) throw new DeadProvider(`openai: HTTP ${res.status}`);

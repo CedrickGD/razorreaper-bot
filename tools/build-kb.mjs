@@ -46,9 +46,15 @@ const SECRET_KEY_RE = /hwid|machineid|hardware|fingerprint|tamper|telemetry|secr
 // Heading allowlist, not a blocklist: the release-engineering sections (worker URL, workflow
 // names, staging internals) are simply never copied.
 const README_SECTIONS = new Set([
-    '## Highlights', '## Features', '## Getting Started', '### Requirements', '### Install',
+    '## Highlights', '## Features', '## Getting Started', '### Requirements',
     '### Updating', '## Notes',
 ]);
+// Dropping a heading from the allowlist is not enough to exclude a `###` — it inherits `keep` from
+// the `##` above it. "### Install" has to be named here: it points at the PRIVATE repo's releases
+// page, which 404s for every customer, and a download answer that 404s is worse than none.
+// kb/faq.md answers "where do I download it" with https://dl.razorreaper.app, and that is the only
+// answer the model may ever see.
+const README_EXCLUDE = '### Install';
 
 function buildApp() {
     const lines = read('README.md').split(/\r?\n/);
@@ -59,7 +65,7 @@ function buildApp() {
         if (heading) {
             // A ### under a kept ## stays kept (the Features tool tables); a new ## decides afresh.
             const isTop = line.startsWith('## ');
-            keep = README_SECTIONS.has(line.trim()) || (!isTop && keep);
+            keep = line.trim() !== README_EXCLUDE && (README_SECTIONS.has(line.trim()) || (!isTop && keep));
         }
         if (keep) out.push(line);
     }

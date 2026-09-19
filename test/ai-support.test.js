@@ -4,6 +4,7 @@ const assert = require('node:assert');
 const {
     redact, clean, makeBudget, parseJsonish, normaliseTriage, formatForm,
     buildProviders, createSupport, BudgetExhausted, CATEGORY_KEYS,
+    openaiProvider, TRIAGE_SCHEMA,
 } = require('../ai-support');
 
 const quiet = () => {};
@@ -123,6 +124,28 @@ test('model ids come from env, with the documented cheap defaults', () => {
     assert.deepStrictEqual(def.map(p => p.model), ['claude-opus-5', 'gemini-3.5-flash-lite', 'gpt-5.6-luna']);
     const custom = buildProviders({ ANTHROPIC_API_KEY: 'a', AI_MODEL: 'claude-haiku-4-5' });
     assert.strictEqual(custom[0].model, 'claude-haiku-4-5');
+});
+
+// The fallback adapters get the SAME request object as Claude, so each one has to translate every
+// field into its own dialect. `json` is the one that matters: triage without it comes back as
+// prose, parseJsonish gives up, and "could not triage" means "let the ticket through" — the
+// False-Topic gate would be off, silently, exactly when Claude and Gemini are the ones down.
+test('the OpenAI fallback asks for the triage schema instead of hoping for JSON', async () => {
+    const sent = [];
+    const fetchImpl = async (_url, init) => {
+        sent.push(JSON.parse(init.body));
+        return { ok: true, status: 200, json: async () => ({ output_text: '{"verdict":"ok"}', usage: {} }) };
+    };
+    const p = openaiProvider({ apiKey: 'k', model: 'm', fetchImpl });
+    const req = { system: [{ type: 'text', text: 'S' }], messages: [{ role: 'user', content: 'x' }], maxTokens: 256 };
+
+    await p.call({ ...req, json: TRIAGE_SCHEMA });
+    assert.strictEqual(sent[0].text.format.type, 'json_schema');
+    assert.strictEqual(sent[0].text.format.strict, true);
+    assert.deepStrictEqual(sent[0].text.format.schema, TRIAGE_SCHEMA);
+
+    await p.call(req);                       // an answer is prose — no format may be forced on it
+    assert.strictEqual(sent[1].text, undefined);
 });
 
 // ── The fallback chain ────────────────────────────────────────────────────────

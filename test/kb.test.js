@@ -21,6 +21,16 @@ test('the knowledge base loads and stays inside one cached system prompt', () =>
     assert.ok(Math.ceil(kb.length / 4) < 60_000, 'kb/ no longer fits the ~60k-token budget');
 });
 
+test('"where do I download it" has exactly one answer, and it is faq.md\'s', () => {
+    // The README's Install section pointed members at the GitHub releases page. It resolves — the
+    // repo is public — but the owner bumps master without cutting a release, so that page goes
+    // stale while https://dl.razorreaper.app always serves the current installer. Two download
+    // answers in one system prompt means the model may pick the stale one. release.md is exempt:
+    // its link is the owner's own changelog URL, taken straight out of update.xml.
+    const app = fs.readFileSync(path.join(__dirname, '..', 'kb', 'app.md'), 'utf8');
+    assert.doesNotMatch(app, /github\.com/i);
+});
+
 test('nothing the generator is supposed to exclude ever lands in a generated file', () => {
     // faq.md is deliberately out of scope: it is hand-written and reviewed, and it NAMES the
     // forbidden topics in order to forbid them.

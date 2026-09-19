@@ -93,14 +93,6 @@ Plus **Troubleshoot**, **Feedback** and **Credits** pages built in.
 - Windows 10 or Windows 11 (x64)
 - Steam **ARK: Survival Evolved**
 
-### Install
-
-1. Grab the [latest release](https://github.com/CedrickGD/RazorReaper/releases/latest)
-2. Download **`RazorReaper-Setup.exe`** from the release assets
-3. Run the installer and launch RazorReaper
-
-The installer is fully self-contained — the .NET runtime ships inside, so there is nothing else to install.
-
 ### Updating
 
 RazorReaper checks for updates on launch and every 30 minutes while it is open, and downloads a new version silently in the background — there is nothing to click and nothing to wait for.
