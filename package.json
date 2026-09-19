@@ -4,7 +4,8 @@
     "description": "RazorReaper Discord Bot",
     "main": "index.js",
     "scripts": {
-        "start": "node index.js"
+        "start": "node index.js",
+        "test": "node --test"
     },
     "dependencies": {
         "discord.js": "^14.18.0",
