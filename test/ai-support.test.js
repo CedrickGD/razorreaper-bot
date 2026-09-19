@@ -135,7 +135,7 @@ test('providers are Claude first, then only the fallbacks that have a key', () =
 
 test('model ids come from env, with the documented cheap defaults', () => {
     const def = buildProviders({ ANTHROPIC_API_KEY: 'a', GEMINI_API_KEY: 'g', OPENAI_API_KEY: 'o' });
-    assert.deepStrictEqual(def.map(p => p.model), ['claude-opus-5', 'gemini-3.5-flash-lite', 'gpt-5.6-luna']);
+    assert.deepStrictEqual(def.map(p => p.model), ['claude-haiku-4-5', 'gemini-3.5-flash-lite', 'gpt-5.4-nano']);
     const custom = buildProviders({ ANTHROPIC_API_KEY: 'a', AI_MODEL: 'claude-haiku-4-5' });
     assert.strictEqual(custom[0].model, 'claude-haiku-4-5');
 });
@@ -177,6 +177,22 @@ test('Claude usage reports the whole prompt, cached prefix included', async () =
     const out = await claudeProvider({ apiKey: 'k', model: 'm', sdk }).call({ system: [], messages: [], maxTokens: 16 });
     assert.strictEqual(out.usage.input, 2344 + 49222);
     assert.strictEqual(weighUsage(out.usage), 2344 + Math.ceil(49222 / 10) + 38);
+});
+
+test('the low tier is sent only what it accepts: no thinking, no effort, still the schema', async () => {
+    // Anthropic's Models API says Haiku 4.5 supports neither adaptive thinking nor effort; either
+    // field is a 400 there. A bigger model (AI_MODEL override) keeps both.
+    const seen = [];
+    const sdk = class { constructor() { this.messages = { create: async (req) => { seen.push(req); return {
+        stop_reason: 'end_turn', content: [{ type: 'text', text: 'hi' }], usage: {} }; } }; } };
+    const args = { system: [], messages: [], maxTokens: 16 };
+    await claudeProvider({ apiKey: 'k', model: 'claude-haiku-4-5', sdk }).call(args);
+    await claudeProvider({ apiKey: 'k', model: 'claude-haiku-4-5', sdk }).call({ ...args, json: TRIAGE_SCHEMA });
+    await claudeProvider({ apiKey: 'k', model: 'claude-opus-5', sdk }).call(args);
+    assert.ok(!('thinking' in seen[0]) && !('output_config' in seen[0]));
+    assert.deepStrictEqual(seen[1].output_config, { format: { type: 'json_schema', schema: TRIAGE_SCHEMA } });
+    assert.deepStrictEqual(seen[2].thinking, { type: 'adaptive' });
+    assert.strictEqual(seen[2].output_config.effort, 'low');
 });
 
 // ── The fallback chain ────────────────────────────────────────────────────────
@@ -270,6 +286,7 @@ test('an empty balance or a bad key parks the provider; a rate limit or a 500 do
     assert.ok(accountError(403));
     assert.ok(accountError(400, 'Your credit balance is too low to access the Anthropic API'));
     assert.ok(accountError(400, 'You exceeded your current quota, please check your plan'));
+    assert.ok(accountError(429, 'You have no credits remaining. Add credits to continue using the API'));
     for (const [status, msg] of [[429, 'rate limit'], [500, 'oops'], [529, 'overloaded'],
         [400, 'max_tokens: must be greater than 0'], [undefined, 'socket hang up']]) {
         assert.strictEqual(accountError(status, msg), false, `${status} ${msg}`);

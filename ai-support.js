@@ -294,7 +294,10 @@ const TIMEOUT_MS = 40_000;
  */
 function accountError(status, message = '') {
     return status === 401 || status === 403
-        || (status === 400 && /credit balance|billing|quota|insufficient|payment required|suspended/i.test(String(message)));
+        || (status === 400 && /credit balance|billing|quota|insufficient|payment required|suspended/i.test(String(message)))
+        // OpenAI says an empty balance with a 429 ("You have no credits remaining", code
+        // insufficient_quota). Only that wording: an ordinary 429 is a rate limit and must not park.
+        || (status === 429 && /no credits|insufficient_quota/i.test(String(message)));
 }
 
 function claudeProvider({ apiKey, model, sdk }) {
@@ -303,6 +306,10 @@ function claudeProvider({ apiKey, model, sdk }) {
     // CJS build also exports; both point at the same class and carry the same error types.
     const loadSdk = () => { const m = sdk || require('@anthropic-ai/sdk'); return m.default || m; };
     let client = null;
+    // The owner wants the LOW tier only. Haiku 4.5 takes neither adaptive thinking nor `effort`
+    // (asked of Anthropic's Models API on 2026-09-20: both "supported": false) — sending them is
+    // a 400, which would have sat unnoticed behind an empty balance. A bigger model keeps both.
+    const lowTier = /haiku/i.test(model);
     return {
         name: 'claude',
         model,
@@ -316,11 +323,13 @@ function claudeProvider({ apiKey, model, sdk }) {
                 res = await client.messages.create({
                     model,
                     max_tokens: maxTokens,
-                    thinking: { type: 'adaptive' },
-                    output_config: {
-                        effort: 'low',
-                        ...(json ? { format: { type: 'json_schema', schema: json } } : {}),
-                    },
+                    ...(lowTier ? {} : { thinking: { type: 'adaptive' } }),
+                    ...(lowTier && !json ? {} : {
+                        output_config: {
+                            ...(lowTier ? {} : { effort: 'low' }),
+                            ...(json ? { format: { type: 'json_schema', schema: json } } : {}),
+                        },
+                    }),
                     system,
                     messages,
                 });
@@ -420,6 +429,9 @@ function openaiProvider({ apiKey, model, fetchImpl }) {
                     instructions: flattenSystem(system),
                     input: messages.map(m => ({ role: m.role, content: m.content })),
                     max_output_tokens: maxTokens,
+                    // Hidden reasoning is billed as output; a support answer does not need it. Only the
+                    // reasoning families take the field — a gpt-4.x override would answer 400 to it.
+                    ...(/^(gpt-5|od)/i.test(model) ? { reasoning: { effort: 'low' } } : {}),
                     // `json` is the same contract the other two adapters honour, in this API's
                     // dialect. Dropping it would leave triage asking for a verdict in prose, which
                     // parseJsonish cannot read — and an unreadable verdict is "let it through", so
@@ -458,7 +470,7 @@ function buildProviders(env = process.env, deps = {}) {
     if (env.ANTHROPIC_API_KEY) {
         list.push(claudeProvider({
             apiKey: env.ANTHROPIC_API_KEY,
-            model: env.AI_MODEL || 'claude-opus-5',
+            model: env.AI_MODEL || 'claude-haiku-4-5',
             sdk: deps.sdk,
         }));
     }
@@ -472,7 +484,7 @@ function buildProviders(env = process.env, deps = {}) {
     if (env.OPENAI_API_KEY) {
         list.push(openaiProvider({
             apiKey: env.OPENAI_API_KEY,
-            model: env.AI_OPENAI_MODEL || 'gpt-5.6-luna',
+            model: env.AI_OPENAI_MODEL || 'gpt-5.4-nano',
             fetchImpl: deps.fetchImpl,
         }));
     }
