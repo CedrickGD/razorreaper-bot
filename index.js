@@ -12,7 +12,7 @@ const path = require('path');
 const os = require('os');
 const { execFile } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
-const { initNotifier, stopNotifier, channelList } = require('./notifier');
+const { initNotifier, stopNotifier } = require('./notifier');
 const { planRoleChanges } = require('./role-plan');
 
 // GuildMessages (non-privileged) lets the notifier receive message events in
@@ -857,23 +857,10 @@ const slashCommands = [
 // ── Home guild only ───────────────────────────────────────────────────────────
 // This bot exists for the RazorReaper server. Anywhere else it registers no commands, so it
 // would just sit there as dead weight — it leaves instead, on startup and on every new invite.
-// The one exception is a server the notifier is actively reading ARK alerts out of (the watch
-// list is channel-id keyed and deliberately cross-guild); leaving there would kill the alert
-// relay to the desktop clients.
-function notifierWatchesGuild(guild) {
-    try {
-        return channelList().some(c => guild.channels.cache.has(c.channelId));
-    } catch {
-        return false;
-    }
-}
-
+// Owner's call (2026-09-19): no exception for servers the notifier reads ARK alerts from — the
+// alert relay moves to a second, public bot later.
 async function leaveForeignGuild(guild) {
     if (!VERIFY_GUILD_ID || guild.id === VERIFY_GUILD_ID) return;
-    if (notifierWatchesGuild(guild)) {
-        console.log(`[RazorReaper] Staying in "${guild.name}" (${guild.id}) — the notifier watches an alert channel there.`);
-        return;
-    }
     console.log(`[RazorReaper] Leaving "${guild.name}" (${guild.id}) — not the home guild.`);
     await guild.leave().catch(e => console.error(`[RazorReaper] Failed to leave ${guild.id}:`, e.message || e));
 }
@@ -892,7 +879,7 @@ client.once('ready', async () => {
           status: 'online',
     });
 
-    // Leave anything that isn't the home guild (or an alert source for the notifier).
+    // Leave anything that isn't the home guild.
     for (const [, g] of client.guilds.cache) {
         await leaveForeignGuild(g);
     }
