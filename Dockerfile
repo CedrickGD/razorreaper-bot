@@ -1,4 +1,5 @@
-FROM node:18-alpine
+# node 22: @anthropic-ai/sdk needs a supported runtime, and 18 is past end-of-life.
+FROM node:22-alpine
 
 WORKDIR /app
 
