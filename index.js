@@ -1296,9 +1296,8 @@ async function archiveTicket(opts, { guildName, snaps } = {}) {
  * before it: the in-memory close time, and the one "Ticket closed" message carrying Delete.
  * @param {import('discord.js').TextChannel} channel
  * @param {{tag: string, id: string, reason?: string}|null} closedBy
- * @param {boolean} withDelete  show the staff-only Delete button on the close message
  */
-async function closeTicketChannel(channel, closedBy = null, withDelete = false) {
+async function closeTicketChannel(channel, closedBy = null) {
     const ticketName = channel.name;
     const num = ticketName.replace(/[^0-9]/g, '');
     const state = parseTopic(channel.topic);
@@ -1376,7 +1375,9 @@ async function closeTicketChannel(channel, closedBy = null, withDelete = false) 
             colour: BRAND_BAD,
             timestamp: true,
         })],
-        components: withDelete ? [closedRow()] : [],
+        // Always there, whoever closed: the handler refuses non-staff, and after a restart this
+        // button is the record rebuildTicketState() reads the close from.
+        components: [closedRow()],
     }).catch(e => console.error('[support] Could not post the close message:', e.message || e));
 
     // Last, and deliberately NOT awaited: rename + hide share the channel's two edits per 10
@@ -1526,7 +1527,7 @@ client.on('interactionCreate', async (interaction) => {
             // No reply of its own: closeTicketChannel posts the one close message, after the
             // transcript is safe, so a second click can never produce a second one.
             await interaction.deferUpdate();
-            return closeTicketChannel(channel, { tag: interaction.user.tag, id: interaction.user.id }, staff);
+            return closeTicketChannel(channel, { tag: interaction.user.tag, id: interaction.user.id });
         }
 
         if (interaction.customId === 'ticket:human') {
@@ -2542,7 +2543,7 @@ client.on('interactionCreate', async (interaction) => {
             tag: interaction.user.tag,
             id: interaction.user.id,
             reason: interaction.options.getString('reason'),
-        }, isStaff(member));
+        });
         return interaction.editReply({ embeds: [okEmbed('✅ Ticket closed.')] });
     }
 
