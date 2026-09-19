@@ -1,0 +1,3045 @@
+# RazorReaper — pages, settings and on-screen texts
+
+Every line is a real string from the app, so you can name a control exactly as the member
+sees it. `EN` is the English UI text; `[DE: …]` is the German label for the same control —
+use the German one when the member writes German. Lines are `<setting key>: <text>`; a
+`.desc` line explains the setting above it.
+
+## access
+- heading.ban: Access permanently revoked
+- heading.suspend: Access suspended
+- text.ban: Your access to RazorReaper on this machine has been revoked by an administrator.
+- text.suspend: Your access to RazorReaper on this machine has been temporarily suspended by an administrator.
+- reason: Reason
+- until.lead: Access returns automatically on 
+- until.rest: .
+- recheck: Re-check access
+- rechecking: Checking…
+- footnote: Believe this is a mistake? Reach out in the RazorReaper Discord.
+
+## My account (account)
+- title: My account  [DE: Mein Konto]
+- subtitle: Your profile, Discord and RazorReaper installations, together.
+- loading: Loading your account…
+- avatar.alt: Your profile picture
+- profile.title: Your profile  [DE: Dein Profil]
+- profile.description: Your chosen name and picture are saved to your account and appear in the support panel.
+- displayname: Display name
+- choosepicture: Choose picture
+- usediscordpicture: Use Discord picture
+- saving: Saving…
+- saveprofile: Save profile
+- picture.hint: PNG, JPG or WebP. The center is cropped into a square.
+- connected.title: Connected accounts  [DE: Verbundene Konten]
+- row.connected: Connected
+- row.installation: This installation
+- row.linked: Linked to your account
+- row.license: License on this device
+- license.active: Active
+- license.free: Free
+- viewlicense: View license
+- redeemkey: Redeem key
+- buypremium: Buy Premium
+- connected.hint: Sign in with the same Discord account on another computer to use this profile there. License activation remains tied to the licensed device.
+- installations.title: Your installations  [DE: Deine Installationen]
+- device.this: This computer
+- device.other: RazorReaper installation
+- device.version: Version {0}
+- device.unknownversion: unknown
+- device.signedin: Signed in
+- device.signedout: Signed out
+- signout.confirm: Sign out on this computer? Your saved profile and license will remain available.
+- signout.stay: Stay signed in
+- signout: Sign out
+- welcome.line1: One profile.
+- welcome.line2: Every installation.
+- welcome.text: Make RazorReaper yours. Connect Discord, choose your picture and keep your profile with you.
+- create: Create account with Discord
+- signin: Sign in
+- benefit.1.title: Your identity  [DE: Deine Identität]
+- benefit.1.text: Choose the name and picture people see in support.
+- benefit.2.title: Connected to Discord  [DE: Mit Discord verbunden]
+- benefit.2.text: Use your existing account. No extra password to remember.
+- benefit.3.title: Across your computers  [DE: Auf all deinen Computern]
+- benefit.3.text: Your profile follows you when you sign in on another installation.
+- dialog.close: Close sign-in
+- dialog.title.connect: Connect your account
+- dialog.title.isthisyou: Is this you?
+- dialog.avatar.alt: Discord profile picture
+- dialog.continueas: Continue as {0}
+- dialog.codematch: Check that this code matches the one in your browser:
+- dialog.waiting: Waiting for Discord authorization
+- dialog.approve: Approve the connection in your browser, then return here to confirm your profile.
+- dialog.reopen: Open Discord again
+- dialog.intro: RazorReaper will connect to your Discord identity.
+- dialog.perm.1: Read your Discord name and profile picture
+- dialog.perm.2: Save your chosen RazorReaper name and picture
+- dialog.perm.3: Link this installation to your account
+- dialog.hint: Discord opens its official authorization in your browser. RazorReaper never sees your password.
+- dialog.connecting: Connecting…
+- dialog.continue: Continue with Discord
+- error.timeout: The connection timed out. Please try again.
+- error.unreachable: The account service could not be reached. Please try again.
+- error.browser: Could not open your browser. Please try again.
+- error.expired: Sign-in expired. Please start again.
+- error.interrupted: Sign-in was interrupted. Please start again.
+- connected.toast: Your account is connected.
+- saved.toast: Your profile has been saved.
+
+## activity
+- justnow: Just now
+- minutes: {0}m ago
+- hours: {0}h ago
+- days: {0}d ago
+
+## Auto Clicker (autoclicker)
+- title: Auto Clicker  [DE: Autoklicker]
+- subtitle: Advanced mouse automation tool
+- timing: Timing
+- running: Running
+- idle: Idle
+- hold: hold (ms)
+- predelay: pre-delay (s)
+- repeat: Repeat
+- repeat.infinite: Until stopped
+- repeat.count: Fixed count
+- clicks: clicks
+- start: Start
+- stop: Stop
+- click: Click
+- button: Button
+- button.left: Left
+- button.middle: Middle
+- button.right: Right
+- type: Type
+- type.single: Single
+- type.double: Double
+- mode: Mode
+- mode.continuous: Continuous
+- mode.burst: Burst
+- burst.count: Clicks / burst
+- burst.pause: Pause
+- randomize: Randomize variance
+- variance: Variance:
+- target: Target
+- position: Position
+- position.current: Cursor
+- position.fixed: Fixed
+- position.multi: Multi
+- pick: Pick location
+- pick.add: Add position
+- pick.armed: Click anywhere…
+- positions.empty: No positions yet.
+- cursor: Cursor
+- hotkey: Hotkey
+- hotkey.recording: Press a key…
+- status.running: {0} · {1} · {2} · {3}
+- status.progress: {0}/{1}
+- status.clicks: {0} clicks
+- status.idle: Press {0} to start · {1}
+- next.now: Now
+- activity.started: Autoclicker started ({0} interval)
+- activity.stopped: Autoclicker stopped ({0} clicks performed)
+- toast.hotkeyinuse: Could not register {0} for the Auto Clicker — it may be in use by another app.
+
+## Bosses (bosses)
+- title: Boss tribute guide  [DE: Boss-Tributführer]
+- subtitle: Bosses and mini-bosses sorted by map with entry requirements.
+- how.title: How to use this list  [DE: So nutzt du diese Liste]
+- how.text: Expand each boss to see Gamma, Beta, and Alpha tribute requirements.
+- showing.lead: Showing 
+- showall: Show all maps
+- show.tiers: Show tier requirements
+- show.entry: Show entry requirements
+- singlelist: Single list
+
+## Building (building)
+- title: Building Techniques  [DE: Bautechniken]
+- subtitle: Foundation, walls, layouts and meta build patterns
+- snap.title: Perfect Foundation Snap  [DE: Fundamente perfekt snappen]
+- snap.sub: The base of every build — get foundations lined up perfectly.
+- snap.raising: Foundation Raising
+- snap.lowering: Foundation Lowering
+- wall.title: How to Build a Wall  [DE: So baust du eine Wand]
+- wall.sub: Stop your turrets from getting blocked — the #1 reason walls fail.
+- wall.callout.bold: 40% of turrets don't shoot through these wall patterns.
+- wall.callout.rest: If you've been getting soaked, this is probably why.
+- wall.dont: Don't build like this
+- wall.do: Build like this
+- wall.alt.bad1: Basic wrong wall
+- wall.cap.bad1: Basic wall — turrets get blocked
+- wall.alt.bad2: Triangle snap wall
+- wall.cap.bad2: Triangle snap — doesn't snap properly
+- wall.alt.correct: Correct wall
+- wall.cap.correct: Correct pattern — clear shot lanes
+- wall.alt.tekceiling: Tek on ceiling
+- wall.cap.tekceiling: 1 tek + 1 metal. Tek turret on ceiling = more res but small dead angle.
+- wall.alt.tunnel: Tunnel turrets
+- wall.cap.tunnel: Turrets shoot into the tunnel entrance
+- wall.alt.gens: Gens with vault drop
+- wall.cap.gens: Many gens with vault drops, one above the entrance
+- wall.alt.floating: Floating turret only-player
+- wall.cap.floating: Floating turret set to "only player" for counter-soak
+- wall.refvideos: Reference videos
+- wall.vid.tekmetal: Tek + Metal walkthrough
+- wall.vid.correct: Correct build sequence
+- wall.check.1: Don't use pillar+ceiling 90% of the time — creates dead angles.
+- wall.check.2: Always double-snap your wall with the cliff.
+- wall.check.3: Add a gate to counter pushes.
+- wall.check.4: Vault drops with gens above and beside the entrance.
+- layouts.title: Base Layouts  [DE: Basis-Grundrisse]
+- layouts.sub: Mainfob, towers, cages — the meta floorplans.
+- layouts.mainfob.text: Fattest to build. Add a TP-Cage and pair it with a warroom/crafting setup.
+- layouts.cage.text: Rename the TP to CAGE, close it, place walls and ceilings everywhere.
+- layouts.tower.title: Tower  [DE: Turm]
+- layouts.tower.text: Turrets on floor, gens on the side. Doorframes go 1/2 — see reference shots below.
+- layouts.underwater.title: Underwater Tower  [DE: Unterwasserturm]
+- layouts.underwater.text: Fully-snapped underwater tower with vacuum compartments.
+- layouts.tower.shots: Tower reference shots
+- layouts.tower.alt1: Tower 1
+- layouts.tower.cap1: Tower turret floor
+- layouts.tower.altdoor: Tower doorframe
+- layouts.tower.capdoor: Doorframe 1/2 trick
+- layouts.underwater.shots: Underwater Tower reference shots
+- layouts.underwater.alt2: Underwater 2
+- layouts.underwater.alt4: Underwater 4
+- crafting.title: Crafting Setup  [DE: Crafting-Setup]
+- crafting.sub: Vaults, replicators, hatchframes — clean tek storage layouts.
+- crafting.alt.template: Crafting template
+- crafting.cap.template.bold: Starter pack template
+- crafting.cap.template.rest: — base reference for a build-it crafting setup.
+- crafting.alt.repli: Repli at 3 dedi
+- crafting.cap.repli: Replicator at 3 dedi-high spacing.
+- crafting.walkthroughs: Placement walkthroughs
+- crafting.vid.vault.bold: Vault on floor
+- crafting.vid.vault.rest: like a cryofridge
+- crafting.vid.floorvault: Floor vault method
+- spam.title: Spam Tactics  [DE: Spam-Taktiken]
+- spam.sub: Spam control sizing + structures that hold ground when offline.
+- spam.sizing: Sizing reference
+- spam.alt.cliff: Spam size cliff
+- spam.cap.cliff: Cliff sizing — drop a gen to estimate your spam radius.
+- spam.alt.toilette: Toilette spam
+- spam.cap.toilette: Toilette can take spam control — same size as foundation.
+- spam.book: Spam structure book ({0} images)
+- spam.alt.n: Spam {0}
+- spam.check.1: Turret in a vault drop counters M.D.S.M.
+- spam.check.2: Pillar in a vault drop = light spam control.
+- spam.check.3: Tek bridge: doesn't take spam control while offline.
+- spam.check.4: Bubble spam: founda inside takes very long to destroy. Force-shields: size 1 lets you place the second closest one.
+- spam.check.5: Founda pillars: need 2 mek or another collision to damage (1 mek isn't enough).
+- spam.check.6: Tanster cliff: snap with kav vault, place foundas as high as possible on the cliff with low walls + ceilings underneath, then remove the wall to break the ceilings.
+- fence.title: Fence Pillars
+- fence.sub: Cheap to push, easy to destroy — pick your spots wisely.
+- fence.copy1: Perfect for push. Build wherever — they're easy to destroy, so use Tek Crop Plots when you need them to survive.
+- fence.copy2: Great for soaking with an FFA Teleporter or pushing with turrets. For turret caps, use Tek Fence Pillars.
+- fence.warning: Method 2 can count as a floating structure — use carefully.
+- fence.link: How to fence-pillar (YouTube)
+- floating.title: Floating Structures  [DE: Schwebende Strukturen]
+- floating.sub: Hatchframe / Transmi / Cryobreeder placement videos.
+- floating.vid.turrets: Floating turrets
+- floating.viahatchframe: via hatchframe
+- floating.vid.vault: Floating vault drop
+- floating.vid.hatch: Floating hatchframe
+- floating.vid.hatch.rest: with Transmi/Cryobreeder
+- floating.copy: Adding turrets to a floating hatchframe can flip it into illegal floating — see below.
+- illegal.title: Illegal Floating Methods  [DE: Illegale Schwebe-Methoden]
+- illegal.sub: Pillar + fish net, hatchframe + trapdoor, kav/S+ fridge snaps.
+- illegal.alt: Illegal
+- illegal.callout: Server rules vary. These methods abuse snap-points and may be wiped by admins. Reference only.
+- illegal.vid.fishnet: Pillar + fish net
+- illegal.vid.trapdoor: Hatchframe + trapdoor
+- illegal.vid.kav: Snap with Kav / S+ fridge
+- nav.title: On this page  [DE: Auf dieser Seite]
+- nav.illegal: Illegal Methods
+
+## Char Manager (charmanager)
+- title: Char Manager  [DE: Charakter-Verwaltung]
+- subtitle: Manage the appearance presets saved on ARK's character creation screen.
+- noark.title: ARK installation not found  [DE: ARK-Installation nicht gefunden]
+- noark.text: RazorReaper couldn't locate ARK: Survival Evolved through Steam. Make sure the game is installed, then rescan.
+- nofolder.title: Presets folder missing  [DE: Vorlagen-Ordner fehlt]
+- nofolder.text: The ARK install was found, but SavedArksLocal doesn't exist yet. Start the game once, then rescan.
+- rescan: Rescan
+- header.one: 1 preset found
+- header.many: {0} presets found
+- openfolder: Open folder
+- import: Import…
+- info.text: Presets are the saved templates on ARK's character creation screen — changes here apply the next time you create a character.
+- info.note: Before a preset is deleted or edited, a copy is kept in
+- empty.title: No character presets yet.  [DE: Noch keine Charakter-Vorlagen.]
+- empty.text: Save one in-game from the character creation screen, or import a .arkcharactersetting file.
+- rename.placeholder: New name
+- delete.confirm: Delete this preset?
+- rename: Rename
+- duplicate: Duplicate
+- export: Export
+- editor.loading: Reading preset…
+- editor.colors: Colors
+- editor.body: Body proportions
+- editor.note: A backup copy is saved before changes are written.
+- editor.save: Save changes
+- editor.saving: Saving…
+- slider.skintone: Skin Tone
+- slider.haircolor: Hair Color
+- slider.eyecolor: Eye Color
+- slider.headsize: Head Size
+- slider.necksize: Neck Size
+- slider.necklength: Neck Length
+- slider.chest: Chest
+- slider.shoulders: Shoulders
+- slider.armlength: Arm Length
+- slider.upperarm: Upper Arm
+- slider.lowerarm: Lower Arm
+- slider.hand: Hand
+- slider.leglength: Leg Length
+- slider.upperleg: Upper Leg
+- slider.lowerleg: Lower Leg
+- slider.foot: Foot
+- slider.hip: Hip
+- slider.torsowidth: Torso Width
+- slider.upperfacesize: Upper Face Size
+- slider.lowerfacesize: Lower Face Size
+- slider.torsodepth: Torso Depth
+- slider.headheight: Head Height
+- slider.headwidth: Head Width
+- slider.headdepth: Head Depth
+- slider.torsoheight: Torso Height
+- slider.unnamed: Slider {0}
+- toast.readfailed: Could not read the character presets folder — see the log for details.
+- toast.arkrunning: ARK is running — reopen the character creation screen to see the change.
+- toast.openfolderfailed: Could not open the presets folder.
+- toast.pickerfailed: Could not open the file picker.
+- toast.folderpickerfailed: Could not open the folder picker.
+- toast.renamefailed: Renaming failed — see the log for details.
+- toast.duplicatefailed: Duplicating failed — see the log for details.
+- toast.deletefailed: Deleting failed — see the log for details.
+- toast.importfailed: Importing failed — see the log for details.
+- toast.exportfailed: Exporting failed — see the log for details.
+- toast.savefailed: Saving failed — see the log for details.
+- toast.parsefailed: Could not read this preset.
+- picker.import: Select a .arkcharactersetting preset file
+- activity.renamed: Renamed character preset to '{0}'
+- activity.duplicated: Duplicated character preset '{0}'
+- activity.deleted: Deleted character preset '{0}'
+- activity.imported: Imported a character preset
+- activity.exported: Exported character preset '{0}'
+- activity.edited: Edited character preset '{0}'
+- result.badname: The new name is empty or contains characters Windows does not allow in file names.
+- result.samename: The preset already has that name.
+- result.nameexists: A preset named '{0}' already exists.
+- result.renamed: Renamed to '{0}'.
+- result.renamefailed: Renaming failed: {0}
+- result.duplicated: Duplicated as '{0}'.
+- result.duplicatefailed: Duplicating failed: {0}
+- result.deleted: Deleted '{0}' — a backup copy was kept.
+- result.deletefailed: Deleting failed: {0}
+- result.noark: ARK installation not found — is the game installed through Steam?
+- result.nofolder: The presets folder is missing: {0}
+- result.badfilename: Invalid preset file name.
+- result.gone: {0} no longer exists — rescan the list.
+- result.sourcemissing: The selected file no longer exists.
+- result.wrongextension: Character presets use the {0} extension.
+- result.notapreset: That file is not a valid ARK character preset.
+- result.imported: Imported '{0}' — it shows up on the character creation screen.
+- result.importfailed: Importing failed: {0}
+- result.nodestination: The chosen destination folder does not exist.
+- result.exported: Exported to {0}
+- result.exportfailed: Exporting failed: {0}
+- result.nosliders: No editable sliders were found in this preset.
+- result.badformat: This file is not in the expected preset format: {0}
+- result.changedondisk: The preset file changed on disk since it was opened — close and reopen the editor.
+- result.offsetmismatch: Internal offset mismatch — reopen the editor and try again.
+- result.saved: Saved changes to '{0}'.
+- result.savefailed: Saving failed: {0}
+
+## colorfield
+- pick: Pick color
+- done: Done
+
+## common
+- automatic: Automatic
+- open: Open
+- reset: Reset
+- active: Active
+- expand: Expand
+- collapse: Collapse
+- cancel: Cancel
+- close: Close
+- close.tooltip: Close (Esc)
+- retry: Retry
+- dismiss: Dismiss
+- na: N/A
+- unknown: Unknown
+- enable: Enable
+- disable: Disable
+- on: On
+- off: Off
+- all: All
+- allmaps: All maps
+- map: Map
+- search: Search
+- lat: Lat
+- lon: Lon
+- remove: Remove
+- delete: Delete
+- edit: Edit
+- save: Save
+- clear: Clear
+- error: Error: {0}
+
+## compact
+- subtitle: Shrink your ARK install with transparent Windows NTFS compression.
+- analyze: Analyze
+- analyzing: Analyzing…
+- stat.logical: Logical size
+- stat.logical.sub: What the game data adds up to
+- stat.ondisk: On disk
+- stat.ondisk.sub: What it actually occupies
+- stat.saved: Saved
+- lastanalyzed: Last analyzed: {0}
+- actions: Actions
+- compress.title: Compress with LZX  [DE: Mit LZX komprimieren]
+- compress.description: Re-packs every game file with NTFS LZX compression — ARK stays fully playable.
+- uncompress.title: Uncompress  [DE: Entpacken]
+- uncompress.description: Restores all files to their original size — the drive needs enough free space.
+- confirm.compress: Compress the ARK install?
+- confirm.uncompress: Uncompress the ARK install?
+- start: Start
+- cancelling: Cancelling…
+- progress.compressing: Compressing…
+- progress.uncompressing: Uncompressing…
+- progress.files: {0} / {1} files
+- before.title: Before you compact  [DE: Bevor du komprimierst]
+- before.1: Close ARK (and let Steam finish updating) before compressing or uncompressing.
+- before.2: Game updates write new files uncompressed — run Compress again after big patches.
+- status.analyzing: Analyzing install…
+- status.notfound: ARK install not found
+- status.notntfs: Drive is not NTFS ({0})
+- status.running: ARK is running
+- state.compacted: Compacted
+- state.partial: Partially compacted
+- state.not: Not compacted
+- description.notfound: Could not locate a valid ARK: Survival Evolved installation.
+- description.notntfs: NTFS compression only works on NTFS-formatted drives.
+- description.running: Close ARK before compressing or uncompressing the install.
+- description.idle: Install path will appear here after analysis.
+- scanning: Scanning files… {0} files, {1} so far
+- confirm.compress.text: Runs compact.exe over {0} files ({1}). You can cancel anytime — processed files stay compressed.
+- confirm.uncompress.text: Restores {0} files to their full size ({1}). You can cancel anytime.
+- button.compress: Compress
+- button.uncompress: Uncompress
+- stat.saved.sub: {0}% of the install
+- stat.saved.sub.none: Run an analysis to find out
+- toast.notfound: ARK installation not found. Compact ARK needs a valid install.
+- toast.notntfs: The ARK drive is {0} — NTFS compression is unavailable.
+- toast.notntfs.unknown: not NTFS
+- toast.analysisfailed: Analysis failed: {0}
+- toast.running: ARK is currently running. Close the game first.
+- toast.cancelled.compress: Compression cancelled. Files already processed stay compressed.
+- toast.cancelled.uncompress: Uncompress cancelled. Files already processed stay uncompressed.
+- activity.cancelled.compress: Compact ARK: compression cancelled
+- activity.cancelled.uncompress: Compact ARK: uncompress cancelled
+- toast.failed: The compact operation failed.
+- activity.failed: Compact ARK operation failed
+- toast.compressed: ARK compressed — {0} saved on disk.
+- activity.compressed: Compacted ARK install (saved {0})
+- toast.uncompressed: ARK restored to its full uncompressed size.
+- activity.uncompressed: Uncompressed ARK install
+- toast.operationfailed: Operation failed: {0}
+
+## Convert (convert)
+- subtitle: Turn a video, image or audio file into another format. Runs locally, and never changes your original.
+- choosefile: Choose file
+- changefile: Change file
+- convert: Convert
+- convertreplace: Convert & replace
+- empty.title: Nothing loaded yet  [DE: Noch nichts geladen]
+- empty.text: Choose a video, image or audio file and you'll get a preview, its details, and every format it can become.
+- preview.title: Preview  [DE: Vorschau]
+- preview.rendering: Rendering preview…
+- preview.none: No preview available
+- alt.waveform: Waveform of {0}
+- alt.preview: Preview of {0}
+- trim.title: Trim  [DE: Zuschneiden]
+- trim.kept: {0} kept
+- trim.start: Trim start
+- trim.end: Trim end
+- trim.starthere: Start here
+- trim.endhere: End here
+- trim.play: Play selection
+- kind.video: Video
+- kind.audio: Audio
+- kind.image: Image
+- to.title: Convert to  [DE: Konvertieren nach]
+- format.current: This is what the file already is
+- quality: Quality
+- volume: Volume
+- noaudio: No audio at all
+- done.title: When it's done  [DE: Wenn es fertig ist]
+- saveto: Save to
+- dest.downloads: Downloads
+- dest.beside: Next to the original
+- dest.appdata: RazorReaper folder
+- dest.custom: Choose a folder…
+- dest.redirected: Saved to the RazorReaper folder — Windows locks that one.
+- replace.label: Replace in ARK  [DE: In ARK ersetzen]
+- replace.none: Don't replace anything
+- replace.alreadyreplaced: {0} — already replaced
+- replace.both: Swap the .mp4 and the .wmv together — ARK plays whichever it finds, so leaving one behind can show the old video.
+- result.title: Converted  [DE: Konvertiert]
+- result.reveal: Show in folder
+- note.text: Replacing an ARK loading screen? Convert to wmv — ARK ships each movie as both an .mp4 and a .wmv, and the .wmv is the one most files are missing.
+- note.linklead: Every one of them is managed on the 
+- note.linkrest:  page.
+- status.converting: Converting…
+- status.nofile: No file chosen
+- status.busy: Long videos take a while — you can cancel any time.
+- status.pick: Pick a video, image or audio file to get started.
+- status.reencode: Already {0} — this re-encodes rather than converts.
+- status.ready: {0} file — pick a format and convert.
+- unsupported: {0} files aren't supported.
+- error.dialog: Windows would not open the file dialog. If ARK is running fullscreen, alt-tab to RazorReaper and try again.
+- error.folder: Could not choose a folder.
+- info.setup: Setting the converter up — this happens once.
+- error.setup: Could not set the converter up. Check your connection and try again.
+- info.cancelled: Conversion cancelled.
+- error.failed: Conversion failed: {0}
+- warn.limit: Converted, but the free monthly limit for loading-screen replacements ({0}) is reached. Resets next month — Premium is unlimited.
+- error.replace: Converted, but could not replace it: {0}
+- svc.gone: That file no longer exists.
+- svc.noformat: Pick a format to convert to.
+- svc.wrongkind: That kind of file can't be converted to {0}.
+- svc.notready: The converter isn't ready yet — give it a moment to set up.
+- svc.failed: Couldn't convert to {0}. The file may be damaged or use an unusual codec.
+- svc.empty: The conversion produced an empty file.
+- svc.saved: Saved as {0}.
+
+## Credits (credits)
+- subtitle: Developer, community, and tools behind RazorReaper.
+- role: ARK: Survival Evolved Tools Developer
+- community.title: Community & Support
+- community.text: Describe the problem in your in-app report. System and feature context is attached automatically when you send it. Discord remains available for community chat.
+- builtwith: Built with
+- help.title: Need help?  [DE: Brauchst du Hilfe?]
+- help.text: Found a bug or need assistance? In-app diagnostics give support the details needed to investigate; use Discord for follow-up conversation.
+- tag.feedback: In-app feedback
+- tag.bugs: Bug reports
+- openfailed: Could not open {0}. Check your default browser settings.
+
+## Crosshair (crosshair)
+- subtitle: Always-on-top overlay with editor, presets, animations & image imports — runs from the tray.
+- overlay.active: Overlay active
+- overlay.off: Overlay off
+- overlay.stop: Stop overlay
+- overlay.start: Start overlay
+- status.active: {0} · {1} · {2}
+- status.static: static
+- status.animated: animated
+- status.press: Press {0} to enable.
+- shape: Shape
+- type.cross: Cross
+- type.dot: Dot
+- type.circle: Circle
+- type.tstyle: T-Style
+- type.image: Image
+- type.pixel: Pixel
+- field.image: Image
+- image.choose: Choose…
+- image.replace: Replace…
+- sizing: Sizing
+- colors: Colors
+- body: Body
+- outline: Outline
+- label.size: Size:
+- label.thickness: Thickness:
+- label.gap: Gap:
+- label.opacity: Opacity:
+- label.dotsize: Dot size:
+- label.pixelsize: Pixel size:
+- label.rotation: Rotation:
+- label.speed: Speed:
+- centerdot: Center dot
+- dot.alwayson: Always on
+- dot.enabled: Enabled
+- pixelart: Pixel art
+- grid: Grid:
+- pixel.eraseall: Erase everything
+- invert: Invert
+- pixel.flipall: Flip every cell
+- pixel.plus: Plus pattern
+- pixel.dot: Single centre pixel
+- pixel.hint: Click or drag to paint. Body colour and outline come from the Colors card; the marked centre cell is the aim point.
+- lines: Lines
+- line.top: Top
+- line.bottom: Bottom
+- line.left: Left
+- line.right: Right
+- position: Position
+- monitor: Monitor
+- monitor.primary: {0} · primary
+- monitor.plain: {0}
+- offsetx: X offset
+- offsety: Y offset
+- offset.hint: Hold the up/down chevrons inside the number boxes to step continuously.
+- recenter: Recenter
+- motion: Motion
+- anim.none: None
+- anim.pulse: Pulse
+- anim.breath: Breath
+- anim.rotate: Rotate
+- rainbow: Rainbow color cycle
+- rainbow.short: Rainbow
+- meta.gap: gap {0}
+- preview: Live preview
+- preview.alt: Crosshair preview
+- presets: Presets
+- profiles: Your profiles
+- profiles.empty: No saved profiles yet. Tweak the editor, then save below.
+- profile.placeholder: New profile name…
+- library: Library
+- library.openfolder: Open folder
+- library.openfolder.tooltip: Open the library folder in Windows Explorer
+- library.copypath: Copy path
+- library.copypath.tooltip: Copy the imports folder path to clipboard
+- library.empty: Imported images appear here. Use the Import options below.
+- import: Import
+- import.image: Import image or video
+- import.workshopfile: Import Crosshair X workshop file
+- import.workshopfolder: Import Crosshair X workshop folder
+- code.label: From game code (Valorant / CS2)  [DE: Aus einem Spielcode (Valorant / CS2)]
+- code.placeholder: Paste a Valorant string or CSGO-XXXXX-… code
+- code.hint: Covers color, length, thickness, gap, dot and outline. Press Enter to import. Rust's own export code isn't readable — use "Import Crosshair X workshop file" for Rust.
+- guide.toggle: How do I find a crosshair to import?
+- guide.image.title: Image file (any game)  [DE: Bilddatei (jedes Spiel)]
+- guide.image.text: Use "Import image or video". Animated GIFs play frame by frame. PNGs with transparency render cleanly with per-pixel alpha.
+- guide.workshop.title: Steam Workshop (Crosshair X)
+- guide.workshop.text: In Steam: Library → Crosshair X → right-click → Properties → Installed Files → Browse → open the workshop folder. Either drag a .png straight in with "Import image or video", or hand the folder to "Import Crosshair X workshop folder" — we pick the first image and parse any config next to it.
+- guide.valorant.title: Valorant
+- guide.valorant.text: In-game: Settings → Crosshair → "Export profile code" at the top right. Paste the whole string above; it looks like 0;P;c;5;u;FFFFFFFF;h;0;m;1;0l;4;… Sites like valorant.crosshairs.gg share them too.
+- guide.cs2.title: CS2 / CSGO
+- guide.cs2.text: In-game: Settings → Crosshair → "Share or Import" gives you a code (CSGO-XXXXX-XXXXX-…, five groups of five). Or take one from a pro-crosshair site and paste it above. Match share codes look identical but are not crosshairs — we say so if you paste one.
+- guide.rust.title: Rust
+- guide.rust.text: Rust's Export gives a code too, but Facepunch never published how it is encoded, so we would only be guessing at what it says. Use "Import Crosshair X workshop file" instead — Crosshair X ships Rust profiles and those import exactly. An image import of the crosshair PNG works for any game as well.
+- hotkey: Hotkey
+- hotkey.toggle: Toggle overlay
+- hotkey.hint: Works globally — even while a game has focus. Default F8.
+- describe: {0} · {1} · size {2} · thickness {3} · gap {4} · outline {5} · {6}%
+- describe.dot: · dot {0}
+- toast.deleted: Deleted from library.
+- error.openfolder: Error opening folder: {0}
+- toast.loaded: Loaded '{0}'.
+- toast.saved: Saved '{0}'.
+- toast.imported: Image imported.
+- error.picker: Image picker failed: {0}
+- toast.savedcode: Saved '{0}' · {1}
+- toast.workshopimported: Imported '{0}'.
+- error.workshop: Workshop import failed: {0}
+- error.saveprofile: Saving profile failed: {0}
+- toast.overlay.enabled: Crosshair overlay enabled.
+- toast.overlay.disabled: Crosshair overlay disabled.
+- import.error.empty: Image file is empty.
+- import.video.extracting: Extracting video frames…
+- import.video.done: Video imported.
+- import.error.frames: Couldn't extract frames from '{0}'. Try converting it to PNG/GIF first.
+- import.error.decode: Couldn't decode '{0}' — unrecognised image format.
+- import.error.image: Image import failed: {0}
+- import.error.workshoptype: Unrecognized workshop file type: {0}
+- import.error.workshopmissing: Workshop path doesn't exist.
+- import.error.workshopempty: No usable image or config found in workshop file.
+- import.error.code: Couldn't read that crosshair code.
+- import.error.codefailed: Code import failed: {0}
+- library.toast.copied: Copied: {0}
+- library.error.copy: Couldn't copy path: {0}
+- library.error.delete: Delete failed: {0}
+- library.error.missing: That image is no longer on disk.
+- error.loadimage: Couldn't load image: {0}
+
+## Sky Changer (customlab)
+- subtitle: Replace the in-game sky with an image or solid color — patches your local sky files, safe on any server.
+
+## Desync (desync)
+- subtitle: Freezes your character server-side by blocking ARK's outbound traffic. Always auto-reverts.
+- inactive: Inactive
+- status.description: Adds a temporary Windows Firewall rule blocking outbound traffic for ShooterGame.exe.
+- activate: Activate
+- elevation: Desync needs administrator rights to add its temporary firewall rule.
+- countdown: until traffic is restored
+- stopnow: Stop now
+- duration.title: Duration  [DE: Dauer]
+- duration.description: Seconds before it reverts automatically (max 600).
+- how.title: How it works  [DE: So funktioniert es]
+- how.1: Activate adds an outbound block rule for ShooterGame.exe — the server stops receiving your position.
+- how.2: Your character freezes in place server-side while the game keeps running for you.
+- how.3: The rule is removed when the timer ends, when you stop it, or when RazorReaper closes.
+- ingame.title: In-game countdown  [DE: Countdown im Spiel]
+- ingame.description: While active, the HUD overlay's Desync module shows the remaining seconds on top of the game.
+- instant.title: Instant stop  [DE: Sofort stoppen]
+- instant.description: Stop now removes the rule immediately — traffic resumes within a second.
+- note: Your position freezes on the server while downloads keep working; the server usually disconnects you after a while. The rule is always removed automatically — on revert, on timeout, and when RazorReaper closes. Use at your own risk: this is detectable and against most servers' rules.
+- toast.admin: Desync needs RazorReaper to run as Administrator — restart it elevated.
+- activity.failed.admin: Desync failed: administrator required
+- toast.notrunning: ARK isn't running — start the game first.
+- activity.failed.notrunning: Desync failed: ARK not running
+- toast.executable: Could not locate ShooterGame.exe — check that ARK is installed where Steam reports it.
+- activity.failed.executable: Desync failed: executable unavailable
+- toast.rulefailed: Could not create the firewall rule: {0}
+- toast.rulefailed.elevation: Could not create the firewall rule (needs Administrator).
+- activity.failed.rulecreate: Desync failed: firewall rule creation
+- toast.limit: Free monthly limit reached ({0} desync activations). Resets next month — Premium is unlimited.
+- activity.failed.limit: Desync failed: monthly usage limit
+- toast.active: Desync active — auto-reverts in {0}s.
+- activity.activated: Desync activated ({0}s)
+- toast.removefailed: Could not remove the Desync firewall rule — traffic may still be blocked. Try again as Administrator.
+- activity.failed.ruleremove: Desync failed: firewall rule removal
+- toast.reverted: Desync reverted — traffic restored.
+- activity.reverted: Desync reverted
+- activity.failed.autorevert: Desync failed: automatic firewall revert
+
+## diagnostics
+- report: Report an issue
+
+## dinolevel
+- title: Higher dino levels  [DE: Höhere Dino-Level]
+- subtitle: How to push a tamed creature's level higher — written down from the owner's own testing
+- what.title: What this does  [DE: Worum es geht]
+- what.1: A creature you have already tamed can be freed and tamed a second time. Each pass lands at a higher tame level than the one before, so the same creature ends up further above where it started without being bred.
+- what.2: This is a game mechanic, not a tool in Razor Reaper — there is nothing here to click. It is written down from the owner's own testing and worked at the time it was written. There is no video for it yet.
+- steps.title: Step by step  [DE: Schritt für Schritt]
+- step.1.head: Unclaim the tamed dino
+- step.1.detail: It has to be unclaimed before anything else works.
+- step.2.head: Catch it with a Noglin
+- step.2.detail: Take the creature over so the Noglin is holding it.
+- step.3.head: Upload the Noglin at a transmitter
+- step.3.detail: Put the Noglin itself into the upload, not the creature.
+- step.4.head: Leave render distance
+- step.4.detail: Move far enough away that the area unloads for you.
+- step.5.head: Wait until the Noglin is gone from render
+- step.5.detail: Give it time — this is the part that is easy to cut short.
+- step.6.head: Come back
+- step.6.detail: The creature should be standing there free again.
+- step.7.head: Tame it again
+- step.7.detail: A normal tame, on the creature you just freed.
+- step.8.head: Repeat
+- step.8.detail: Every round starts from a higher tame level than the last.
+- requirements.title: Requirements  [DE: Voraussetzungen]
+- requirement.1: A Noglin — a high level one is likely to be needed.
+- requirement.2: A transmitter to upload the Noglin at.
+- requirement.3: The dino unclaimed before you start.
+- tips.title: Tips & caveats  [DE: Hinweise & Einschränkungen]
+- tip.1: Leave render properly — half out is not out, and the step will not fire.
+- tip.2: Keep the Noglin safe; you need it again for the next round.
+- tip.3: Results can differ by server settings, so treat the levels you get as your server's, not a fixed number.
+- footer.lead: Something changed? Tell us via 
+- footer.rest: .
+
+## Mutagen Prices (dinoprices)
+- title: Gen2 mutagen dino prices  [DE: Gen2-Mutagen-Preise für Dinos]
+- subtitle: Browse creature mutation values and search by name
+- search.label: Search by name  [DE: Nach Namen suchen]
+- search.placeholder: Search dinos…
+- showing: Showing:
+- column.name: Creature name  [DE: Name der Kreatur]
+- column.value: Mutagen value
+- empty.title: No creatures found  [DE: Keine Kreaturen gefunden]
+- empty.text: Try adjusting your search query
+
+## dropdown
+- placeholder: Choose…
+
+## elevation
+- reason: This feature needs administrator rights.
+- restart: Restart as Administrator
+- restarting: Restarting…
+- failed: Could not restart with administrator rights.
+
+## Feedback & Support (feedback)
+- title: Feedback & Support
+- subtitle: Share an idea or an opinion, or report a problem with a system snapshot attached.
+- tabs.aria: Feedback or support
+- tab.feedback: Feedback
+- tab.support: Support
+- message.feedback: Your feedback (required)
+- message.support: What went wrong? (required)
+- placeholder.feedback: Share an idea, an opinion, or anything you'd like to see next...
+- placeholder.support: Describe what happened, what you expected, and the steps that led there...
+- contact.label: Contact (optional)  [DE: Kontakt (optional)]
+- contact.placeholder: Discord or email — an additional way to reach you
+- attach.note: A system and feature snapshot is attached when you send your report.
+- sending: Sending…
+- send.feedback: Send Feedback
+- send.support: Send Report
+- reportid: Report ID: {0}
+- side.support.title: Attached automatically  [DE: Automatisch angehängt]
+- side.support.1: Machine name
+- side.support.2: Install and hardware IDs
+- side.support.3: License key and status
+- side.support.4: App and Windows versions
+- side.support.5: ARK and feature prerequisites
+- side.support.6: Safe settings and recent operation outcomes
+- side.support.note: Sending your report attaches a read-only snapshot automatically so support can reproduce the issue. It never includes screenshots, clipboard text, server passwords, command text, raw file paths, IP addresses, or log contents.
+- side.feedback.title: Good to know  [DE: Gut zu wissen]
+- side.feedback.1: Ideas, opinions and feature requests all belong here
+- side.feedback.2: Only your message, contact and app identity are sent
+- side.feedback.3: Something broken? Use the Support section instead
+- side.feedback.note: Feedback is sent without a diagnostic snapshot. If you are reporting a problem, switch to Support so the system and feature details travel with it.
+- side.inbox.note: Answers appear privately in your Inbox. The bell beside your tier in the sidebar shows a dot when a reply arrives; you don't need to leave a contact to receive an answer here.
+- result.empty: Please enter your feedback before submitting.
+- result.notconfigured: Feedback is not configured.
+- result.nodiagnostics: Diagnostics could not be collected. Nothing was sent—please try again.
+- result.diagnosticstoolarge: The diagnostic snapshot is too large to send. Nothing was sent—please try again after restarting the app.
+- result.thanks: Thanks for your feedback!
+- result.failed: Failed to send feedback. Please try again.
+- result.canceled: Feedback submission was canceled.
+- result.networkerror: Network error: {0}
+
+## File Modifier (filemodifier)
+- title: File Modifier  [DE: Dateien ändern]
+- subtitle: Remove or replace individual ARK files, and clear redundant cooked data to reclaim disk.
+- noark.label: ARK not found  [DE: ARK nicht gefunden]
+- noark.description: ARK wasn't found through Steam — install it, then rescan.
+- rescan: Rescan
+- elevation: Some game folders can only be changed with administrator rights.
+- sfc.label: SeekFree cleanup  [DE: SeekFree aufräumen]
+- sfc.label.size: SeekFreeContent — {0}
+- sfc.description: Deletes redundant cooked map data. Frees disk and forces ARK to load loose (modified) files.
+- scan: Scan
+- scanning: Scanning…
+- verify: Verify in Steam
+- note.warning: This permanently deletes game files and is not backed up.
+- note.undo: To undo it, verify the game files in Steam — that re-downloads the data. Only delete maps you don't play; a game update may bring them back too.
+- sfc.empty: Nothing redundant found in SeekFreeContent.
+- sfc.none: No SeekFreeContent folder found — nothing to clean up.
+- sfc.sm4: Shader Model 4 files (*.SM4)
+- sfc.core: Core blueprints
+- sfc.category.shaders: Redundant shader variants
+- sfc.category.map: Map data
+- sfc.category.mod: Official map (mod)
+- sfc.category.core: Core game data (advanced)
+- confirm: Delete {0} item(s), freeing {1}? This cannot be undone here.
+- delete.confirm: Yes, delete
+- deleting: Deleting…
+- delete.selected: Delete selected
+- delete.selected.size: Delete selected ({0})
+- files.none: No files modified
+- files.one: 1 file modified
+- files.many: {0} files modified
+- files.description: Remove or replace a single file inside the ARK install. Originals are backed up and fully restorable.
+- remove: Remove a file…
+- replace: Replace a file…
+- restoreall: Restore all
+- files.empty: No files modified. Use “Remove” or “Replace” to change a game file — the original is always backed up first.
+- badge.removed: Removed
+- badge.replaced: Replaced
+- restore: Restore
+- entry.description: {0} · {1} {2}
+- picker.remove: Select the ARK file to remove
+- picker.replace.target: Select the ARK file to replace
+- picker.replace.source: Select the replacement file
+- toast.pickerfailed: Could not open the file picker.
+- toast.cleanupfailed: Cleanup failed: {0}
+- toast.arkrunning: ARK is running — close the game so it doesn't lock these files.
+- toast.restoredall: Restored {0} file(s).
+- toast.restoredpartial: Restored {0} file(s), {1} failed.
+- toast.nothingtorestore: Nothing to restore.
+- result.nofile: No file selected.
+- result.noark: ARK installation not found.
+- result.noark.steam: ARK installation not found — is the game installed through Steam?
+- result.badpath: That path could not be read.
+- result.outsideark: For safety, only files inside the ARK install folder can be modified.
+- result.filemissing: That file no longer exists.
+- result.alreadymodified: That file is already modified — restore it first.
+- result.removed: Removed {0} — backed up and restorable.
+- result.removefailed: Could not remove the file: {0}
+- result.sourcemissing: The replacement file no longer exists.
+- result.samefile: The replacement is the same file as the target.
+- result.targetmissing: The target game file wasn't found, so there is nothing to replace.
+- result.replaced: Replaced {0} — original backed up and restorable.
+- result.replacefailed: Could not replace the file: {0}
+- result.untracked: That modification is no longer tracked.
+- result.nobackup: No backup found for {0} — use Steam's Verify Integrity.
+- result.restored: Restored {0}.
+- result.restorefailed: Could not restore the file: {0}
+- result.accessdenied: Access denied — try running RazorReaper as Administrator.
+- result.nothingselected: Nothing selected.
+- result.freed: Freed {0}.
+- result.freedpartial: Freed {0}, but {1} item(s) could not be deleted (try running as Administrator).
+- result.steamfailed: Could not open Steam — start it manually and verify the ARK files.
+- activity.removed: Removed game file {0}
+- activity.replaced: Replaced game file {0}
+- activity.freed: SeekFree cleanup freed {0}
+
+## Fonts (fonts)
+- title: Game Fonts  [DE: Spiel-Schriftarten]
+- subtitle: Customize ARK: Survival Evolved font settings
+- selection.title: Font Selection  [DE: Schriftart wählen]
+- selection.description: Choose your preferred in-game font
+- option.default.name: Game Default  [DE: Spielstandard]
+- option.default.description: Standard ARK font
+- option.asian.name: Asian Font  [DE: Asiatische Schrift]
+- option.asian.description: Asian localization font
+- option.global.name: Global Font  [DE: Global-Schrift]
+- option.global.description: Enhanced custom font
+- openark: Open ARK in Steam
+- install.title: Installation
+- install.auto: Automated setup
+- install.autoormanual: Automated or manual setup
+- installing: Installing…
+- autoinstall: Auto Install
+- openfolder: Open Font Folder
+- downloadonly: Download Only
+- default.title: Game Default Font  [DE: Standard-Spielschriftart]
+- default.text: The standard ARK: Survival Evolved font. Clean, simple, and built-in.
+- default.howto: How to Enable
+- step.steamproperties: Open Steam → Right-click ARK → Properties
+- step.launchoptions: Under the General tab, find Launch Options
+- default.step.remove: Remove any font commands:
+- step.restart: Restart ARK.
+- default.tip.label: Tip:  [DE: Tipp:]
+- default.tip.text: You can keep other launch options (like -lowmemory, -nomansky, etc). Just remove culture commands.
+- asian.title: Asian Font Setup  [DE: Asiatische Schrift einrichten]
+- asian.text: This font uses ARK's Asian localization files to change the in-game font appearance.
+- easyinstall: Easy Installation
+- step.clickbutton: Click the "{0}" button
+- step.typethis: Type this:
+- asian.how.label: How it works:  [DE: So funktioniert es:]
+- asian.how.text: This copies English localization files to the Asian locale folder, which changes the font while keeping text in English.
+- global.title: Global Font Setup  [DE: Global-Schrift einrichten]
+- global.text: The Global font provides an enhanced visual experience. Follow the steps below to install.
+- manualinstall: Manual Installation
+- global.placefolder: Place the Global folder in:
+- step.steamlaunchoptions: In Steam: Right-click ARK → Properties → Launch Options
+- activity.selected: Font selected: {0}
+- error.noark: ARK installation not found.
+- status.extracting: Extracting Global font…
+- error.packagemissing: Global font package missing from the app's resources: wwwroot/assets/fonts/Global.zip is not there.
+- error.packagestructure: Invalid Global font package structure.
+- status.installingfiles: Installing font files…
+- success.installed.global: Font files installed. Set the Steam launch option next (see instructions).
+- activity.global.installed: Global font installed
+- error.install: Installation failed: {0}
+- success.downloaded: Global font downloaded to:
+{0}
+
+Zip file also saved as:
+{1}
+- activity.global.downloaded: Global font downloaded
+- error.download: Download failed: {0}
+- status.copying: Copying localization files…
+- error.noenglishfiles: English localization files not found in the ARK installation.
+- success.installed.asian: Font files installed. Set the Steam launch option to -culture=zh-Hans-CN.
+- activity.asian.installed: Asian font installed
+- error.nofolder: Font folder not found: {0}
+- success.folderopened: Opened font folder in Explorer.
+- activity.folderopened: Opened font folder
+- error.openfolder: Failed to open folder: {0}
+- success.copied: Copied to clipboard.
+- activity.launchoption.copied: Launch option copied
+- error.copy: Failed to copy.
+- activity.asian.launchoption.copied: Asian font launch option copied
+- success.pathcopied: Path copied to clipboard.
+- activity.path.copied: Font path copied
+- error.copypath: Failed to copy path.
+- success.steamopened: ARK opened in Steam — right-click it for Properties.
+- activity.steamopened: Opened ARK in Steam
+- error.opensteam: Failed to open Steam: {0}
+
+## Game (game)
+- title: Game management  [DE: Spielverwaltung]
+- subtitle: Control and monitor ARK: Survival Evolved.
+- launch: Launch
+- close: Close
+- status.running: Running
+- status.notrunning: Not running
+- commands.title: In-game commands  [DE: Befehle im Spiel]
+- commands.note: Typed into the console, so ARK has to be running and the key below has to match the one it opens with.
+- command.reconnect: Reconnect
+- command.disconnect: Disconnect
+- command.cleanvision: Clean Vision
+- command.debugstructures: Debug Structures
+- consolekey.title: Console hotkey  [DE: Konsolentaste]
+- consolekey.note: Click and press the key that opens the console in ARK. Default is {0}.
+- consolekey.unknown: Unknown console key '{0}'. Using {1}.
+- consolekey.saved: New hotkey saved
+- toast.notrunning: ARK: Survival Evolved is not running.
+- toast.commandsent: Command '{0}' executed successfully
+- activity.commandsent: Game command executed: {0}
+- toast.commandfailed: Failed to send '{0}'. Try again.
+- toast.commanderror: Error executing command: {0}
+- activity.launched: ARK launched via Steam
+- activity.launchfailed: ARK launch failed
+- toast.launcherror: Error launching game: {0}
+- toast.closed: ARK: Survival Evolved closed successfully
+- activity.closed: ARK: Survival Evolved closed
+- toast.closeerror: Error closing game: {0}
+
+## Gamma (gamma)
+- title: Gamma
+- subtitle: System-wide screen gamma with hotkey and Logitech G HUB triggers
+- status.listening: Listening
+- status.off: Off
+- status.watching: Watching triggers · {0}
+- status.idle: Idle · {0} · press Start listening to enable hotkeys
+- mode.cycle: Cycle mode
+- mode.direct: Direct mode
+- start: Start listening
+- stop: Stop listening
+- reset: Reset to 1.0
+- hookerror: Couldn't install the global hooks. Another tool may already hold a low-level keyboard or mouse hook — close it and try again.
+- preview.title: Live preview  [DE: Live-Vorschau]
+- preview.description: Drag to change gamma instantly. 1.00 is neutral; higher brightens the mid-tones.
+- preview.unit: gamma
+- presets.title: Presets  [DE: Vorlagen]
+- presets.description: Six named levels. Edit the value (0.10–2.50) and choose which take part in the cycle.
+- preset.cycle: Cycle
+- preset.apply: Apply
+- triggers.title: Triggers  [DE: Auslöser]
+- triggers.description: Cycle steps through the enabled presets on one key. Direct binds a key or mouse button to each preset. Bindable inputs: any key (incl. F13–F24 from G HUB), Mouse 3 / 4 / 5.
+- trigger.cycle: Cycle
+- trigger.direct: Direct
+- trigger.advance: Advance cycle
+- trigger.capturing: Press key or mouse… (Esc)
+- trigger.set: Set trigger
+- monitors.title: Monitors  [DE: Monitore]
+- monitors.description: Apply gamma to every display, or pick a subset.
+- monitors.all: All monitors
+- monitors.all.description: Turn off to choose which displays are affected.
+- monitors.empty: No displays detected.
+- monitor.primary: Primary
+- lua.title: Logitech G HUB script  [DE: Logitech-G-HUB-Skript]
+- lua.description: Maps mouse buttons to the keyboard hotkeys above so a button press changes your gamma. Paste into a G HUB Lua script and keep listening on.
+- lua.view: View script
+- copy: Copy
+- copied: Copied
+- note: Gamma changes are system-wide and affect every app, not just ARK. The original ramp is restored automatically when RazorReaper closes.
+
+## gate
+- lifetime.title: Lifetime only  [DE: Nur mit Lifetime]
+- lifetime.text: This page comes with the Lifetime licence — the monthly plans do not include it.
+- premium.title: Premium Feature  [DE: Premium-Funktion]
+- premium.text: This feature requires an active Premium license.
+- premium.upgrade: Upgrade to Premium
+
+## Home (home)
+- welcome: Welcome, {0}
+- subtitle: ARK: Survival Evolved Configuration & Server Management Tool
+- status.title: Status
+- storage.title: Storage  [DE: Speicher]
+- resources.title: System Resources  [DE: Systemauslastung]
+- activity.title: Recent Activity  [DE: Letzte Aktivität]
+- activity.clear: Clear All
+- sound.title: Sound Settings  [DE: Toneinstellungen]
+- sound.subtitle: Control UI click and notification audio.
+- paths.title: System Paths  [DE: Systempfade]
+- status.uptime: System uptime
+- status.session: App session
+- status.network: Network
+- status.notconnected: Not connected
+- wifi.timedout: Timed Out
+- wifi.noadapter: No WiFi Adapter
+- wifi.undetectable: Unable to detect
+- wifi.unavailable: Not Available
+- status.signal: Signal
+- status.timezone: Timezone
+- status.utcoffset: UTC offset
+- status.week: Week
+- status.week.value: {0} of {1}
+- storage.drives: Installed drives
+- storage.unavailable: Drive info unavailable
+- storage.used: {0}% used
+- storage.more: +{0} more drives
+- resources.cpu: CPU usage
+- resources.gpu: GPU usage
+- resources.ram: RAM usage
+- resources.total: Total memory:
+- resources.app: App usage:
+- resources.initializing: Initializing system monitoring…
+- activity.empty: No recent activity
+- activity.loaded: Dashboard loaded
+- activity.openedfolder: Opened folder: {0}
+- activity.pathset: ARK path set to: {0}
+- activity.pathreset: ARK path reset to auto-detect
+- sound.enable: Enable UI sounds
+- sound.notification: Notification sound
+- sound.click: Click sound
+- sound.on: Enabled
+- sound.current: Current
+- sound.default.notification: Default (Notify)
+- sound.default.click: Default (Global Click)
+- sound.upload: Upload
+- sound.test: Test
+- sound.folder: Custom sounds folder
+- sound.openfolder: Open folder
+- sound.formats: Supports MP3, WAV, OGG, M4A, AAC. Keep files under {0} MB for fast playback.
+- sound.folder.missing: Custom sound folder not found.
+- sound.error.format: Unsupported audio format. Use MP3, WAV, OGG, M4A, or AAC.
+- sound.error.toolarge: Sound file too large. Max size is {0} MB.
+- sound.error.read: Could not read the sound file.
+- sound.updated.notification: Notification sound updated
+- sound.updated.click: Click sound updated
+- paths.change: Change ARK path
+- paths.edit.lede: Set a custom ARK installation path. This will be used for all file operations.
+- paths.edit.hint: Paste the ARK install folder (contains ShooterGame). Config/INI files live in:
+- paths.save: Save path
+- paths.autodetect: Auto-detect
+- paths.install: ARK installation
+- paths.config: Config directory
+- paths.notfound: Not found
+- paths.saved: Custom ARK path saved
+- paths.resetdone: Reset to auto-detect
+- paths.adjusted: Detected a subfolder. Using ARK install root: {0}
+- paths.error.missing: Path does not exist
+- paths.error.open: Failed to open folder: {0}
+- paths.error.empty: Please enter a valid ARK installation path
+- paths.error.nodir: The specified directory does not exist
+- paths.error.notark: This doesn't appear to be a valid ARK installation. Paste the folder that contains ShooterGame.
+- paths.error.save: Error saving path: {0}
+- paths.error.reset: Error resetting path: {0}
+- sound.customfile: Custom file
+
+## hotkey
+- unset: Not set
+- changelink: Change in Global Hotkeys
+- clear: Clear this hotkey
+- presskey: Press a key…
+
+## Global Hotkeys (hotkeys)
+- subtitle: Every system-wide hotkey, set in one place. They work even while ARK has focus.
+- group.scripts: Scripts
+- group.overlays: Overlays
+- group.automation: Automation
+- script.description: Starts or stops the script.
+- crosshair.name: Crosshair overlay  [DE: Fadenkreuz-Overlay]
+- crosshair.description: Shows or hides the crosshair.
+- autoclicker.description: Starts or stops clicking.
+- setonpage: Set on its page
+- presscombo: Press a combination
+
+## hud
+- subtitle: A click-through on-screen panel with clock, session timer, server info, tool status and alerts
+- movemode: Move mode
+- movemode.on: Move mode: on
+- testalert: Test alert
+- status.off: Overlay is off — enable it to draw on screen.
+- status.enabled: {0} of {1} modules enabled
+- status.movemode:  · move mode on
+- modules.title: Modules  [DE: Module]
+- modules.description: Toggle each panel line and reorder it with the arrows.
+- module.moveup: Move up
+- module.movedown: Move down
+- module.clock: Time
+- module.session: Session
+- module.server: Server
+- module.tool: Tool
+- module.scripts: Scripts
+- module.alerts: Alerts
+- module.desync: Desync
+- module.clock.description: Current time of day.
+- module.session.description: Time on the current server, or since RazorReaper launched.
+- module.server.description: Auto-detected server: name, players and live ping.
+- module.tool.description: Shows which RazorReaper tool is currently active.
+- module.scripts.description: Automation scripts that are currently running.
+- module.alerts.description: On-screen stack of tool alerts.
+- module.desync.description: Shows how long your position has been frozen.
+- placement.title: Placement  [DE: Platzierung]
+- placement.description: Choose where the panel sits and how it looks. Changes apply instantly.
+- monitor.description: Which display the overlay draws on.
+- monitor.primary: Primary display
+- monitor.primary.suffix:  · primary
+- anchor.title: Placement  [DE: Platzierung]
+- anchor.description: Where the panel sits on the screen.
+- anchor.topleft: Top left
+- anchor.top: Top
+- anchor.topright: Top right
+- anchor.left: Left
+- anchor.center: Center
+- anchor.right: Right
+- anchor.bottomleft: Bottom left
+- anchor.bottom: Bottom
+- anchor.bottomright: Bottom right
+- anchor.dragged: Custom (dragged)
+- anchor.free: Free
+- alertplacement.title: Alert placement  [DE: Platzierung der Hinweise]
+- alertplacement.description: Where notifier alerts stack up. They grow away from the edge they sit on.
+- alertposition.title: Alert position  [DE: Position der Hinweise]
+- alertposition.description: Top-left of the alert stack, in pixels on the chosen monitor.
+- alertmargin.title: Alert margin  [DE: Abstand der Hinweise]
+- alertmargin.description: Distance from the edge the alerts are anchored to.
+- offsetx.title: Offset X  [DE: Abstand X]
+- offsetx.description: Horizontal margin from the corner.
+- offsety.title: Offset Y  [DE: Abstand Y]
+- offsety.description: Vertical margin from the corner.
+- opacity.title: Opacity  [DE: Deckkraft]
+- opacity.description: Overall transparency of the overlay.
+- scale.title: Scale  [DE: Größe]
+- scale.description: Size of the panel and alert text.
+- compact.title: Compact mode  [DE: Kompaktmodus]
+- compact.description: Collapse every module into one condensed line.
+- note: The overlay is click-through except in move mode — turn on move mode to drag the panel into place, then turn it back off.
+- server.none: No server set
+- server.singleplayer: Single Player
+- tool.idle: Idle
+- desync.frozen: Frozen — {0}s
+- desync.off: Off
+- scripts.none: None
+- scripts.active.one: {0} active
+- scripts.active.many: {0} active
+- compact.scripts: {0} scripts
+- compact.desync: Desync {0}s
+- testalert.info: Test alert — this is where alerts appear
+- testalert.success: Test alert — success
+- testalert.warning: Test alert — warning
+- testalert.error: Test alert — error
+
+## Support inbox (inbox)
+- unread.one: {0} unread reply
+- unread.many: {0} unread replies
+- title: Inbox  [DE: Posteingang]
+- subtitle: Private answers from support, linked to your reports.
+- loading: Loading your inbox…
+- empty.title: No replies yet  [DE: Noch keine Antworten]
+- empty.text: Your replies will appear here automatically. The bell beside your tier in the sidebar shows a dot when support answers.
+- replied: Support replied
+- new: New
+- yourreport: Your report
+- older: Earlier replies
+
+## INI Builder (inibuilder)
+- title: INI Builder  [DE: INI-Baukasten]
+- subtitle: One-click Game.ini & GameUserSettings.ini presets with automatic backups
+- recheck: Re-check
+- status.noark: ARK installation not found
+- status.noark.description: ARK install not found — make sure Steam and ARK are installed.
+- status.running: ARK is running
+- status.running.description: Close ARK before applying — it overwrites GameUserSettings.ini on exit.
+- status.ready: Ready to apply
+- status.ready.description: Editing INIs in {0}
+- presets.title: One-Click Presets  [DE: Vorlagen auf einen Klick]
+- presets.intro: Each preset edits only its own keys; a backup is created before every apply.
+- preset.keys: {0} keys
+- lastapplied: Last applied
+- lastapplied.at: Applied {0}
+- apply: Apply
+- preset.maxfps: Max FPS
+- preset.maxfps.description: Everything at minimum and sky effects fully disabled. The most frames possible for low-end rigs and sweats.
+- preset.balanced: Balanced
+- preset.balanced.description: Medium detail with clean performance. Sensible everyday settings that still look like ARK.
+- preset.quality: Quality
+- preset.quality.description: Near-maximum visuals: full view distance, textures, shadows and sky. For strong hardware and screenshots.
+- preset.pvp: PvP Visibility
+- preset.pvp.description: Competitive clarity: foliage and ground clutter minimized, long view distance, no bloom or light shafts hiding players.
+- custom.title: Custom Keys  [DE: Eigene Schlüssel]
+- custom.intro: Add your own keys — existing keys are updated in place, missing keys and sections are created.
+- target.title: Target file  [DE: Zieldatei]
+- target.description: Which INI file the rows below are written to.
+- gameini.note: Game.ini does not exist yet — it will be created when you apply.
+- column.section: Section
+- column.key: Key
+- column.value: Value
+- placeholder.section: e.g. ScalabilityGroups
+- placeholder.key: e.g. sg.ShadowQuality
+- row.remove: Remove row
+- addrow: Add Row
+- applyto: Apply to {0}
+- draftnote: Rows are saved as a draft automatically.
+- backups.title: Backups
+- backups.intro: The last {0} backups per file are kept; restoring snapshots the current file first.
+- backups.empty: No backups yet — one is created each time you apply.
+- restore: Restore
+- toast.noark: ARK installation not found — cannot write INI files.
+- toast.arkrunning: ARK is running. Close the game first — it overwrites GameUserSettings.ini on exit.
+- toast.presetapplied: Preset '{0}' applied ({1} keys). A backup was saved first.
+- toast.presetfailed: Failed to apply preset.
+- toast.applyfailed: Apply failed: {0}
+- toast.norows: Add at least one row with a section and a key.
+- toast.customapplied: {0} key(s) written to {1}.
+- toast.customfailed: Failed to apply custom keys.
+- confirm.restore: Restore '{0}' over the live {1}?
+- toast.restored: Backup restored to {0}. The previous file was snapshotted first.
+- toast.restorefailed: Failed to restore backup.
+- toast.restoreerror: Restore failed: {0}
+- confirm.delete: Delete backup '{0}'? This cannot be undone.
+- toast.backupdeleted: Backup deleted.
+- toast.backupdeletefailed: Backup could not be deleted.
+- toast.deleteerror: Delete failed: {0}
+- activity.presetapplied: INI Builder preset applied: {0}
+- activity.customapplied: INI Builder custom keys applied to {0} ({1} keys)
+- activity.restored: INI Builder backup restored: {0}
+- activity.backupdeleted: INI Builder backup deleted: {0}
+- result.presetempty: Preset contains no keys.
+- result.nokeys: No keys to apply.
+- result.noark: ARK installation not found.
+- result.badbackup: Invalid backup.
+- result.outsidebackups: Backup path is outside the backup folder.
+- result.backupgone: Backup file no longer exists.
+- result.nosnapshot: Could not snapshot the current file — restore cancelled to protect your INI.
+- result.restorefailed: Restore failed: {0}
+- result.novalidkeys: No valid keys to apply. Each row needs a section and a key.
+- result.nobackup: Could not create a backup — apply cancelled to protect your INI.
+- result.applyfailed: Apply failed: {0}
+
+## INI Changer (inichanger)
+- title: INI Configuration  [DE: INI-Konfiguration]
+- subtitle: Manage & optimize ARK configuration presets
+- badge.custom: Custom
+- active.none: No preset applied
+- active.label: Active preset  [DE: Aktive Vorlage]
+- active.pick: Pick a preset below
+- active.hint: Click any card to apply that preset to your live ARK INI.
+- stat.presets: Presets
+- tooltip.open: Open the live ARK INI
+- check: Check
+- tooltip.check: Verify INI file path
+- tooltip.save: Write current buffer to disk
+- tooltip.clear: Empty the live INI
+- export: Export
+- tooltip.export: Export all presets as a zip
+- water: Water
+- tooltip.water: Check water surface files
+- water.restore.tooltip: Restore the water surface
+- water.remove.tooltip: Remove the water surface (reversible)
+- water.restore: Restore Water
+- water.remove: Remove Water
+- addpreset: Add Preset
+- tooltip.addpreset: Save current INI as a custom preset
+- tooltip.deletemode: Click a custom preset to remove it
+- deletemode: Delete mode
+- preview.alt: {0} preview
+- editor.title: INI Editor  [DE: INI-Editor]
+- editor.empty: Empty buffer
+- editor.stats: {0} lines · {1}
+- editor.placeholder: Load an INI file or apply a preset to start editing…
+- dialog.title: Create Preset  [DE: Vorlage erstellen]
+- dialog.subtitle: Save your tuned INI as a reusable preset
+- dialog.name: Preset name  [DE: Vorlagenname]
+- dialog.name.placeholder: Enter preset name
+- dialog.description: Description
+- dialog.description.placeholder: Short description
+- dialog.image: Preview image
+- dialog.optional: optional
+- dialog.image.alt: Preset image preview
+- dialog.image.change: Change image
+- dialog.image.choose: Choose image…
+- dialog.content: INI content
+- dialog.content.placeholder: Paste INI content or import a file...
+- dialog.usecurrent: Use Current Editor
+- dialog.import: Import INI File
+- dialog.note: Custom presets are saved locally and appear in your preset list.
+- dialog.save: Save Preset
+- preset.default.description: Game default.
+- preset.super-hard.description: Max FPS, minimum visuals.
+- preset.hard-black.description: Dark theme, perf-tuned.
+- preset.hard-stalker.description: Long-range PvP visibility.
+- preset.soft.description: Balanced look and FPS.
+- preset.black-spyglass.description: Dark with Spyglass tweaks.
+- preset.content-creator.description: Content creator tuning.
+- preset.stalker.description: Player/dino spotting.
+- preset.black-semi-hard.description: Black tinted scene.
+- preset.hard.description: Raid-grade FPS.
+- preset.clear-water-snow-north.description: Snow biome with clear water.
+- preset.semi-soft.description: Soft visuals, gentle FPS bump.
+- picker.image: Pick preset image
+- picker.ini: Select an INI file
+- toast.imagepickfailed: Image pick failed: {0}
+- toast.emptybuffer: Current INI content is empty.
+- toast.imported: INI file imported.
+- toast.importfailed: Import failed: {0}
+- toast.namerequired: Preset name is required.
+- toast.contentrequired: Preset content is required.
+- toast.nameexists: A preset with this name already exists.
+- toast.savefailed: Failed to save preset.
+- toast.imagenotattached: Preset saved, but the image could not be attached.
+- toast.presetsaved: Preset saved successfully.
+- toast.saveerror: Save failed: {0}
+- toast.selectcustom: Select a custom preset to delete.
+- toast.onlycustom: Only custom presets can be deleted.
+- confirm.delete: Delete custom preset '{0}'?
+- toast.removefailed: Unable to remove this preset.
+- toast.presetremoved: Custom preset removed.
+- toast.removeerror: Remove failed: {0}
+- toast.imagesavefailed: Failed to save preset image.
+- toast.imageupdated: Image updated for '{0}'.
+- toast.imagereplacefailed: Image replace failed: {0}
+- toast.nocustomimage: No custom image to reset.
+- toast.imagereset: Reset image for '{0}'.
+- toast.imageresetfailed: Image reset failed: {0}
+- toast.nosteam: Steam installation not found in registry.
+- toast.nosteam.long: Steam installation not found in registry. Please ensure Steam is properly installed.
+- toast.noini: INI file does not exist at expected location.
+- toast.iniloaded: INI file loaded successfully.
+- toast.loaderror: Error loading INI file: {0}
+- toast.inicleared: INI file content cleared successfully.
+- toast.clearerror: Error clearing INI file: {0}
+- toast.badpath: Invalid directory path
+- toast.inisaved: INI file saved successfully.
+- toast.saveinierror: Error saving INI file: {0}
+- toast.nopresets: No presets available to download.
+- toast.downloaded: Presets downloaded to {0}
+- toast.downloadfailed: Download failed: {0}
+- toast.ininotfound: INI file not found at: {0}
+- toast.inifound: INI file found.
+Path: {0}
+Size: {1} bytes
+Modified: {2}
+- toast.checkerror: Error checking INI file: {0}
+- toast.noark.long: ARK installation not found. Please ensure ARK is properly installed.
+- toast.noark: ARK installation not found.
+- toast.nowaterdir: Water files directory not found at: {0}
+- toast.waterallfound: All water surface files found ({0} files)
+Path: {1}
+- toast.waterpartial: Partial water files found ({0}/{1} files)
+Path: {2}
+- toast.wateralreadyremoved: Water surface already removed (0/{0} files found)
+Path: {1}
+- toast.watercheckerror: Error checking water files: {0}
+- toast.waterrestored: Water surface restored ({0} file(s)) — applies on next map load.
+- toast.waterremoved: Water surface removed ({0} file(s)) — reversible, applies on next map load.
+- toast.waternotfound: Water surface files were not found (already removed, or a different ARK version).
+- toast.watertoggleerror: Error toggling water surface: {0}
+- activity.presetsaved: Custom preset saved: {0}
+- activity.presetremoved: Custom preset removed: {0}
+- activity.imageupdated: Preset image updated: {0}
+- activity.imagereset: Preset image reset: {0}
+- activity.iniloaded: INI file loaded successfully
+- activity.inicleared: INI file cleared
+- activity.presetselected: Preset selected: {0}
+- activity.inisaved: INI file saved
+- activity.inisaved.preset: INI file saved (Preset: {0})
+- activity.downloaded: INI presets downloaded
+- activity.waterall: Water files check: All {0} files found
+- activity.waterpartial: Water files check: {0}/{1} files found
+- activity.wateralreadyremoved: Water files check: Already removed
+- activity.waterrestored: Water surface restored
+- activity.waterremoved: Water surface removed
+
+## language
+- label: Language  [DE: Sprache]
+- description: The language Razor Reaper's interface is shown in. German, Russian and Chinese are machine-translated — tell us through Feedback & Support if something reads wrong. Pages that have not been translated yet stay English.
+
+## launch
+- subtitle: Quick ARK startup flags with clear trade-offs.
+- before.title: Before you change anything  [DE: Bevor du etwas änderst]
+- before.text: Use only what helps. Test FPS, stability, and visibility after each change.
+- args.title: ARK launch arguments  [DE: ARK-Startparameter]
+- args.text: Click any argument to copy it.
+- copyflag: Copy {0}
+- goodfor: Good for
+- watchout: Watch out
+- steps.title: How to add them in Steam  [DE: So trägst du sie in Steam ein]
+- step.1: Open Steam.
+- step.2: Open ARK and go to Properties.
+- step.3: In the General tab, find Launch Options.
+- step.4: Paste your selected arguments separated by spaces.
+- example.title: Example line  [DE: Beispielzeile]
+- example.text: Click to copy:
+- example.tooltip: Copy full launch line
+- note.lead: Many players keep 
+- note.rest: , but test on your own hardware.
+- toast.copied: Copied to clipboard.
+- activity.copied: Copied launch text: {0}
+- toast.copyfailed: Failed to copy: {0}
+- toast.opened: Opened ARK Properties (General).
+- activity.opened: Opened ARK Properties General tab
+- toast.opened.fallback: Opened ARK Properties. If General is not selected, click the General tab.
+- activity.opened.fallback: Opened ARK Properties (fallback URI)
+- toast.openfailed: Failed to open Steam: {0}
+- opt.lowmemory.description: Low-memory mode for RAM-limited PCs.
+- opt.lowmemory.pro.1: Best for systems with under 8 GB RAM
+- opt.lowmemory.pro.2: Reduces memory usage
+- opt.lowmemory.pro.3: Destroyed structures despawn immediately
+- opt.lowmemory.con.1: Can reduce visual quality
+- opt.useallavailablecores.description: Forces ARK to use all CPU cores.
+- opt.useallavailablecores.pro.1: Can improve FPS and performance
+- opt.useallavailablecores.con.1: Can increase load on older CPUs
+- opt.sm4.description: Forces Shader Model 4.
+- opt.sm4.pro.1: Can increase FPS on older hardware
+- opt.sm4.con.1: Water and shadows look worse
+- opt.high.description: Starts ARK with high process priority.
+- opt.high.pro.1: Can improve performance
+- opt.high.con.1: Can make other apps slower while ARK is running
+- opt.noverifiedmappings.description: Skips part of startup file checks.
+- opt.noverifiedmappings.pro.1: Can reduce startup time
+- opt.noverifiedmappings.con.1: Can cause issues if game files are damaged
+- opt.nomansky.description: Disables sky effects to reduce visual overhead.
+- opt.nomansky.pro.1: Can improve FPS
+- opt.nomansky.pro.2: Can improve visibility
+- opt.nomansky.con.1: Sky can look unrealistic
+
+## license
+- hero.title.premium: Premium is active
+- hero.title.free: Unlock Premium
+- hero.lede.premium: This PC is licensed. Your key, plan and expiry are on the right.
+- hero.lede.free: Paste the key from your order to unlock every RazorReaper feature on this PC.
+- perk.premium.1: Every feature is unlocked on this machine.
+- perk.premium.2: The license is re-checked in the background — nothing to do.
+- perk.premium.lifetime: Lifetime plan: there is no expiry to keep an eye on.
+- perk.premium.renew: Renew before the countdown ends to stay uninterrupted.
+- perk.free.1: A key from your order unlocks every feature.
+- perk.free.2: Keys bind to one PC at activation.
+- perk.free.3: Support replies land in your in-app inbox.
+- benefits.title.premium: Included with Premium
+- benefits.title.free: Premium unlocks
+- benefit.1.name: Auto Clicker  [DE: Autoklicker]
+- benefit.1.note: Timed clicks, hold-to-click and the hotkey
+- benefit.2.name: Pixel Glitch  [DE: Pixel-Glitch]
+- benefit.2.note: Pixel and calibration tools
+- benefit.3.name: Scripts & HUD Overlay  [DE: Skripte & HUD-Overlay]
+- benefit.3.note: Automation and the in-game HUD
+- benefit.4.name: Sky Changer & Loading Screen  [DE: Himmel-Wechsler & Ladebildschirm]
+- benefit.4.note: Custom textures and screens
+- benefit.5.name: Mods & Intel  [DE: Mods & Wissen]
+- benefit.5.note: Prices, line list, bosses, drops, locations
+- benefit.6.name: Priority support  [DE: Bevorzugter Support]
+- benefit.6.note: Replies from the panel, in your inbox
+- buy.renew: Buy / renew
+- buy.premium: Buy Premium
+- esc.hint: Esc closes this view
+- panel.aria: License details
+- key.label: Your license key  [DE: Dein Lizenzschlüssel]
+- key.reveal: Reveal
+- key.hide: Hide
+- key.copy: Copy
+- fact.plan: Plan
+- fact.status: Status
+- fact.expires: Expires
+- fact.never: Never
+- fact.timeleft: Time left
+- fact.device: Device
+- fact.device.bound: Bound to this PC
+- fact.device.thispc: This PC
+- fact.recheck: Re-check
+- fact.unlock: Unlock
+- fact.unlock.value: One key, this PC
+- fact.support: Support
+- fact.support.value: In-app inbox
+- fact.updates: Updates
+- expired: Your license has expired.
+- expiring: Your license runs out in {0}.
+- renew: Renew
+- activation.label: License key  [DE: Lizenzschlüssel]
+- activation.verifying: Verifying…
+- activation.activate: Activate
+- activation.note: The key is in your order confirmation. It binds to this PC the moment it is activated.
+- activation.empty: Please enter a license key.
+- status.active: Active
+- status.expired: Expired
+- status.notactivated: Not activated
+- help.title: Need help?  [DE: Brauchst du Hilfe?]
+- help.text: Problems with a key, a purchase or an activation go to support; replies land in your inbox.
+- copied: License key copied to clipboard.
+- copyfailed: Failed to copy license key.
+- plan.1month: 1 Month
+- plan.3months: 3 Months
+- plan.6months: 6 Months
+- plan.12months: 12 Months
+- remaining.months: {0} months
+- remaining.days: {0} days
+- remaining.hours: {0} hours
+- remaining.minutes: {0} minutes
+
+## licenseactivated
+- kicker: License activated
+- title: Premium unlocked  [DE: Premium freigeschaltet]
+- text: Every RazorReaper feature is now available on this machine.
+- hint: Click anywhere to continue
+
+## Line List (linelist)
+- subtitle: Track your breeding lines and build WTS/WTB posts.
+- search.placeholder: Search species or line name…
+- filter.forsale: For Sale
+- count: {0} / {1} lines
+- post.button: WTS / WTB Post
+- add: Add Line
+- edit: Edit Line
+- editor.hint: Stat values are points, not displayed levels.
+- field.species: Species
+- placeholder.species: e.g. Rex
+- field.name: Line Name  [DE: Linienname]
+- placeholder.name: e.g. Ultron line  [DE: z. B. Ultron-Linie]
+- field.generation: Generation
+- field.baselevel: Base Level
+- stat.health: Health
+- stat.stamina: Stamina
+- stat.oxygen: Oxygen
+- stat.food: Food
+- stat.weight: Weight
+- stat.melee: Melee
+- field.mutations.maternal: Mutations (Maternal)
+- field.mutations.paternal: Mutations (Paternal)
+- field.notes: Notes
+- placeholder.optional: Optional
+- forsale: For sale
+- placeholder.price: Price, e.g. 2x mutagen or offer
+- save: Save Changes
+- empty.title: No breeding lines yet  [DE: Noch keine Zuchtlinien]
+- empty.text: Add your first line to start tracking stats and mutations.
+- nomatch.title: No matching lines  [DE: Keine passenden Linien]
+- nomatch.text: Try a different search or filter.
+- sort.tooltip: Sort by species
+- th.line: Line
+- th.stats: Stats
+- th.muts: Muts M/P
+- th.gen: Gen
+- unnamed: Unnamed line
+- tooltip.baselevel: Base level {0}
+- tooltip.muts: Maternal / paternal mutations
+- modal.wts.hint: generated from lines marked for sale
+- modal.wts.empty: No lines are marked for sale yet.
+- modal.wtb.hint: free text, saved with your list
+- modal.wtb.placeholder: e.g. WTB clean Rex females, high melee Shadowmane…
+- modal.combined: Combined post
+- modal.combined.empty: Mark lines for sale or write a WTB block to build a post.
+- modal.copy: Copy Post
+- error.species: Species is required.
+- success.added: Line added.
+- activity.added: Added breeding line: {0}
+- success.updated: Line updated.
+- activity.updated: Updated breeding line: {0}
+- error.save: Could not save the line. Check the log for details.
+- success.deleted: Line deleted.
+- activity.deleted: Deleted breeding line: {0}
+- error.delete: Could not delete the line. Check the log for details.
+- error.savewtb: Could not save the WTB text. Check the log for details.
+- warn.nothingtocopy: Nothing to copy yet. Mark lines for sale or write a WTB block.
+- success.copied: Post copied to clipboard.
+- activity.copied: Copied WTS/WTB post to clipboard
+- error.copy: Failed to copy: {0}
+
+## Loading Screen (loadingscreen)
+- title: Custom Loading Screen  [DE: Eigener Ladebildschirm]
+- subtitle: Swap ARK's startup and loading videos for your own — fully reversible.
+- noark.title: ARK installation not found  [DE: ARK-Installation nicht gefunden]
+- noark.text: ARK wasn't found through Steam — make sure it's installed, then rescan.
+- nomovies.title: Movies folder missing  [DE: Movies-Ordner fehlt]
+- nomovies.text: The Movies folder doesn't exist — verify the game files in Steam, then rescan.
+- rescan: Rescan
+- header.replaced: {0} of {1} videos replaced
+- header.replaced.description: Custom videos play on the next game start.
+- header.intact: All original videos intact
+- header.intact.description: ARK's stock startup and loading videos are untouched.
+- restoreall: Restore all
+- restoringall: Restoring…
+- info.backup: Pick any video and it is converted to ARK's format for you. Originals are backed up to
+- info.applies: and changes apply on the next game start. Wrong format? The
+- info.format: page makes the .wmv variant ARK expects alongside the .mp4.
+- volume.title: Audio volume  [DE: Audiolautstärke]
+- volume.description: Applied to the converted video. 100% keeps the original loudness; 0% mutes it.
+- nofiles: No video files found in the Movies folder.
+- group.loading: Loading screen
+- group.startup: Startup & title
+- group.cinematic: Map cinematics
+- group.other: Other video files
+- badge.custom: Custom
+- restore: Restore
+- change: Change
+- replace: Replace
+- progress.downloading: Downloading video converter…
+- progress.preparing: Preparing video converter…
+- progress.converting: Converting…
+- picker.title: Select a video for {0}  [DE: Video für {0} auswählen]
+- toast.readfailed: Could not read the ARK Movies folder — see the log for details.
+- toast.arkrunning: ARK is running — it may lock these files. Close the game if the change fails.
+- toast.pickerfailed: Could not open the file picker.
+- toast.converterfailed: Could not download the video converter — check your connection and try again.
+- toast.limit: Free monthly limit reached ({0} loading-screen replacements). Resets next month — Premium is unlimited.
+- toast.replacefailed: Replacing {0} failed — see the log for details.
+- toast.restorefailed: Restoring {0} failed — see the log for details.
+- toast.restoredall: Restored {0} original video(s).
+- toast.restoredpartial: Restored {0} video(s), {1} failed.
+- toast.firsterror: First error: {0}
+- toast.nothingtorestore: Nothing to restore — no videos are currently replaced.
+- toast.restoreallfailed: Restoring the original videos failed — see the log for details.
+- activity.replaced: Replaced ARK video {0}
+- activity.restored: Restored ARK video {0}
+- activity.restoredall: Restored all ARK videos ({0})
+- result.noark: ARK installation not found — is the game installed through Steam?
+- result.nomoviesfolder: ARK's Movies folder is missing: {0}
+- result.badname: Invalid movie file name.
+- result.unsupported: {0} is not a supported ARK movie file (.mp4 / .wmv).
+- result.sourcemissing: The selected video file no longer exists.
+- result.wrongformat: Wrong format: {0} needs a {1} file, but you picked a {2}. RazorReaper does not convert videos — pick a {1} video.
+- result.noextension: file without an extension
+- result.extensionfile: {0} file
+- result.sourceunreadable: The selected video file could not be read.
+- result.sourceempty: The selected video file is empty (0 bytes).
+- result.samefile: That is the game's own video file — pick your replacement video instead.
+- result.converternotready: The video converter isn't ready yet — let ffmpeg finish downloading.
+- result.formats: {0} formats of {1}
+- result.converted: {0} converted and replaced — plays on the next game start.
+- result.notinfolder: {0} was not found in the Movies folder, so there is no original to replace.
+- result.replaced: {0} replaced — your video plays on the next game start.
+- result.replacefailed: Replacing {0} failed: {1}
+- result.convertfailed: Converting {0} failed: {1}
+- result.backupunreadable: Could not read the backup folder: {0}
+- result.nobackup: No backup found for {0} — it has not been replaced.
+- result.restored: {0} restored to the original.
+- result.restorefailed: Restoring {0} failed: {1}
+- convert.sourcemissing: The source video no longer exists.
+- convert.noffmpeg: ffmpeg is not available. Try again so it can download.
+- convert.unsupported: Unsupported target format '{0}'.
+- convert.failed: Conversion failed — the source video could not be converted. See the log for details.
+- convert.nooutput: Conversion produced no output.
+- convert.crashed: Conversion failed: {0}
+- convert.done: Conversion complete.
+
+## macro
+- activity.stopall: All macro runners stopped
+- activity.started: Macro '{0}' started
+- activity.completed: Macro '{0}' completed ({1} loop(s))
+- activity.stopped: Macro '{0}' stopped
+- activity.aborted: Macro '{0}' aborted — {1}
+- activity.failed: Macro '{0}' failed
+
+## Map Mods (mapmods)
+- subtitle: Modded map spots — caves, landmarks, obelisks and POIs — with coordinates and notes.
+- spots: {0} spots
+- nospots: No spots here yet.
+- selectspot: Select a spot to see its details.
+- preview.loading: Loading preview…
+- image.add: Add image or GIF
+- image.replace: Replace
+- label.artifact: Artifact
+- label.entrance: Entrance
+- label.hazards: Hazards
+- label.loadout: Loadout
+- label.loot: Loot
+- label.note: Note
+- coords: Lat {0} / Lon {1}
+- nocoords: Not documented
+- copytp: Copy teleport
+- noartifact: No artifact
+- type.poi: POI
+- type.spot: Spot
+- servers.title: Your servers  [DE: Deine Server]
+- servers.subtitle: Add your own servers, maps, and base spots.
+- server.add: Add server
+- server.edit: Edit server
+- server.delete: Delete server
+- server.stats: {0} maps · {1} spots
+- map.add: Add map
+- map.edit: Edit map
+- map.delete: Delete map
+- spot.add: Add spot
+- spot.edit: Edit spot
+- nomaps: No maps yet — add one to get started.
+- noservers.lead: No custom servers yet. Click 
+- noservers.rest:  to create one.
+- modal.addserver: Add server
+- modal.editserver: Edit server
+- modal.addmap: Add map
+- modal.editmap: Edit map
+- modal.addspot: Add spot
+- modal.editspot: Edit spot
+- modal.confirmdelete: Confirm delete
+- form.servername: Server name
+- form.servername.hint: e.g. INX, Nitrado, MyCluster
+- form.logo: Server logo (optional)
+- form.logo.preview: Preview
+- form.logo.upload: Upload image
+- form.logo.hint: PNG, JPG, WebP · max 2 MB. Leave empty for auto initials.
+- form.mapname: Map name
+- form.mapname.hint: e.g. Ragnarok, The Island
+- form.mapnote.hint: e.g. Custom caves and landmarks
+- form.spotname: Spot name
+- form.spotname.hint: e.g. Horror Cave
+- form.lat: Latitude
+- form.lat.hint: e.g. 50
+- form.lon: Longitude
+- form.lon.hint: e.g. 72
+- form.note: Note (optional)
+- form.note.hint: Optional notes
+- confirm.spot: Delete spot "{0}"?
+- confirm.server: Delete server "{0}" and all its maps and spots?
+- confirm.map: Delete map "{0}" and all its spots?
+- toast.copied: Teleport command copied.
+- activity.copied: Copied teleport: {0}
+- toast.copyfailed: Failed to copy the command.
+- toast.imagetoolarge: Image must be under {0} MB.
+- toast.imageadded: Preview image added.
+- toast.imagefailed: Failed to add the image.
+- toast.imageremoved: Preview image removed.
+- toast.spotsaved: Spot updated.
+- toast.serversaved: Server updated.
+- toast.mapsaved: Map updated.
+- toast.spotaddedto: Spot "{0}" added to {1}.
+- toast.spotadded: Spot "{0}" added.
+- toast.spotdeleted: Spot "{0}" deleted.
+- toast.serveradded: Server "{0}" added.
+- toast.serverdeleted: Server "{0}" deleted.
+- toast.mapadded: Map "{0}" added.
+- toast.mapdeleted: Map "{0}" deleted.
+
+## media
+- image.failed: Image unavailable
+- video.failed: Video unavailable
+- video.loading: Loading video…
+- video.loading.percent: Loading video… {0}%
+
+## nav
+- search.label: Search  [DE: Suchen]
+- search.tooltip: Search pages, locations and commands (Ctrl+K)  [DE: Seiten, Orte und Befehle durchsuchen (Strg+K)]
+- resize: Drag to resize  [DE: Zum Verändern der Breite ziehen]
+- license.premium.tooltip: Premium — open your license: plan, key and expiry  [DE: Premium — Lizenz öffnen: Tarif, Schlüssel und Ablauf]
+- license.freemium.tooltip: Freemium — open your license to activate a key  [DE: Freemium — Lizenz öffnen, um einen Schlüssel zu aktivieren]
+- group.core: Core  [DE: Allgemein]
+- group.ark-tweaks: ARK Tweaks  [DE: ARK-Anpassungen]
+- group.custom-ark: Custom ARK  [DE: Eigenes ARK]
+- group.automation: Automation  [DE: Automatisierung]
+- group.mods-intel: Mods & Intel  [DE: Mods & Wissen]
+- group.utilities: Utilities  [DE: Werkzeuge]
+- group.help-about: Help & About  [DE: Hilfe & Über]
+- page.home: Home  [DE: Startseite]
+- page.server: Server
+- page.game: Game  [DE: Spiel]
+- page.account: My account  [DE: Mein Konto]
+- page.settings: Settings  [DE: Einstellungen]
+- page.hotkeys: Global Hotkeys  [DE: Tastenkürzel]
+- page.ini-changer: INI Changer  [DE: INI-Wechsler]
+- page.ini-builder: INI Builder  [DE: INI-Baukasten]
+- page.vision: Vision Tools  [DE: Sicht-Werkzeuge]
+- page.gamma: Gamma
+- page.launch-options: Launch Options  [DE: Startoptionen]
+- page.fonts: Fonts  [DE: Schriften]
+- page.pixel: Pixel Glitch  [DE: Pixel-Glitch]
+- page.paintings: Paintings  [DE: Gemälde]
+- page.custom-lab: Sky Changer  [DE: Himmel-Wechsler]
+- page.loading-screen: Loading Screen  [DE: Ladebildschirm]
+- page.char-manager: Char Manager  [DE: Char-Verwaltung]
+- page.stretched-res: Stretched Res  [DE: Gestreckte Res]
+- page.autoclicker: Auto Clicker  [DE: Autoklicker]
+- page.scripts: Scripts  [DE: Skripte]
+- page.hud-overlay: HUD Overlay  [DE: HUD-Overlay]
+- page.notifier: Notifier  [DE: Melder]
+- page.dino-prices: Mutagen Prices  [DE: Mutagen-Preise]
+- page.line-list: Line List  [DE: Zuchtlinien]
+- page.oc-bps: OC BPs  [DE: OC-BPs]
+- page.bosses: Bosses  [DE: Bosse]
+- page.guides.dino-level: Dino levels  [DE: Dino-Level]
+- page.tp-locations: TP Locations  [DE: TP-Orte]
+- page.underwater-drops: Underwater Drops  [DE: Tiefsee-Drops]
+- page.map-mods: Map Mods  [DE: Map-Mods]
+- page.steam-mods: Steam Mods  [DE: Steam-Mods]
+- page.building: Building  [DE: Bauen]
+- page.desync: Desync
+- page.file-modifier: File Modifier  [DE: Dateien ändern]
+- page.crosshair: Crosshair  [DE: Fadenkreuz]
+- page.convert: Convert  [DE: Umwandeln]
+- page.compact-ark: Compact ARK  [DE: ARK verkleinern]
+- page.feedback: Feedback & Support  [DE: Feedback]
+- page.inbox: Support inbox  [DE: Posteingang]
+- page.troubleshoot: Troubleshoot  [DE: Fehlersuche]
+- page.credits: Credits
+- page.home.description: Dashboard, updates & recent activity  [DE: Übersicht, Updates & letzte Aktivität]
+- page.server.description: Connect and manage ARK servers  [DE: ARK-Server verbinden und verwalten]
+- page.game.description: Control and monitor ARK: Survival Evolved  [DE: ARK: Survival Evolved steuern und überwachen]
+- page.account.description: Your profile picture, Discord account and connected installations  [DE: Dein Profilbild, dein Discord-Konto und verbundene Installationen]
+- page.settings.description: Appearance, audio and app behaviour  [DE: Aussehen, Ton und App-Verhalten]
+- page.hotkeys.description: Every system-wide hotkey in one place  [DE: Alle systemweiten Tastenkürzel an einem Ort]
+- page.ini-changer.description: Manage & optimize ARK configuration presets  [DE: ARK-Konfigurationsvorlagen verwalten und optimieren]
+- page.ini-builder.description: One-click Game.ini & GameUserSettings.ini presets with auto-backup  [DE: Game.ini- und GameUserSettings.ini-Vorlagen per Klick, mit automatischem Backup]
+- page.vision.description: TEK camera, scope visibility, and custom FOV  [DE: TEK-Kamera, Zielfernrohr-Sicht und eigenes Sichtfeld]
+- page.gamma.description: System-wide screen gamma with hotkey and Logitech G HUB triggers, presets and a cycle  [DE: Systemweiter Bildschirm-Gamma mit Tastenkürzel- und Logitech-G-HUB-Auslösern, Vorlagen und Durchschalten]
+- page.launch-options.description: Quick ARK startup flags with trade-offs  [DE: Schnelle ARK-Startparameter samt Nachteilen]
+- page.fonts.description: Customize ARK font settings  [DE: ARK-Schrifteinstellungen anpassen]
+- page.pixel.description: Manage ARK texture files for visual mods  [DE: ARK-Texturdateien für optische Mods verwalten]
+- page.paintings.description: Manage your in-game paintings  [DE: Deine Bilder im Spiel verwalten]
+- page.custom-lab.description: Replace the in-game sky with an image or solid color  [DE: Den Himmel im Spiel durch ein Bild oder eine Farbe ersetzen]
+- page.loading-screen.description: Replace ARK's startup and loading videos with your own — reversible  [DE: ARKs Start- und Ladevideos durch eigene ersetzen — umkehrbar]
+- page.char-manager.description: Manage saved ARK character appearance presets — rename, edit sliders, import and export  [DE: Gespeicherte ARK-Aussehensvorlagen verwalten — umbenennen, Regler ändern, importieren und exportieren]
+- page.stretched-res.description: Switch the desktop to a stretched resolution with a safe 15-second auto-revert  [DE: Den Desktop auf eine gestreckte Auflösung umstellen, mit sicherer Rückkehr nach 15 Sekunden]
+- page.autoclicker.description: Advanced mouse automation tool  [DE: Fortgeschrittene Maus-Automatisierung]
+- page.scripts.description: Premade automation that runs natively — no external tools  [DE: Fertige Automatisierung, die nativ läuft — ohne Fremdprogramme]
+- page.hud-overlay.description: In-game HUD overlay with clock, session timer, server info, tool status and alerts  [DE: HUD-Overlay im Spiel mit Uhr, Sitzungsdauer, Serverinfo, Werkzeugstatus und Hinweisen]
+- page.notifier.description: Live alerts for rare dinos, resources, element nodes and OSD events, shown on the HUD with sound  [DE: Live-Hinweise auf seltene Dinos, Ressourcen, Element-Knoten und OSD-Ereignisse, im HUD und mit Ton]
+- page.dino-prices.description: Browse creature mutation values by name  [DE: Mutationswerte von Kreaturen nach Namen durchsuchen]
+- page.line-list.description: Track breeding lines with stats and mutations, and generate WTS/WTB trade posts  [DE: Zuchtlinien mit Werten und Mutationen verfolgen und WTS/WTB-Handelsposts erzeugen]
+- page.oc-bps.description: Genesis 2 mission rewards for overcapped blueprints  [DE: Genesis-2-Missionsbelohnungen für übersteigerte Blaupausen]
+- page.bosses.description: Boss tribute guide sorted by map  [DE: Boss-Tributführer, nach Karte sortiert]
+- page.guides.dino-level.description: How to push a tamed creature's level higher  [DE: Wie du eine gezähmte Kreatur auf ein höheres Level bringst]
+- page.tp-locations.description: Teleport location database — obelisks, caves, terminals and landmarks for every map  [DE: Datenbank für Teleport-Ziele — Obelisken, Höhlen, Terminals und Orientierungspunkte jeder Karte]
+- page.underwater-drops.description: Underwater loot crate locations with coordinates for every ocean map  [DE: Fundorte von Unterwasser-Lootkisten samt Koordinaten für jede Ozeankarte]
+- page.map-mods.description: Modded map spots — caves, landmarks, obelisks and POIs — plus the artifact-cave database, with coordinates and notes  [DE: Orte auf Mod-Karten — Höhlen, Orientierungspunkte, Obelisken und Sehenswürdigkeiten — samt Artefakthöhlen-Datenbank, mit Koordinaten und Notizen]
+- page.steam-mods.description: Browse installed workshop mods  [DE: Installierte Workshop-Mods durchsehen]
+- page.building.description: Foundation raising and lowering tutorials  [DE: Anleitungen zum Anheben und Absenken von Fundamenten]
+- page.desync.description: Freeze your position server-side (admin, auto-reverts)  [DE: Deine Position serverseitig einfrieren (Admin, kehrt selbst zurück)]
+- page.file-modifier.description: Remove/replace game files + clear redundant SeekFree data  [DE: Spieldateien entfernen oder ersetzen und überflüssige SeekFree-Daten löschen]
+- page.crosshair.description: Always-on-top crosshair overlay with editor & presets  [DE: Immer sichtbares Fadenkreuz-Overlay mit Editor und Vorlagen]
+- page.convert.description: Convert video, image and audio files between formats  [DE: Video-, Bild- und Audiodateien zwischen Formaten umwandeln]
+- page.compact-ark.description: Shrink the ARK install with Windows NTFS compression  [DE: Die ARK-Installation mit der NTFS-Komprimierung von Windows verkleinern]
+- page.feedback.description: Share feedback, or report a problem with a system snapshot attached  [DE: Rückmeldung geben oder ein Problem melden — mit angehängter Systemaufnahme]
+- page.inbox.description: Private replies to your reports  [DE: Private Antworten auf deine Meldungen]
+- page.troubleshoot.description: Logging, diagnostics, and quick fixes  [DE: Protokollierung, Diagnose und schnelle Lösungen]
+- page.credits.description: Developer information & contact  [DE: Informationen zum Entwickler und Kontakt]
+
+## notfound
+- title: Page not found  [DE: Seite nicht gefunden]
+- subtitle: This link points at a page RazorReaper no longer has. Nothing is broken — the page has moved or been retired.
+- back: Back to Home
+
+## Notifier (notifier)
+- title: Notifier  [DE: Melder]
+- subtitle: Live in-game alerts for rare dinos, resources and OSD events
+- status.connected: Connected
+- status.connecting: Connecting…
+- status.error: Connection error
+- status.disconnected: Disconnected
+- connect: Connect
+- disconnect: Disconnect
+- testalert: Test alert
+- types.title: Alert types  [DE: Meldungsarten]
+- types.description: Choose which alerts pass, their sound, and preview each one.
+- test: Test
+- sound.silent: Silent
+- sound.notification: Notification
+- sound.click: Click
+- type.rare-dino.label: Rare dinos  [DE: Seltene Dinos]
+- type.rare-dino.description: Wild spawns from the whitelist below.
+- type.resource.label: Resources  [DE: Ressourcen]
+- type.resource.description: Harvestable nodes and gatherables of note.
+- type.element-node.label: Element nodes  [DE: Element-Knoten]
+- type.element-node.description: Element veins and charge nodes coming online.
+- type.osd.label: OSD / events  [DE: OSD / Events]
+- type.osd.description: Orbital supply drops and timed server events.
+- type.tribe-log.label: Tribe log  [DE: Tribe-Log]
+- type.tribe-log.description: Tribe-log events matching your trigger phrases below.
+- species.title: Rare dino species  [DE: Seltene Dino-Arten]
+- species.description: Only applies while {0} is enabled.
+- species.count: {0} / {1} on
+- species.none: None
+- clusters.title: Clusters  [DE: Cluster]
+- clusters.description: Enable the clusters you play on. Real cluster names roll out later — rename these to match.
+- tribelog.title: Tribe log triggers  [DE: Tribe-Log-Auslöser]
+- tribelog.description: Only applies while {0} is enabled. One phrase per line; a tribe-log alert shows if it contains any of them (case-insensitive). Leave empty to show every tribe-log message.
+- tribelog.placeholder: One phrase per line — e.g. was killed, destroyed, starved to death, an enemy tribe name…
+- channels.title: Watched channels  [DE: Beobachtete Kanäle]
+- channels.description: Discord channels the backend relays from. Add or remove them here — it applies live, no restart. The bot must be a member of the channel's server.
+- channels.refresh: Refresh
+- channels.id.placeholder: Channel ID (digits only)
+- channels.cluster.placeholder: Cluster / label
+- channels.add: Add channel
+- channels.remove: Remove channel
+- channels.empty.lead: No channels loaded. Add one above, or hit
+- channels.empty.rest: to pull the current list from the backend.
+- channeltype.rare-dino: Rare dino
+- channeltype.resource: Resource
+- channeltype.element-node: Element node
+- channeltype.osd: OSD / events
+- channeltype.tribe-log: Tribe log
+- recent.title: Recent alerts  [DE: Letzte Meldungen]
+- recent.description: The last alerts received or tested.
+- recent.empty: No alerts yet. Connect to a backend or send a test alert.
+- chip.dino: Dino
+- chip.resource: Resource
+- chip.element: Element
+- chip.osd: OSD
+- state.disconnected: Disconnected.
+- state.connecting: Connecting to {0}…
+- state.streaming: Streaming from {0}
+- state.retrying: {0} — retrying…
+- reason.status: Server returned {0}
+- reason.unreachable: Could not reach the backend
+- reason.timeout: Connection timed out
+- reason.failed: Connection failed
+- alert.raredino: Rare dino spotted
+- alert.raredino.named: Rare dino: {0}
+- alert.resource: Resource available
+- alert.resource.named: Resource: {0}
+- alert.element: Element node active
+- alert.element.named: Element node: {0}
+- alert.osd: OSD event
+- alert.tribelog: Tribe log
+- alert.generic: Alert
+- alert.withcluster: {0} · {1}
+- test.cluster: Test
+- test.marker: {0} (test)
+- channels.error.unauthorized: Unauthorized — the token in your endpoint URL is wrong.
+- channels.error.badid: That doesn't look like a valid Discord channel ID (digits only).
+- channels.error.status: The backend returned {0}.
+- channels.error.badresponse: Couldn't read the backend's response.
+- channels.error.transport: {0} — check the endpoint and your connection.
+
+## notify
+- update.ready: update ready — restart to install
+- update.ready.version: update {0} ready — restart to install
+- newversion: new version {0}
+- whatsnew: what's new in {0}
+- tooltip.idle: What's new & inbox
+
+## OC BPs (ocbps)
+- subtitle: Genesis 2 mission rewards for overcapped blueprints.
+- how.title: How to get them  [DE: So bekommst du sie]
+- how.text: Run the listed Gen2 missions on the shown difficulty to roll overcapped blueprints.
+- count: {0} items
+- column.item: Item
+- column.mission: Mission
+- column.difficulty: Difficulty
+- category.armor: Armor
+- category.weapons: Weapons
+- category.saddles: Saddles
+- difficulty.alpha: Best rolls
+- difficulty.beta: Solid rolls
+- difficulty.gamma: Lowest rolls
+
+## Paintings (paintings)
+- subtitle: Manage your in-game paintings
+- folder.title: Folder management  [DE: Ordner verwalten]
+- folder.open: Open MyPaintings folder
+- folder.create: Create MyPaintings folder
+- canvasfiles: Canvas files
+- canvas.title: Get canvas — templates by ArkTested  [DE: Canvas holen — Vorlagen von ArkTested]
+- canvas.text: Organized collection of ARK-themed paintings and canvas images. Includes labeled icons for dinos, items, structures, and more. Helps players customize storage, signs, and base visuals.
+- tag.templates: Templates
+- tag.sorted: Sorted categories
+- tag.labelready: Label ready
+- canvas.download: Download canvas here
+- maker.title: ARK Canvas Maker tool  [DE: Werkzeug ARK Canvas Maker]
+- maker.text: Specialized tool for creating custom canvas paintings in ARK: Survival Evolved. Convert your artwork into the proper format for in-game canvas items.
+- tag.arkspecific: ARK specific
+- tag.integration: Game integration
+- tag.conversion: Format conversion
+- maker.download: Download ARK Canvas Maker
+- maker.howto: How to use
+- guide.title: ARK canvas setup guide  [DE: Anleitung: Canvas in ARK einrichten]
+- guide.1.title: Step 1: Prepare  [DE: Schritt 1: Vorbereiten]
+- guide.1.text: Create your artwork in any image editor. Recommended size: 256x256 pixels.
+- guide.2.title: Step 2: Convert  [DE: Schritt 2: Umwandeln]
+- guide.2.text: Use ARK Canvas Maker to convert your image to ARK's canvas format (.arkpnt).
+- guide.3.title: Step 3: Import  [DE: Schritt 3: Importieren]
+- guide.3.text: Place the converted file in your ARK game directory and import in-game.
+- toast.noark: ARK installation not found. Please install ARK or check your installation.
+- toast.nosteamark: ARK: Survival Evolved not found in Steam directory. Please verify your ARK installation.
+- toast.nofolder: MyPaintings folder doesn't exist. Create it first or ensure ARK has been launched at least once.
+- toast.opened: MyPaintings folder opened.
+- activity.opened: Opened MyPaintings folder
+- toast.noark.create: ARK installation not found. Cannot create MyPaintings folder.
+- toast.noexe: ShooterGame.exe not found. Is ARK properly installed?
+- toast.exists: MyPaintings folder already exists.
+- toast.created: MyPaintings folder created.
+- activity.created: MyPaintings folder created
+- toast.createfailed: Error creating folder: {0}
+- toast.opencanvas: Opening Canvas download page…
+- toast.websitefailed: Error opening website: {0}
+- toast.openmaker: Opening ARK Canvas Maker download page…
+- toast.makerfailed: Error opening ARK Canvas Maker: {0}
+
+## palette
+- placeholder: Search pages, locations and commands...
+- section.pages: Pages
+- section.locations: Locations
+- section.commands: Commands
+- section.recent: Recent
+- section.jumpto: Jump to
+- hint.navigate: navigate
+- hint.run: run
+- hint.open: open
+- hint.close: close
+- empty.lead: No results for "
+- empty.rest: "
+- count.one: {0} result
+- count.many: {0} results
+- count.capped: {0} of {1}
+- deeplink.parent: {0} · {1}
+- deeplink.tp.count: {0} locations
+- deeplink.uw.count: {0} crates
+- deeplink.cave.count: {0} spots
+- deeplink.boss.count: {0} entries
+- category.script: Script
+- category.command: Command
+- status.running: Running
+- status.on: On
+- cmd.script.subtitle: Automation script — Enter to toggle
+- cmd.script.started: {0} started.
+- cmd.script.stopped: {0} stopped.
+- cmd.stopall.title: Stop all scripts  [DE: Alle Skripte stoppen]
+- cmd.stopall.subtitle: Halts every running automation script
+- cmd.stopall.status: {0} running
+- cmd.stopall.done.one: Stopped {0} script.
+- cmd.stopall.done.many: Stopped {0} scripts.
+- cmd.stopall.none: No scripts were running.
+- cmd.crosshair.title: Toggle crosshair overlay  [DE: Fadenkreuz-Overlay umschalten]
+- cmd.crosshair.subtitle: Shows or hides the always-on-top crosshair
+- cmd.crosshair.on: Crosshair on.
+- cmd.crosshair.off: Crosshair off.
+- cmd.hud.title: Toggle HUD overlay  [DE: HUD-Overlay umschalten]
+- cmd.hud.subtitle: Shows or hides the in-game HUD panel
+- cmd.hud.on: HUD overlay on.
+- cmd.hud.off: HUD overlay off.
+- cmd.antidote.title: Toggle Auto Antidote  [DE: Auto Antidote umschalten]
+- cmd.antidote.subtitle: Starts or stops the antidote HUD watcher
+- cmd.antidote.state.watching: Watching
+- cmd.antidote.state.cooldown: Cooldown
+- cmd.antidote.calibrate: Auto Antidote needs calibration first — open the page to set it up.
+- cmd.antidote.stopped: Auto Antidote stopped.
+- cmd.antidote.watching: Auto Antidote watching.
+- cmd.fedsuit.title: Toggle Fed Suit run  [DE: Fed-Suit-Lauf umschalten]
+- cmd.fedsuit.subtitle: Starts or stops the transmitter transfer loop
+- cmd.fedsuit.status: Cycle {0}
+- cmd.fedsuit.started: Fed Suit started.
+- cmd.fedsuit.stopped: Fed Suit stopped.
+- cmd.fedsuit.failed: Fed Suit couldn't start — check calibration on its page.
+- cmd.gamma.title: Gamma: {0}
+- cmd.gamma.subtitle: Apply gamma {0}
+- cmd.gamma.applied: Gamma set to {0}.
+- cmd.gamma.clamped: Windows clamped the {0} curve — the change may be partial.
+- cmd.gamma.rejected: The display driver rejected the {0} gamma curve.
+- cmd.gamma.reset.title: Reset gamma to default  [DE: Gamma zurücksetzen]
+- cmd.gamma.reset.subtitle: Restores the system gamma ramp
+- cmd.gamma.reset.done: Gamma reset to default.
+- cmd.launch.title: Launch ARK  [DE: ARK starten]
+- cmd.launch.subtitle: Starts the game through Steam, BattlEye intact
+
+## Pixel Glitch (pixel)
+- title: Pixel textures  [DE: Pixel-Texturen]
+- subtitle: Manage ARK texture files for visual modifications
+- delete.title: Delete textures  [DE: Texturen löschen]
+- delete.subtitle: Remove default texture files
+- selectcategories: Select categories
+- preview: Preview
+- deletebutton.one: Delete {0} category
+- deletebutton.many: Delete {0} categories
+- restore.title: Restore files  [DE: Dateien wiederherstellen]
+- restore.subtitle: Revert textures to default
+- restore.step.1: Click verify integrity button
+- restore.step.2: Steam scans ARK files
+- restore.step.3: Missing files redownload
+- noinfo: No info available
+- allassets: All .uasset files in directory
+- nofiles: No files
+- toast.selectone: Select at least one category
+- toast.noark: ARK installation not found
+- toast.deleted: Deleted {0} files from {1} categories
+- toast.skipped: Skipped {0} (no files found): {1}
+- toast.restored: Restored {0} files from {1} categories
+- toast.verifying: Starting Steam verification…
+- toast.openingsteam: Opening ARK in Steam…
+- category.weapons-harpoon: Weapons — Harpoon
+- category.weapons-tek-rifle: Weapons — Tek Rifle
+- category.weapons-shields: Weapons — Shields
+- category.tools-picks-axes: Tools — Picks & Axes
+- category.weapons-melee: Weapons — Melee
+- category.weapons-guns-basic: Weapons — Guns (basic)
+- category.weapons-sniper-rifles: Weapons — Sniper & Rifles
+- category.weapons-bows-crossbows: Weapons — Bows & Crossbows
+- category.weapons-explosives-rockets: Weapons — Explosives & Rockets
+- category.weapons-special-tools: Weapons — Special Tools
+- category.weapons-spears-attachments: Weapons — Spears & Attachments
+- category.armor-tek-suit: Armor — Tek Suit
+- category.armor-exo-suit-gen2: Armor — Exo Suit (Gen2)
+- category.armor-metal: Armor — Metal
+- category.armor-riot: Armor — Riot
+- category.saddles-tek: Saddles — Tek
+- category.tek-weapons: Tek weapons
+- category.turrets-tek-heavy: Turrets (Tek & Heavy)
+- category.ui-inventory-textures: UI — Inventory textures
+
+## Scripts (scripts)
+- subtitle: Premade automation that runs natively — no AutoHotkey or other external tools. External input only.
+- list.all: All scripts
+- list.running: {0} running
+- start: Start
+- stop: Stop
+- settings: Settings
+- calibration: Calibration
+- calibrate: Calibrate region
+- capturereference: Capture reference
+- ignorebackground: Ignore background
+- region.button: Button region
+- region.durability: Durability numbers
+- region.notset: Not set for this resolution.
+- region.summary: {0}x{1} px at {2}, {3}
+- reference.title: Reference snapshot  [DE: Referenzbild]
+- reference.captured: Captured.
+- reference.capture.icon: Capture with the icon visible on screen.
+- reference.capture.target: Capture with the target visible on screen.
+- mask.hint: Turn the camera so the background changes, keep the target on screen, then press.
+- mask.summary: {0} of {1} px compared
+- cal.hovercorners: Hover one corner of the icon, then the opposite corner.
+- cal.progress: Hover corner {0} — capturing in {1}s…
+- cal.progress.button: Hover corner {0} of the button — capturing in {1}s…
+- cal.captured: Region captured.
+- cal.cancelled: Region capture cancelled.
+- cal.ref.captured: Reference captured.
+- cal.ref.failed: Could not capture the reference.
+- cal.livematch: Live match
+- cal.livematch.desc: How similar the region looks to its reference right now. Watch it with the target on screen and off it, then set the threshold between the two.
+- cal.monitor.title: Display  [DE: Bildschirm]
+- cal.monitor.match: Captured on Monitor {0} · {1}.
+- cal.monitor.mismatch: Captured on Monitor {0} · {1} — ARK is on Monitor {2} · {3} now. Matching is paused until you recapture.
+- cal.monitor.unknown: Recapture the reference to record which display it belongs to.
+- field.interval: Interval
+- field.matchthreshold: Match threshold
+- field.scaninterval: Scan interval
+- field.clickdelay: Click delay
+- field.forwardkey: Forward key
+- field.transferkey: Transfer key
+- desc.scaninterval: Milliseconds between scans.
+- hotkey.title: Start / Stop hotkey  [DE: Start-/Stopp-Hotkey]
+- hotkey.desc: System-wide toggle — works even while ARK is focused.
+- yuty.roarkey: Roar key
+- yuty.roarkey.desc: Key pressed each interval. ARK exposes no binding for the Yuty roar, so set this one yourself.
+- yuty.interval.desc: Milliseconds between roars.
+- walk.movement: Movement
+- walk.movement.desc: Walk at normal speed, or hold sprint the whole time.
+- walk.mode.walk: Walk
+- walk.mode.sprint: Sprint
+- walk.forwardkey.desc: Held to move forward — prefilled from your ARK 'Move forward' binding.
+- walk.sprintkey: Sprint key
+- walk.sprintkey.desc: Held alongside forward — prefilled from your ARK 'Run' binding.
+- mammoth.interval.desc: Milliseconds between drum cycles (left + right click).
+- download.command: Chat command
+- download.command.desc: Sent each cycle (opens chat, types, sends).
+- download.delay: Delay
+- download.delay.desc: Milliseconds between sends.
+- fasttp.destination: Destination
+- fasttp.destination.desc: Name typed into the teleport search field.
+- fasttp.confirm: Confirm with Enter
+- fasttp.confirm.desc: Press Enter after typing to pick the first match.
+- takeall.clickinterval: Click interval
+- takeall.clickinterval.desc: Milliseconds between scan + click attempts.
+- takeall.threshold.desc: Similarity % at which the button counts as visible.
+- tek.threshold.desc: Similarity % at which the buff counts as active.
+- tek.clickdelay.desc: Milliseconds between spammed clicks (20 ≈ 50/s).
+- noglin.threshold.desc: Similarity % at which the mind-control icon counts as visible.
+- noglin.restore: Restore after
+- noglin.restore.desc: Clean scans before FPS is restored.
+- invsize.pulse: Pulse interval
+- invsize.pulse.desc: Milliseconds between Shift+right-click pulses.
+- antiafk.invkey: Inventory key
+- antiafk.invkey.desc: Toggles your inventory — prefilled from your ARK 'Show my inventory' binding.
+- antiafk.interval: Interval (seconds)
+- antiafk.interval.desc: Seconds between pulses.
+- turret.threshold.desc: Similarity % at which the turret inventory counts as open.
+- turret.transferkey.desc: Pushes ammo into the turret — prefilled from your ARK 'Transfer item' binding.
+- turret.presses: Transfer presses
+- turret.presses.desc: Presses per detection.
+- turretfill.cursorwarning: Presses move whatever your cursor hovers. Hover your own ammo, not the turret's — the script cannot tell the two sides apart.
+- turretfill.mode: Mode
+- turretfill.mode.desc: Even split sends a set amount; Fill keeps going until nothing moves; Filter only types the search text and stops.
+- turretfill.mode.evensplit: Even split
+- turretfill.mode.fill: Fill
+- turretfill.mode.filteronly: Filter only
+- turretfill.amount: Transfer amount
+- turretfill.amount.desc: What one press moves: the whole hovered stack (T), half (Shift+T), or one item (Ctrl+T).
+- turretfill.amount.stack: Whole stack
+- turretfill.amount.half: Half stack
+- turretfill.amount.single: One item
+- turretfill.presses: Presses per turret
+- turretfill.presses.desc: Even split sends exactly this many. Fill stops earlier when nothing moves.
+- turretfill.transferkey.desc: Prefilled from your ARK 'Transfer item' binding.
+- turretfill.pressdelay: Delay between presses
+- turretfill.pressdelay.desc: Raise it on a laggy server — a press the server has not answered yet reads as 'nothing moved'.
+- turretfill.changethreshold: Change threshold
+- turretfill.changethreshold.desc: How much of the calibrated area has to change for a press to count. Lower it if real transfers read as 'nothing moved'.
+- turretfill.usefilter: Filter by ammo type
+- turretfill.usefilter.desc: Types the name into the inventory search box first, so only that ammo is left to hover. Needs both points below.
+- turretfill.filtertext: Ammo name
+- turretfill.filtertext.desc: Part of the item name as your game spells it, e.g. Advanced Rifle
+- turretfill.settle: Filter settle time
+- turretfill.settle.desc: How long the list gets to redraw before the first press.
+- turretfill.point.search: Search box
+- turretfill.point.slot: First ammo slot
+- turretfill.point.set: Set at {0}, {1}
+- turretfill.point.notset: Not set — hover the spot, then Capture.
+- turretfill.point.capture: Capture
+- turretfill.point.clear: Clear
+- turretfill.point.countdown: Hover the spot — {0} s
+- flak.swapbelow: Swap below
+- flak.swapbelow.desc: Durability points left on a piece before it is replaced. An absolute number, so it means the same on any server multiplier.
+- flak.rowkey: Row {0} hotbar key
+- flak.rowkey.badkey: '{0}' is not a key that can be sent — use a single character like 8, or a name like F5.
+- flak.rowkey.top: Hotbar slot holding the spare for the top armor row. Leave a row empty to ignore it.
+- flak.rowkey.other: Leave empty if you carry no spare for this row.
+- flak.scan.desc: Milliseconds between reads.
+- flak.lastread: Last read
+- flak.hint.notrunning: Start the script to see what it reads.
+- flak.hint.waiting: Waiting for ARK to be in the foreground…
+- flak.hint.nonumber: No number recognised — check the calibrated region.
+- flak.hint.swapping: Lowest {0} — at or below {1}, swapping{2}
+- flak.hint.nothing: Lowest {0} — above {1}, nothing to do{2}
+- flak.hint.lastswap: · last swap {0}
+- dino.presses: Presses
+- dino.presses.desc: How many times to click the calibrated + button.
+- dino.clickdelay.desc: Milliseconds between clicks.
+- craft.mode: Mode
+- craft.mode.desc: Watcher = you walk and open stations; Walk = the script walks the row.
+- craft.mode.watcher: Watcher
+- craft.mode.walk: Walk
+- craft.craftkey: Craft key
+- craft.craftkey.desc: Starts a craft in the open station — prefilled from your ARK 'Use' binding.
+- craft.accesskey: Access key
+- craft.accesskey.desc: Opens and closes the station — prefilled from your ARK 'Access inventory' binding.
+- craft.presses: Craft presses
+- craft.presses.desc: Craft presses per station.
+- craft.ping: Ping compensation
+- craft.ping.desc: Extra ms added to every wait so lag can't desync the sequence.
+- craft.threshold.desc: Similarity % at which the station inventory counts as open.
+- craft.forwardkey.desc: Held to walk between stations — prefilled from your ARK 'Move forward' binding.
+- craft.walktime: Walk time
+- craft.walktime.desc: Milliseconds held forward between stations.
+- antidote.trigger: Trigger
+- antidote.trigger.desc: When the watcher fires: the icon appearing, disappearing, or its timer running low.
+- antidote.mode.appears: Icon appears
+- antidote.mode.disappears: Icon disappears
+- antidote.mode.timer: Timer below
+- antidote.burstkey: Burst key
+- antidote.burstkey.desc: Hotbar key pressed when it fires.
+- antidote.burstpresses: Burst presses
+- antidote.burstpresses.desc: Presses per trigger.
+- antidote.timer: Timer threshold
+- antidote.timer.desc: Fires at or below this many seconds remaining.
+- antidote.threshold.desc: Similarity % at which the icon counts as visible.
+- antidote.cooldown: Cooldown
+- antidote.cooldown.desc: Seconds before it may fire again.
+- antidote.livematch: Live match
+- antidote.livematch.desc: Similarity of the last scan, and how often it has fired.
+- antidote.fired: · {0} fired
+- antidote.region: Icon region
+- fed.openkey: Open key
+- fed.openkey.desc: Opens the transmitter — prefilled from your ARK 'Access inventory' binding.
+- fed.transferkey.desc: Moves one worn piece — prefilled from your ARK 'Transfer item' binding.
+- fed.exitkey: Exit key
+- fed.exitkey.desc: Closes the transmitter between cycles.
+- fed.runs: Runs
+- fed.runs.desc: Suits to farm before it stops on its own. 0 keeps going until you stop it.
+- fed.wait: Wait after open
+- fed.wait.desc: Milliseconds to let the inventory finish opening.
+- desc.yuty: Spams the Yutyrannus courage roar on an interval while mounted.
+- desc.autowalk: Holds the forward key so you keep running hands-free (released when ARK loses focus).
+- desc.mammoth: Alternates left/right clicks to keep the Mammoth war drum going AFK.
+- desc.astro: One-shot: fires the Astrocetus downward-teleport sequence when you press Start.
+- desc.autodownload: Repeats a chat command (default /download) on an interval.
+- desc.fasttp: With the teleport menu open, types a destination and confirms (one-shot).
+- desc.takeall: Clicks the container Take-All button whenever it's visible (calibrated region).
+- desc.teksaddle: While the Tek Saddle buff is up and you hold left-click, spams extra clicks.
+- desc.noglin: Detects the Noglin mind-control icon and drops FPS to 1 until it clears.
+- desc.invsize: Experimental: Shift+right-click spam to inflate inventory (needs your blueprint hotkeys; lag/loss risk).
+- desc.antiafk: Opens/closes inventory on an interval to avoid the idle kick.
+- desc.turret: When a turret inventory is open, presses transfer to refill its ammo.
+- desc.turretfill: Fills the turret inventory you have open — a set amount, or until it stops taking.
+- desc.flak: Reads the durability numbers next to your armor and swaps in a fresh piece from the hotbar — flak, riot or tek, without opening anything.
+- desc.dinoready: Single-stat leveler: clicks a calibrated stat + button N times (one-shot).
+- desc.crafting: Crafts at Fabricator/Chem Bench/Replicator — Watcher or Walk mode, with ping compensation.
+- desc.antidote: Watches a calibrated icon and presses a hotbar key when it appears, disappears, or its timer runs low.
+- desc.fedsuit: Genesis 2 transmitter loop: opens it, moves the worn exo set into it, closes, and the next suit is on you.
+- ark.notrunning: ARK not running
+- ark.background: ARK running, not in foreground
+- ark.foreground: ARK in foreground
+- ark.tooltip: Scripts only act while ARK is the window in front.
+- keys.custom: Keys read from your ARK Input.ini — your own bindings: {0}
+- keys.stock: Keys read from your ARK Input.ini — you are on ARK's default keys
+- keys.missing: ARK Input.ini not found — using ARK's default keys
+- keys.rescan: Rescan
+- keys.rescanned: ARK key bindings re-read
+- experimental: Experimental
+- experimental.note: Runs on fixed timings and cannot verify the result — if the game or the server is slow, it sends the same keys and nothing happens.
+- effect.ago.seconds: Last action {0} s ago.
+- effect.ago.minutes: Last action {0} min ago.
+- effect.none: No action yet.
+- effect.none.background: No action yet — ARK is not in the foreground.
+- effect.none.match: No action yet — waiting for a match.
+- effect.short.seconds: {0} s
+- effect.short.minutes: {0} min
+- toast.started: {0} started.
+- toast.stopped: {0} stopped.
+- toast.waitingforark: {0} is waiting for ARK to be in the foreground.
+- activity.started: {0} started
+- activity.stopped: {0} stopped
+- toast.quota: Free monthly limit reached ({0} input-script starts across all scripts). Resets next month — Premium is unlimited.
+- toast.hotkey.invalid: '{0}' can't be used as a hotkey.
+- toast.hotkey.inuse: Could not register {0} — it may be in use by another app.
+- toast.regionset: Region set — now capture a reference with the target visible.
+- toast.regionfailed: Failed to capture the region.
+- toast.needregion: Calibrate the region first.
+- toast.referencefailed: Could not capture the reference snapshot.
+- toast.referencecaptured: Reference snapshot captured.
+- toast.needreference: Capture a reference first.
+- toast.masknothing: Nothing stayed still — is the element still on screen?
+- toast.maskdone: Background ignored — {0} px left to match on.
+- cannotstart.region: Calibrate the detection region first.
+- cannotstart.reference: Capture a reference snapshot with the target visible.
+- cannotstart.monitor: The reference was captured on Monitor {0} · {1}, and ARK is on Monitor {2} · {3} now. Recapture it there first.
+- cannotstart.astro: Focus ARK first — Astro fires its sequence immediately on start.
+- cannotstart.iconregion: Calibrate the icon region first.
+- cannotstart.iconreference: Capture a reference with the icon visible first.
+- cannotstart.statregion: Calibrate the stat + button region first.
+- cannotstart.dinoinventory: Open the dino's inventory in ARK first, then start.
+- cannotstart.destination: Set a destination name first.
+- cannotstart.tpmenu: Open the teleporter/bed menu in ARK first, then start.
+- cannotstart.durability: Calibrate the durability numbers first.
+- cannotstart.armorrow: Set the hotbar key for at least one armor row.
+- cannotstart.turretinventory: Open a turret inventory in ARK, then start this with its hotkey.
+- cannotstart.filterpoints: Filter is on, but the search box or ammo slot point is not calibrated.
+- turretfill.activity.noinventory: Turret Filler: no inventory detected
+- turretfill.activity.done: Turret Filler: {0} of {1} presses moved something (last change {2} %)
+- flak.activity.swapped: Armor swapped — row {0} was at {1}
+- noglin.activity.throttled: Noglin: FPS throttled (mind-control detected)
+- noglin.activity.restored: Noglin: FPS restored
+- antidote.toast.needregion: Capture the HUD icon region first (calibration step 1).
+- antidote.toast.needreference: Capture a reference snapshot with the icon visible (calibration step 2).
+- antidote.toast.watching: Auto Antidote is watching.
+- antidote.toast.stopped: Auto Antidote stopped.
+- antidote.toast.regionupdated: Region updated — capture a new reference snapshot with the icon visible.
+- antidote.toast.regionfailed: Failed to capture the icon region.
+- antidote.toast.referencefailed: Could not capture the reference snapshot.
+- antidote.toast.referencecaptured: Reference snapshot captured.
+- antidote.toast.referencecapturefailed: Failed to capture the reference snapshot.
+- antidote.toast.referencecleared: Reference snapshot cleared.
+- antidote.toast.badburstkey: That key can't be used for the burst — reset to 5.
+- antidote.toast.badhotkey: That combination can't be used as a toggle hotkey — keeping the previous one.
+- antidote.toast.hotkeyinuse: Could not register {0} — the combination may be in use by another app.
+- antidote.toast.noregion: Auto Antidote stopped — no calibrated region for the current resolution.
+- antidote.activity.started: Auto Antidote started
+- antidote.activity.stopped: Auto Antidote stopped
+- antidote.activity.referencecaptured: Auto Antidote reference snapshot captured
+- antidote.activity.noregion: Auto Antidote stopped (region missing)
+- antidote.activity.triggered: Auto Antidote triggered (#{0})
+- antidote.activity.burstfailed: Auto Antidote burst did not complete (game window unavailable?)
+- cal.toast.busy: Another calibration capture is already running.
+- cal.toast.nocursor: Could not read the cursor position.
+- cal.toast.pointcaptured: Point '{0}' captured at {1}, {2}.
+- cal.toast.pointfailed: Failed to capture calibration point.
+- cal.toast.regiontoosmall: Region too small ({0}x{1}). Hover two opposite corners of the target, not the same spot — the previous calibration was kept.
+- cal.toast.regioncaptured: Region '{0}' captured ({1}x{2}).
+- cal.toast.regionfailed: Failed to capture calibration region.
+- cal.activity.pointcaptured: Calibration point '{0}' captured
+- cal.activity.regioncaptured: Calibration region '{0}' captured
+- fed.toast.started: Fed-Suit macro started — press {0} to stop.
+- fed.toast.started.nokey: Fed-Suit macro started — stop it on the Scripts page, or bind a hotkey there first.
+- fed.toast.quota: Free monthly limit reached ({0} Fed-Suit starts). Resets next month — Premium is unlimited.
+- fed.toast.stopped.one: Fed-Suit macro stopped — {0} cycle completed.
+- fed.toast.stopped.many: Fed-Suit macro stopped — {0} cycles completed.
+- fed.toast.noark: Fed-Suit macro could not run — the ARK window was not available.
+- fed.toast.nomove: Fed-Suit stopped itself — three cycles moved nothing. Check that you are standing at a Tek Transmitter on Genesis 2, that the open key is the one ARK uses, and the interface scale in ARK's options.
+- fed.toast.notopen: Fed-Suit stopped itself — the transmitter inventory did not open. Stand right at the Tek Transmitter and look at it, and close any inventory that is already open before you start.
+- fed.toast.badkey.open: Open Transmitter key "{0}" is not a supported key.
+- fed.toast.badkey.exit: Exit Transmitter key "{0}" is not a supported key.
+- fed.toast.badkey.transfer: Transfer key "{0}" is not a supported key.
+- fed.activity.run.one: Fed-Suit run: {0} cycle ({1})
+- fed.activity.run.many: Fed-Suit run: {0} cycles ({1})
+
+## Server (server)
+- title: Server Management  [DE: Serververwaltung]
+- connection.title: Server Connection  [DE: Serververbindung]
+- field.ip: Server IP Address
+- field.steamurl: Steam Connect URL
+- query: Query
+- connect: Connect
+- addtosteam: Add to Steam
+- steambrowser: Steam Browser
+- detail.status: Status:
+- status.online: Online
+- status.offline: Offline
+- detail.address: Address:
+- detail.players: Players:
+- detail.map: Map:
+- detail.version: Version:
+- detail.queryport: Query Port:
+- detail.query: Query:
+- saved.title: Saved Servers  [DE: Gespeicherte Server]
+- saved.count: {0} servers
+- players: {0}/{1} players
+- info: Info
+- empty.title: No servers saved yet  [DE: Noch keine Server gespeichert]
+- empty.text: Query and save servers to see them here
+- bulk.title: Bulk Add Favorites  [DE: Favoriten-Liste hinzufügen]
+- bulk.applying: Applying
+- bulk.apply: Apply
+- bulk.help.lead: One server per line — 
+- bulk.help.mid:  or a 
+- bulk.help.rest:  link; lines starting with # are ignored.
+- bulk.placeholder: 141.98.157.224:27015
+144.76.28.10 27017
+steam://connect/145.239.87.28:27015
+# comment lines are skipped
+- bulk.valid: {0} valid
+- bulk.invalid: {0} invalid
+- bulk.line: Line {0}
+- bulk.more: + {0} more invalid lines
+- bulk.note.ports: Ports are treated as query ports; the game port is derived automatically.
+- bulk.note.steam: Steam must be running — added servers appear under View → Game Servers → Favorites.
+- bulk.status.added: Added
+- bulk.status.skipped: Skipped
+- bulk.status.failed: Failed
+- bulk.detail.already: Already in Steam favorites
+- bulk.detail.sent: Sent to Steam favorites
+- bulk.desc.applying: Adding to Steam favorites ({0}/{1})
+- bulk.desc.lastrun: Last run: {0} added, {1} skipped, {2} failed
+- bulk.desc.ready.one: {0} server ready to add
+- bulk.desc.ready.many: {0} servers ready to add
+- bulk.desc.novalid: No valid servers found
+- bulk.desc.idle: Paste a server list to add all entries to Steam favorites
+- bulk.complete: Bulk add complete: {0} added, {1} skipped, {2} failed
+- bulk.activity.one: Bulk added {0} server to Steam favorites
+- bulk.activity.many: Bulk added {0} servers to Steam favorites
+- bulk.error: Bulk add failed: {0}
+- bulk.reason.empty: Nothing left after trimming
+- bulk.reason.ip: Invalid IPv4 address '{0}'
+- bulk.reason.noport: Missing port
+- bulk.reason.port: Invalid port '{0}' (must be 1-65535)
+- bulk.reason.duplicate: Duplicate of an earlier line ({0})
+- troubleshooting.title: Troubleshooting  [DE: Fehlersuche]
+- troubleshooting.show: Show
+- troubleshooting.hide: Hide
+- trouble.connection: Connection
+- trouble.connection.1: Check IP and port
+- trouble.connection.2: Verify Steam is running
+- trouble.connection.3: Disable VPN
+- trouble.connection.4: Check firewall
+- trouble.launch: Game Launch
+- trouble.launch.1: Restart Steam
+- trouble.launch.2: Verify game files
+- trouble.launch.3: Run as admin
+- trouble.launch.4: Clear cache
+- trouble.query: Query Issues
+- trouble.query.1: Server offline
+- trouble.query.2: Port blocked
+- trouble.query.3: Try +1 port
+- trouble.query.4: No response
+- trouble.ports: Ports
+- trouble.ports.1: Game: 7777-7784
+- trouble.ports.2: Query: Game+12288
+- trouble.ports.3: RCON: Game+2
+- trouble.ports.4: Raw UDP: Game+3
+- success.urlcopied: Steam URL copied to clipboard.
+- error.urlcopy: Failed to copy the URL to the clipboard.
+- error.format: Invalid format. Use IP:QUERYPORT (e.g. 192.168.1.1:27015)
+- error.empty: Enter a server endpoint in the format IP:QUERYPORT.
+- error.ip: Invalid IP address. Use a valid IPv4 address like 141.98.157.224.
+- error.port: Invalid query port. Use a value between 1 and 65535.
+- success.online: Server online — Players: {0}/{1} | Map: {2}
+- warn.reachable: Server reachable — Ping: {0} ms (query failed)
+- error.offline: Server is offline or unreachable
+- error.query: Query failed: {0}
+- error.nosave: No server to save — query a server first
+- success.updated: Server '{0}' updated in the local list.
+- activity.updated: Server updated: {0}
+- success.saved: Server '{0}' saved to the local list. Total servers: {1}
+- activity.saved: Server saved: {0}
+- error.save: Failed to save the server: {0}
+- activity.removed: Server removed: {0}
+- success.launching: Launching ARK via Steam…
+- activity.connecting: Connecting to server: {0} ({1})
+- error.connect: Connection failed: {0}
+- error.nofavorite: No server to add to favorites — query a server first
+- success.favorited: Server '{0}' added to Steam favorites.
+Check Steam under View → Servers → Favorites.
+- error.favorite: Failed to add to favorites: {0}
+- success.browser: Opening the Steam server browser…
+- error.browser: Failed to open the Steam browser: {0}
+
+## Settings (settings)
+- title: Settings  [DE: Einstellungen]
+- subtitle: Appearance, audio and app behaviour. Hotkeys live on their own page.
+- account.title: My account  [DE: Mein Konto]
+- account.description: Your profile picture, Discord account and connected computers.
+- account.action: Manage account
+- appearance.title: Appearance  [DE: Darstellung]
+- appearance.description: The accent recolours the whole app — every surface reads it from one variable.
+- appearance.reset.done: Appearance reset to defaults.
+- scale.title: Interface scale  [DE: Oberflächengröße]
+- scale.description: Scales every element. Useful on very high or very low resolutions.
+- behaviour.title: App behaviour  [DE: Verhalten der App]
+- behaviour.description: How Razor Reaper behaves alongside ARK and Discord.
+- discord.title: Discord Rich Presence
+- discord.description: Shows your current tool and version on your Discord profile.
+- startwithark.title: Start with ARK  [DE: Mit ARK starten]
+- startwithark.description: A lightweight watcher launches Razor Reaper as soon as ARK starts.
+- closewithark.title: Close with ARK  [DE: Mit ARK schließen]
+- closewithark.description: Exits Razor Reaper when ARK closes.
+- updates.title: Updates
+- updates.description: Updates install themselves and restart the app. There is no opt-out.
+- elsewhere.title: Elsewhere  [DE: An anderer Stelle]
+- elsewhere.description: Settings that have a page of their own.
+- hotkeys.title: Global hotkeys  [DE: Globale Tastenkürzel]
+- hotkeys.description: Every system-wide hotkey, in one place.
+- gamma.title: Gamma triggers  [DE: Gamma-Auslöser]
+- gamma.description: Gamma supports mouse buttons and Logitech G HUB, so its triggers are configured on its own page.
+- accent.title: Accent Color  [DE: Akzentfarbe]
+- accent.description: Recolor the whole app. Pick any color and every purple accent updates instantly — your choice is saved until you change it.
+- accent.hue.aria: Hue
+- accent.hex.aria: Hex color
+- accent.reset.tooltip: Reset to default purple
+- accent.advanced.toggle: Advanced — override individual shades
+- accent.shade.light: Light
+- accent.shade.light.description: Hover / highlight accents
+- accent.shade.dark: Dark
+- accent.shade.dark.description: Gradient end, pressed states
+- accent.shade.darker: Darker
+- accent.shade.darker.description: Deep gradient / shadow tone
+- accent.shade.soft: Soft
+- accent.shade.soft.description: Subtle tinted text
+- accent.shade.auto: Auto
+- accent.shade.custom: Custom
+- accent.shade.hex.aria: {0} hex
+- accent.shade.reset: Reset to auto
+- accent.advanced.note.lead: Each shade left on 
+- accent.advanced.note.rest:  is derived from the accent color. Pin a shade to lock it; "Reset to auto" hands it back to the accent.
+- accent.activity.reset: Accent color reset to purple
+- font.title: Interface Font  [DE: Oberflächenschrift]
+- font.description: Switch the UI font preset. Fonts auto-install in the background.
+- font.preset.system.description: Windows UI stack with a clean sans look.
+- font.preset.space-grotesk.description: Wide, modern sans with a tech edge.
+- font.preset.manrope.description: Smooth sans with balanced geometry.
+- font.preset.jetbrains-mono-nerd.description: Compact mono with nerd glyphs.
+- font.preset.fira-code-nerd.description: Ligature-friendly mono with nerd glyphs.
+- font.status.system: System
+- font.status.installing: Installing
+- font.status.installed: Installed
+- font.activity.set: UI font set: {0}
+- font.status.autoinstall: Auto-install
+- font.preview: The quick brown fox jumps over the lazy dog 0123456789.
+- font.manual.title: Manual install (if auto-install fails)  [DE: Manuelle Installation (falls die Auto-Installation scheitert)]
+- font.manual.download: Download the font from the official link below.
+- font.manual.unzip: If you get a zip, extract it.
+- font.manual.install.lead: Right-click the .ttf file and choose 
+- font.manual.install.action: Install
+- font.manual.install.rest:  (or double-click and install).
+- font.manual.return: Return here and select the preset again. Switching updates the UI instantly.
+- font.note: Fonts install per-user in the background. Switching updates the UI instantly.
+- font.limit: Free monthly limit reached ({0} font switches). The default font is always free — Premium is unlimited.
+- font.toast.installing: Installing {0}...
+- font.toast.installed: {0} installed.
+- font.toast.pending: {0} installation pending. Try the preset again in a few seconds.
+- font.toast.linkcopied: Copied download link for {0}
+- font.error.package: Font package is invalid or blocked. Use the manual install links below.
+- font.error.inuse: Font files are in use. Close other apps using the font and try again.
+- font.error.download: Font download failed. Check your network or add the font zip to wwwroot/assets/fonts.
+- font.error.install: Font installation failed: {0}
+- font.error.linkcopy: Failed to copy download link.
+
+## sky
+- source.title: Sky source  [DE: Himmelsquelle]
+- source.subtitle: Pick an image to tile across the sky, or choose a flat color.
+- mode.image: Image file
+- mode.color: Solid color
+- browse: Browse…
+- noimage: No image selected
+- preview.alt: Loaded sky image
+- color.label: Sky color  [DE: Himmelsfarbe]
+- options.title: Options  [DE: Optionen]
+- options.subtitle: Tweak how the image is mapped onto the sky.
+- flip: Flip vertically
+- tile: Tile size
+- tile.1: 1× — normal
+- tile.2: 2× — 2 by 2 tiles
+- tile.3: 3× — 3 by 3 tiles
+- tile.4: 4× — 4 by 4 tiles (very small)
+- inject: Inject sky
+- injecting: Injecting…
+- restore: Restore original sky
+- restoring: Restoring…
+- picker.title: Select a sky image  [DE: Himmelsbild auswählen]
+- status.injected: Sky injected
+- status.injected.text: ARK is running with your custom sky. Restore to revert to the original.
+- status.restored: Original sky restored
+- status.restored.text: ARK's original sky is back. Backups are kept — clear them in Settings if you're done.
+- status.original: Original
+- status.original.text: No backups on disk yet. Pick an image or color and inject.
+- log.title: Output  [DE: Ausgabe]
+- log.empty.lead: Ready. Pick an image or color, then click 
+- log.empty.rest: .
+- coverage.title: Maps covered  [DE: Abgedeckte Karten]
+- coverage.caveat.1: Shows after the next map load — rejoin or relaunch to see it. Won't show at night — that's normal.
+- coverage.caveat.2: Safe on any server: it only edits your own local sky files, so there's nothing for anti-cheat to flag. Instant in-game swapping isn't offered — it would mean fighting BattlEye, which risks your account.
+- limit: Free monthly limit reached ({0} sky injects). Resets next month — Premium is unlimited.
+- toast.pickerfailed: Could not open the file picker.
+- toast.urlfailed: Couldn't open {0} — copy and paste it into your browser.
+- toast.applied: Sky applied to {0} file(s) — rejoin or relaunch to see it.
+- toast.injecterrors: Sky inject completed with {0} error(s) — see log.
+- toast.swapfailed: Sky swap failed — see log.
+- toast.restored: Restored {0} sky texture(s). Restart ARK to see the original.
+- toast.restorefailed: Sky restore failed — see log.
+- activity.injected: Sky injected → {0} texture(s)
+- activity.injected.errors: Sky inject → {0} ok, {1} errors
+- activity.restored: Sky restored → {0} file(s)
+- activity.restored.errors: Sky restore → {0} ok, {1} errors
+- log.imageselected: Image selected: {0}
+- log.undecodable: {0} files aren't decoded by the built-in image pipeline. Convert it to PNG/JPG/BMP/TGA/WEBP first.
+- log.convertx:   Need a quick converter? Try Convert-X (also by CedrickGD):
+- log.convertx.action: Open Convert-X on GitHub
+- log.swapping.image: Swapping sky → {0} (tile {1}x, flip {2})…
+- log.swapping.color: Swapping sky → solid color {0}…
+- log.patched: Patched
+- log.restored: Restored
+- log.injecterrors: errors during inject
+- log.restoreerrors: errors during restore
+- log.result: {0}: {1} | Skipped: {2}
+- log.errorcount: {0} {1}.
+- log.rejoin: Rejoin the server or relaunch ARK to see it (or wait for the next in-game day). Won't show at night — that's normal.
+- log.arkrunning: ARK is running — file writes may fail or be ignored until you restart.
+- log.restoring: Restoring original sky textures from backup…
+- log.swapfailed: Swap failed: {0}
+- log.restorefailed: Restore failed: {0}
+- log.formatfailed: That image format wasn't decoded.
+
+## Steam Mods (steammods)
+- subtitle: Browse installed ARK: Survival Evolved workshop mods with fast search and latest-install filters.
+- meta.installed: Installed mods
+- meta.showing: Showing
+- meta.libraries: Libraries
+- meta.named: Named by Steam
+- scanning: Scanning…
+- refresh: Refresh mods
+- steampath: Steam path:
+- path.notdetected: Not detected
+- lastscan: Last scan:
+- search.placeholder: Search by mod name or workshop ID
+- sort: Sort
+- recency: Installed filter
+- sizefilter: Size filter
+- onlynamed: Only show mods with Steam titles
+- scannotes: Scan notes
+- scanning.text: Scanning Steam libraries and workshop metadata…
+- nosteam.title: Steam not detected  [DE: Steam nicht gefunden]
+- nosteam.text: Install path was not found in registry. Open Steam once and then refresh.
+- nomods.title: No installed ARK workshop mods found  [DE: Keine installierten ARK-Workshop-Mods gefunden]
+- nomods.lead: This scan checks all detected Steam libraries for 
+- nomods.rest: .
+- nomatch.title: No matches for current filters  [DE: Keine Treffer für die aktuellen Filter]
+- nomatch.text: Try widening the recency filter or clearing the search box.
+- tag.drive: Drive: {0}
+- tag.size: Size: {0}
+- tag.installed: Installed: {0}
+- tag.updated: Updated: {0}
+- time.installed: Installed (local)
+- time.updated: Updated (best source)
+- copyid: Copy ID
+- openweb: Open web
+- opensteam: Open Steam
+- notscanned: Not scanned yet
+- sort.latestinstalled: Latest installed
+- sort.latestupdated: Latest updated
+- sort.sizedesc: Size (biggest first)
+- sort.sizeasc: Size (smallest first)
+- sort.nameasc: Name A–Z
+- sort.namedesc: Name Z–A
+- sort.idasc: Workshop ID (low to high)
+- sort.iddesc: Workshop ID (high to low)
+- recency.7: Last 7 days
+- recency.30: Last 30 days
+- recency.90: Last 90 days
+- size.all: All sizes
+- size.unknown: Unknown size
+- toast.nosteam: Steam was not detected on this machine.
+- toast.nomods: No installed ARK workshop mods found.
+- toast.loaded: Loaded {0} installed ARK mods.
+- activity.scanned: Steam Workshop scan complete: {0} ARK mods
+- toast.scanfailed: Failed to scan Steam mods: {0}
+- toast.copied: Copied ID {0}
+- toast.copyfailed: Failed to copy ID: {0}
+- toast.openweb.failed: Could not open workshop page in browser.
+- toast.opensteam.failed: Could not open workshop page in Steam client.
+- toast.nofolder: No mod folder path available.
+- toast.openfolder.failed: Could not open mod folder.
+- size.under100: Under 100 MB
+- size.100to500: 100 MB to 500 MB
+- size.500to1g: 500 MB to 1 GB
+- size.over1g: Over 1 GB
+
+## Stretched Res (stretchedres)
+- title: Stretched Res  [DE: Gestreckte Auflösung]
+- subtitle: Switch a monitor to a stretched resolution — safely, with a 15-second auto-revert.
+- monitor.label: Monitor
+- monitor.option: Monitor {0} — {1}×{2}
+- monitor.option.primary: Monitor {0} — {1}×{2} (primary)
+- monitor.unknown: the selected display
+- monitor.fallback: The monitor you last used is not connected — {0} is selected instead.
+- monitor.none: No monitor could be detected — changes go to the primary display.
+- confirm.title: Keep this resolution?  [DE: Diese Auflösung behalten?]
+- confirm.sub: Now showing {0} on {1}. Reverts to {2} automatically if you do not confirm.
+- confirm.newmode: the new mode
+- confirm.previousmode: the previous mode
+- confirm.unit: s
+- confirm.keep: Keep resolution
+- confirm.revert: Revert now
+- status.pending: Awaiting confirmation
+- status.active: Stretched resolution active
+- status.native: Native resolution
+- status.restore: Restore native
+- status.desc.pending: Confirm below to keep the new resolution, or it reverts automatically.
+- status.desc.current: {0} is at {1} ({2}).
+- status.desc.unknown: Could not read the current desktop resolution.
+- fact.current: Current
+- fact.current.stretched: {0} · stretched
+- fact.current.native: {0} · native
+- fact.current.none: Not detected
+- fact.native: Native
+- fact.native.sub: The panel's full resolution
+- fact.gpu: Graphics
+- gpu.unknown: Unknown
+- gpu.sub.nvidia: NVIDIA — GPU scaling supported
+- gpu.sub.amd: AMD — GPU scaling supported
+- gpu.sub.intel: Intel — GPU scaling supported
+- gpu.sub.none: Set your GPU to full-screen scaling
+- presets.title: Stretched presets  [DE: Gestreckte Vorgaben]
+- presets.intro: Each one applies its resolution to the monitor below temporarily — you get 15 seconds to confirm before it reverts on its own.
+- preset.note.1440x1080: Popular wide-model stretch
+- preset.note.1280x1024: Classic 5:4 hitbox stretch
+- preset.note.1024x768: Maximum model width
+- preset.note.1600x1080: Mild stretch, sharper
+- preset.note.1280x960: Lighter 4:3 option
+- safety: If the screen goes black or unreadable, do not touch anything — the resolution reverts by itself after 15 seconds.
+- custom.title: Custom resolution  [DE: Eigene Auflösung]
+- custom.width: Width
+- custom.height: Height
+- custom.apply: Apply custom
+- custom.error.min: Resolution must be at least {0}×{0}.
+- custom.error.max: Resolution must not exceed {0}×{1}.
+- scaling.title: Make the GPU stretch the image  [DE: Die GPU das Bild strecken lassen]
+- scaling.lead: A stretched resolution only fills the screen when your GPU scales it to the whole panel. {0}
+- scaling.vendor.nvidia: Your NVIDIA GPU handles this in the NVIDIA Control Panel.
+- scaling.vendor.amd: On your AMD GPU, enable GPU scaling in AMD Software.
+- scaling.vendor.intel: On Intel graphics, set the scale in the Intel Graphics Command Center.
+- scaling.vendor.none: Set your GPU's scaling mode to full-screen so the image fills the panel.
+- steps.nvidia.1: Right-click the desktop and open the NVIDIA Control Panel.
+- steps.nvidia.2: Go to Display → Adjust desktop size and position.
+- steps.nvidia.3: Pick the monitor you chose above, then set Scaling to Full-screen.
+- steps.nvidia.4: Set Perform scaling on to GPU, then click Apply.
+- steps.nvidia.5: Apply a stretched resolution above — it now fills the whole panel.
+- steps.amd.1: Open AMD Software → Display and pick the monitor you chose above.
+- steps.amd.2: Turn GPU Scaling on and set Scaling Mode to Full panel.
+- steps.amd.3: Apply a stretched resolution above.
+- steps.intel.1: Open the Intel Graphics Command Center → Display and pick the monitor you chose above.
+- steps.intel.2: Under Scale, choose Full Screen and turn off Maintain Display Scaling.
+- steps.intel.3: Apply a stretched resolution above.
+- steps.generic.1: Open your GPU's control panel (NVIDIA Control Panel, AMD Software or Intel Graphics Command Center).
+- steps.generic.2: Set the display scaling mode to full-screen and perform scaling on the GPU.
+- steps.generic.3: Apply a stretched resolution above.
+- ark.title: ARK game resolution  [DE: ARK-Spielauflösung]
+- ark.row.title: Write resolution to GameUserSettings.ini  [DE: Auflösung in GameUserSettings.ini schreiben]
+- ark.row.description: Optional — sets ARK's ResolutionSizeX/Y and windowed-fullscreen to match your chosen size. A timestamped backup is made first.
+- ark.note: Close ARK before writing — the game rewrites GameUserSettings.ini when it exits.
+- ark.button.closefirst: Close ARK first
+- ark.button.choose: Choose a resolution first
+- ark.button.write: Write {0} × {1}
+- ark.toast.closefirst: Close ARK first — it rewrites GameUserSettings.ini when it exits.
+- ark.toast.written: Wrote {0} × {1} to GameUserSettings.ini.
+- ark.toast.error: Could not write ARK's resolution.
+- ark.toast.failed: ARK write failed: {0}
+- error.apply: Could not apply that resolution.
+- limit: Free monthly limit reached ({0} resolution applies). Resets next month — Premium is unlimited.
+- monitor.primary: the primary display
+- service.pending: Confirm or revert the current change first.
+- service.readfailed: Could not read the current display mode.
+- service.applyfailed: Apply failed: {0}
+- service.restorefailed: Restore failed: {0}
+- service.noprevious: No previous resolution to revert to.
+- service.autorevertfailed: Auto-revert failed: {0}
+- service.arkmissing: ARK installation not found.
+- service.arkwritefailed: Failed to write GameUserSettings.ini.
+- toast.kept: Kept {0}.
+- toast.reverted: Reverted to the previous resolution.
+- toast.restored: Restored {0}.
+- toast.autoreverted: Resolution reverted automatically — no confirmation received.
+- activity.applied: Applied {0}×{1} on {2} — confirm to keep
+- activity.kept: Kept resolution {0}
+- activity.reverted: Reverted resolution
+- activity.restored: Restored desktop resolution {0}
+- activity.autoreverted: Auto-reverted resolution (no confirmation)
+- activity.arkwritten: Wrote {0}×{1} to ARK's GameUserSettings.ini
+- driver.rejected: Your display driver rejected {0}×{1}. Create it first in {2}, then try again.
+- driver.path.nvidia: NVIDIA Control Panel → Change resolution → Customize
+- driver.path.amd: AMD Software: Adrenalin Edition → Display → Custom Resolutions
+- driver.path.intel: Intel Graphics Command Center → Display → Custom Resolutions
+- driver.path.none: your GPU control panel's custom resolution option
+- result.success: Success.
+- result.restart: The change requires a restart to take effect.
+- result.badmode: The display driver does not support this resolution.
+- result.failed: The display driver failed the requested change.
+- result.badflags: Invalid display-change flags.
+- result.badparam: Invalid display-change parameters.
+- result.notupdated: Unable to write the new settings to the registry.
+- result.baddualview: The change is not supported in a multi-view configuration.
+- result.unknown: Display change failed (code {0}).
+
+## tp
+- subtitle: Teleport-worthy spots across every map, with copyable setplayerpos commands where documented.
+- search.placeholder: Search locations…
+- count: of {0} locations
+- copy.tooltip: Copy: cheat setplayerpos {0}
+- empty.title: No locations found  [DE: Keine Orte gefunden]
+- empty.text: Try a different search, map, or category filter.
+- category.obelisk: Obelisk
+- category.cave: Cave
+- category.loot: Loot
+- category.resource: Resource
+- category.landmark: Landmark
+- category.terminal: Terminal
+- copied: {0} teleport command copied.
+- activity.copied: Copied TP command: {0}
+- copy.failed: Failed to copy the teleport command.
+
+## tray
+- tooltip: Razor Reaper — crosshair overlay
+- open: Open Razor Reaper
+- overlay.show: Show overlay
+- overlay.hide: Hide overlay
+- update: Restart & update (v{0})
+- quit: Quit
+
+## Troubleshoot (troubleshoot)
+- subtitle: Logging, diagnostics, and quick fixes when something looks off.
+- support.title: Let support see the useful details  [DE: Gib dem Support die nützlichen Details]
+- support.text: Describe what went wrong in the report form. Windows, ARK, license, feature prerequisites, and recent operation details are attached when you send it.
+- notes.title: Important notes  [DE: Wichtige Hinweise]
+- notes.subtitle: Things to check before assuming something is broken.
+- note.1: If Steam is updating or repairing ARK, paths can appear missing or locked. Wait for Steam to finish, then try again.
+- note.2: If files refuse to change, close the game first and rerun the tool.
+- note.3: If you ever see a startup error code, note it and share it with support.
+- logging.title: Logging  [DE: Protokollierung]
+- logging.subtitle: Turn on logs to capture issues and share details.
+- logging.enable: Enable logging
+- logging.verbose: Verbose diagnostics (debug)
+- log.folder: Log folder
+- log.current: Current folder
+- log.open: Open log folder
+- log.change: Change output
+- log.reset: Reset default
+- lasterror.title: Last error  [DE: Letzter Fehler]
+- lasterror.subtitle: Most recent error captured by the app.
+- lasterror.empty: No errors captured yet.
+- codes.title: Error codes  [DE: Fehlercodes]
+- codes.subtitle: Short descriptions to help decode failures.
+- time.unknown: Time unknown
+- nodetails: No additional details recorded.
+- code.unhandled.title: Unhandled exception  [DE: Unbehandelte Ausnahme]
+- code.unhandled.description: The app hit an unexpected error. Restart and check the log file.
+- code.timeout.title: Startup timeout  [DE: Zeitüberschreitung beim Start]
+- code.timeout.description: The UI did not load in time. Restart or reinstall the app.
+- code.script.title: Startup script error  [DE: Fehler im Startskript]
+- code.script.description: A startup script failed before the UI loaded.
+- code.task.title: Background task failure  [DE: Fehler in einer Hintergrundaufgabe]
+- code.task.description: A background task crashed. Check the log file for details.
+- toast.saved: Logging settings updated.
+- toast.folderset: Log folder updated. Restart to apply.
+- toast.folderpickfailed: Unable to select a log folder.
+- toast.foldercreatefailed: Could not create the default log folder.
+- toast.folderreset: Log folder reset to default. Restart to apply.
+- toast.foldermissing: Log folder does not exist yet.
+- toast.folderopenfailed: Unable to open the log folder.
+- toast.cleared: Last error cleared.
+
+## update
+- check.failed: Update check failed.
+- gated: Close ARK (or stop the running macro) first, then restart to update.
+- status.checking: Checking for updates...
+- status.latest: You're on the latest version.
+- status.ready: Update v{0} is ready — restart to install.
+- status.ready.closeark: Update v{0} is ready — close ARK, then restart to install.
+- status.installing: Installing v{0} — restarting...
+- status.deferred: Update v{0} couldn't start — it will be applied at the next start.
+- status.nourl: Update available but download URL is missing.
+- status.manual: Update v{0} could not be installed — install it manually.
+- status.downloading: Downloading update...
+- status.downloading.percent: Downloading update... {0}%
+- status.incomplete: Update download was incomplete — it will be retried.
+- status.cancelled: Download cancelled.
+- status.downloadfailed: Failed to download update.
+- install.failed.retry: Update to v{0} could not be installed (installer exit code {1}). Restart & update to try again.
+- install.failed.givingup: Update to v{0} could not be installed (installer exit code {1}). It has been discarded — install the latest version manually.
+- toast.installing: Installing update v{0} — Razor Reaper will restart.
+- toast.updated: Successfully updated to v{0}.
+
+## usage
+- remaining: {0}/{1} left this month
+- quota.tooltip: Free monthly quota — resets each month. Premium is unlimited.
+
+## uw
+- subtitle: Underwater loot crate locations with coordinates, searchable by map and crate type.
+- search.placeholder: Search area, map or note…
+- cratetype: Crate type
+- alltypes: All types
+- tier.deepsea: Deep sea
+- tier.cave: Cave crate
+- tier.shipwreck: Shipwreck
+- note: Deep-sea crates need character level 80 to open and respawn on a timer after being looted.
+- count.one: {0} location
+- count.many: {0} locations
+- column.type: Type
+- column.area: Area
+- column.access: Access
+- empty.title: No drops found  [DE: Keine Drops gefunden]
+- empty.text: Try a different search, map or crate type.
+
+## Vision Tools (vision)
+- subtitle: Manage TEK camera behavior, scope visibility, and field of view in one place.
+- tab.tek: TEK camera
+- tab.scope: Scope
+- tab.fov: Custom FOV
+- configpath: Config path
+- path.unavailable: Path not available
+- toast.noark: ARK installation not found. Please ensure ARK is installed.
+- toast.nosettings: GameUserSettings.ini not found. Launch ARK once to create it.
+- toast.nofile: GameUserSettings.ini file not found.
+- toast.nosection: Could not find settings section in GameUserSettings.ini.
+- toast.nopath: Config path not available.
+- toast.nofolder: Folder does not exist.
+- tek.subtitle: Restore the classic third-person camera trace and offset behavior.
+- tek.state.on: Classic third-person camera
+- tek.state.on.text: Older trace + offset behavior is active. Useful for closer-feeling combat camera.
+- tek.state.off: Vanilla third-person camera
+- tek.state.off.text: Default modern camera behavior. Enable for the classic feel.
+- tek.enable: Enable camera trace
+- tek.disable: Disable camera trace
+- tek.keys: Underlying settings
+- tek.toast.enabled: Camera trace enabled.
+- tek.toast.disabled: Camera trace disabled.
+- scope.title: Scope files  [DE: Zielfernrohr-Dateien]
+- scope.subtitle: Disable scope rendering files to clear the view.
+- scope.warning.lead: Set in-game textures to High or Epic
+- scope.warning.rest:  for scope removal to take effect properly.
+- scope.image.alt: Scope view after files disabled
+- scope.state.enabled: Enabled
+- scope.state.disabled: Disabled
+- scope.scanning: Scanning scope files…
+- scope.disable: Disable scope files
+- scope.restore: Restore scope files
+- scope.root: Scope root
+- scope.toast.norootpath: Scope root path not found.
+- scope.toast.renamed: Renamed {0} scope file(s).
+- scope.activity.disabled: Scope files disabled: {0}
+- scope.toast.noactive: No active scope files found.
+- scope.toast.norename: No files renamed. Skipped: {0}, failed: {1}.
+- scope.toast.disablefailed: Scope disable failed: {0}
+- scope.toast.restored: Restored {0} scope file(s).
+- scope.activity.restored: Scope files restored: {0}
+- scope.toast.nodisabled: No disabled scope files found.
+- scope.toast.norestore: No files restored. Skipped: {0}, failed: {1}.
+- scope.toast.restorefailed: Scope restore failed: {0}
+- fov.subtitle: The in-game slider caps at 1.35. Push higher for ultrawide or triple-monitor setups.
+- fov.image.alt: Custom FOV view example
+- fov.apply: Apply {0}
+- fov.reset: Reset to 1.00
+- fov.toast.set: FOV set to {0}.
+- fov.activity.applied: FOV applied: {0}
+- fov.toast.failed: FOV write failed: {0}
+
+## whatsnew
+- eyebrow: Release notes
+- title: What's new in v{0}  [DE: Neu in v{0}]
+- failed: Update failed
+- available: Version {0} is available.
+- youreon: You're on {0}.
+- restarting: Restarting…
+- restartupdate: Restart & update to v{0}
+- downloading: Downloading…
+- downloading.percent: Downloading… {0}%
+- checking: Checking…
+- checkagain: Check again
+- changelog: Full changelog
+- notes.pending: Release notes appear once the update check has run.
+- notes.nextcheck: The notes will appear at the next check.
+- uptodate: You're up to date — v{0}.
+- nonotes: No notes were published for this release.
+- inbox.title: Inbox  [DE: Posteingang]
+- inbox.open: Open inbox
+- inbox.loading: Loading your inbox…
+- inbox.empty: No replies yet. Answers to your reports land here.
+- unread.one: 1 unread
+- unread.many: {0} unread
+- reply.subject: Support replied · {0}
+- reply.new: New
+- when.now: just now
+- when.minutes: {0} min ago
+- when.hours: {0} h ago
+- when.days: {0} d ago
