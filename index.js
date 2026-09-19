@@ -16,7 +16,7 @@ const { initNotifier, stopNotifier } = require('./notifier');
 const { planRoleChanges } = require('./role-plan');
 const {
     buildTopic, parseTopic, rebuildTicketState, nextTicketNumber, ticketChannelName, checkLimits,
-    slowmodeSeconds, deletableTickets, makeWaiting, TICKET_BUTTONS,
+    slowmodeSeconds, deletableTickets, makeWaiting, parseBotCommand, TICKET_BUTTONS, TICKET_COMMANDS,
 } = require('./ticket-state');
 const ai = require('./ai-support');
 const {
@@ -536,6 +536,15 @@ const TICKET_SLOWMODE = slowmodeSeconds(process.env.TICKET_SLOWMODE_SECONDS);
 // in this file. `|| 24` reads an unset or blank var as the default; "0" is a truthy string and
 // survives it.
 const TICKET_AUTO_DELETE_HOURS = Number(process.env.TICKET_AUTO_DELETE_HOURS || 24);
+// A member may have one open ticket PER CATEGORY, so the daily cap can never be the thing that
+// stops them using the categories — it is derived, not a second knob to get wrong.
+const TICKET_MAX_PER_DAY = Math.max(3, ai.CATEGORY_KEYS.length);
+// Who gets pinged when a ticket asks for a person. Discord already has the mechanism for "these
+// people are on duty" — a role — so there is nothing to store: whoever holds HUMAN_PING_ROLE_ID
+// is pinged, and with no role (or nobody in it) the owner is, exactly as before. The bot never
+// creates it: a role found by NAME is how this server ended up with duplicates.
+const HUMAN_PING_ROLE_ID = process.env.HUMAN_PING_ROLE_ID || '';
+const HUMAN_PING_MAX = 10;           // a ping list longer than this is noise, not urgency
 
 const aiProviders = ai.buildProviders(process.env);
 const aiKb = ai.loadKb();
@@ -765,6 +774,28 @@ const aiBackRow = () => new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(TICKET_BUTTONS.aiOn).setLabel('Re-enable AI').setStyle(ButtonStyle.Secondary),
 );
 
+/**
+ * The "a human is needed here" ping, in the four places that need one. Individual member mentions
+ * rather than `<@&role>`: a ROLE mention only notifies when the role is mentionable or the bot
+ * holds Mention Everyone, and a ping that silently notifies nobody is worse than no feature at
+ * all. `role.members` is a view on the member cache, so a cold cache is warmed once per process.
+ * allowedMentions is explicit so that nothing ELSE in the message can ever ping.
+ * @returns {Promise<{content: string, allowedMentions: object}>} spread into the message payload
+ */
+let humanPingFetched = false;
+async function humanPing(guild) {
+    const role = HUMAN_PING_ROLE_ID ? guild?.roles?.cache?.get(HUMAN_PING_ROLE_ID) : null;
+    if (role) {
+        if (!role.members.size && !humanPingFetched) {
+            humanPingFetched = true;
+            await guild.members.fetch().catch(e => console.error('[support] Could not read the member list:', e.message || e));
+        }
+        const ids = [...role.members.keys()].slice(0, HUMAN_PING_MAX);
+        if (ids.length) return { content: ids.map(id => `<@${id}>`).join(' '), allowedMentions: { users: ids } };
+    }
+    return { content: `<@${OWNER_ID}>`, allowedMentions: { users: [OWNER_ID] } };
+}
+
 // ── Opening a ticket ──────────────────────────────────────────────────────────
 async function openTicket(interaction, categoryKey, fields) {
     const guild = interaction.guild;
@@ -774,15 +805,26 @@ async function openTicket(interaction, categoryKey, fields) {
     // Checked twice: cheaply here, so a member over the limit never costs a triage call, and again
     // inside the creation chain below, where the cache can actually see a ticket another submission
     // from the same member is in the middle of creating.
+    // One open ticket PER CATEGORY: a License question and a bug report are two conversations,
+    // and making the member close one to ask the other is what the owner asked us to stop doing.
     const checkTicketLimits = () => checkLimits(
-        guild.channels.cache.map(c => ({ name: c.name, topic: c.topic, createdTimestamp: c.createdTimestamp })),
+        guild.channels.cache.map(c => ({
+            name: c.name,
+            topic: c.topic,
+            createdTimestamp: c.createdTimestamp,
+            // Not the name: the close rename is no longer awaited, so a ticket this process closed
+            // a minute ago can still be called ticket-NNNN while Discord works through its queue.
+            closed: closedTickets.has(c.id) || transcribedTickets.has(c.id),
+        })),
         user.id,
+        Date.now(),
+        { cat: categoryKey, maxPerDay: TICKET_MAX_PER_DAY },
     );
     const limitEmbed = (limit) => rrEmbed({
         title: 'Ticket not opened',
         blocks: [limit.reason === 'open'
-            ? `You already have an open ticket: **${limit.open}**.\nContinue there, or close it first.`
-            : 'You opened three tickets in the last 24 hours.\nContinue in one of those, or wait a little.'],
+            ? `You already have an open **${ai.categoryLabel(categoryKey)}** ticket: **${limit.open}**.\nContinue there, or close it first.`
+            : `You opened ${limit.count} tickets in the last 24 hours.\nContinue in one of those, or wait a little.`],
         colour: BRAND_BAD,
     });
     const limit = checkTicketLimits();
@@ -914,10 +956,10 @@ async function openTicket(interaction, categoryKey, fields) {
     // 5. Answer — unless this category is the owner's alone, or there is no AI configured.
     if (ai.HUMAN_ONLY.has(categoryKey)) {
         await channel.send({
-            content: `<@${OWNER_ID}>`,
+            ...(await humanPing(guild)),
             embeds: [rrEmbed({
                 title: '💳 A human answers this',
-                blocks: ['Purchases, payments and refunds are answered personally.\nThe owner has been notified.'],
+                blocks: ['Purchases, payments and refunds are answered personally.\nThe team has been notified.'],
             })],
         });
         return;
@@ -995,6 +1037,20 @@ async function consumeButtons(message) {
 }
 
 /**
+ * Grey out the hand-off message that is still offering "Re-enable AI". The button door already
+ * holds that message; /enableai and "@bot enableai" have to go and find it, because a live
+ * Re-enable button is exactly what rebuildTicketState() reads back as "the AI is still off".
+ */
+async function retireHandoffButtons(channel, message = null) {
+    if (message) return consumeButtons(message);
+    const recent = await channel.messages.fetch({ limit: TICKET_SCAN }).catch(() => null);
+    const live = [...(recent?.values() || [])]
+        .sort((a, b) => b.createdTimestamp - a.createdTimestamp)
+        .find(m => m.components.some(row => row.components.some(c => c.customId === TICKET_BUTTONS.aiOn && !c.disabled)));
+    if (live) await consumeButtons(live);
+}
+
+/**
  * One AI answer into the ticket. Every stop condition the owner asked for lands here, so there is
  * one place to read when the bot goes quiet: budget spent, reply cap, provider outage.
  */
@@ -1042,7 +1098,7 @@ async function runAiReply(channel, { category, fields, history, data = '', opene
                 ? 'I can\'t answer this automatically right now.\nA human will take a look.'
                 : 'A human will take a look at this shortly.';
         await channel.send({
-            content: `<@${OWNER_ID}>`,
+            ...(await humanPing(channel.guild)),
             embeds: [rrEmbed({ title: 'Handed to a human', blocks: [text] })],
             components: [aiBackRow()],
         }).catch(() => {});
@@ -1163,6 +1219,41 @@ client.on('messageCreate', async (m) => {
     try {
         if (!m.guild || m.author.bot) return;
         if (VERIFY_GUILD_ID && m.guild.id !== VERIFY_GUILD_ID) return;
+        if (!ANY_TICKET_NAME_RE.test(m.channel?.name || '')) return;
+
+        // ── "@bot close" ──────────────────────────────────────────────────────
+        // The third door, and it comes FIRST: a command must never be fed to a model, counted as
+        // a member message, or read as "a human took over". It works in a closed ticket too —
+        // deleting one is the thing you do there.
+        const cmd = parseBotCommand(m.content, client.user?.id);
+        if (cmd) {
+            if (!cmd.action) {
+                await m.reply({
+                    embeds: [rrEmbed({ title: 'Ticket commands', blocks: [TICKET_COMMANDS.map(c => `\`${c}\``).join(' · ')], footer: null })],
+                }).catch(() => {});
+                return;
+            }
+            let said = false;
+            const ran = await runTicketAction(cmd.action, m.channel, m.member, async ({ embeds, files }) => {
+                said = true;
+                // His message is public, so the file must not be: it goes to his DMs, and the
+                // channel only gets the one line saying so.
+                if (!files?.length) return m.reply({ embeds, allowedMentions: { parse: [] } });
+                const sent = await m.author.send({ embeds, files }).catch(() => null);
+                return m.reply({
+                    embeds: [rrEmbed({
+                        title: sent ? '📑 Sent to your DMs' : 'DMs closed',
+                        blocks: [sent ? 'The transcript is in your DMs.' : 'I could not DM you — open your DMs and ask again.'],
+                        colour: sent ? BRAND_GOOD : BRAND_BAD,
+                        footer: null,
+                    })],
+                });
+            }, { reason: cmd.reason });
+            // A tick is the whole confirmation when the action already spoke for itself.
+            if (ran && !said) await m.react('✅').catch(() => {});
+            return;
+        }
+
         // Only OPEN tickets: a closed-NNNN channel keeps its topic, and a member still typing in
         // one must not get more answers out of it.
         if (!isTicketChannel(m.channel)) return;
@@ -1225,7 +1316,7 @@ client.on('messageCreate', async (m) => {
         if (replies >= AI_MAX_REPLIES) {
             setTicketAi(m.channelId, false);
             await m.channel.send({
-                content: `<@${OWNER_ID}>`,
+                ...(await humanPing(m.guild)),
                 embeds: [rrEmbed({ title: 'Handed to a human', blocks: ['We\'ve gone back and forth a few times.\nA human will take it from here.'] })],
                 components: [aiBackRow()],
             });
@@ -1474,6 +1565,100 @@ async function archiveFalseTopic(guild, user, categoryKey, reason, fields, ancho
     }, { guildName: guild.name, snaps });
 }
 
+// ── The five ticket actions, once ─────────────────────────────────────────────
+/**
+ * Close, transcript, delete, enableai, disableai — written once and reached through three doors:
+ * the ticket's buttons, a slash command, and "@bot close" typed into the channel. The door only
+ * supplies `respond`: it gets ONE payload and decides where it lands (ephemeral for a slash
+ * command, a DM for a file when the door is a public message), which is the only thing the three
+ * really differ in.
+ * @param {string} action  one of TICKET_COMMANDS
+ * @param {import('discord.js').TextChannel} channel
+ * @param {import('discord.js').GuildMember} member  whoever asked
+ * @param {(payload: object) => Promise<any>} respond
+ * @param {{reason?: string, message?: import('discord.js').Message}} opts
+ *        `message` is the door's own control message, when it has one (the button door): a
+ *        Re-enable that has been used must be greyed out, and that is the message carrying it.
+ * @returns {Promise<boolean>} false when it refused, and the refusal has already been sent
+ */
+async function runTicketAction(action, channel, member, respond, { reason = '', message = null } = {}) {
+    const refuse = (text) => respond({
+        embeds: [rrEmbed({ title: 'Not allowed', blocks: [text], colour: BRAND_BAD, footer: null })],
+        ephemeral: true,
+    }).then(() => false);
+    if (!ANY_TICKET_NAME_RE.test(channel?.name || '')) return refuse('Use this inside a ticket channel.');
+    const state = parseTopic(channel.topic);
+    const staff = Boolean(member && isStaff(member));
+    // A Ticket Tool leftover has no topic of ours: the permission overwrite is then the only
+    // record of who it belongs to, which is what /close has always fallen back on.
+    const opener = state ? member?.id === state.opener : Boolean(channel.permissionOverwrites?.cache?.has(member?.id));
+    if (!opener && !staff) return refuse('Only the person who opened this ticket can do that.');
+    // The buttons stay on screen after a restart, and so does this channel: read back what the
+    // restart lost before anything decides the ticket is still open, or still has the AI on.
+    await hydrateTicket(channel);
+    const closed = closedTickets.has(channel.id) || transcribedTickets.has(channel.id) || /^closed-/i.test(channel.name);
+
+    if (action === 'transcript') {
+        let snaps = await fetchTicketSnapshots(channel).catch(() => []);
+        if (!snaps.length) snaps = ticketMessageCache.get(channel.id) || [];
+        if (!snaps.length) return refuse('There is nothing in this ticket to write down yet.');
+        await respond({
+            embeds: [rrEmbed({ title: '📑 Ticket transcript', blocks: [`**${channel.name}** — the whole conversation is attached.`] })],
+            files: [new AttachmentBuilder(
+                Buffer.from(renderTranscriptHtml(channel.guild.name, channel.name, snaps), 'utf8'),
+                { name: `${channel.name}-transcript.html` },
+            )],
+        });
+        return true;
+    }
+
+    if (action === 'delete') {
+        if (!staff) return refuse('Only staff can delete a ticket channel.');
+        // An OPEN ticket is closed first, and awaited: the transcript, the opener's DM, #ticket-log
+        // and the panel archive all happen in there, and none of them can be done afterwards.
+        if (!closed) await closeTicketChannel(channel, { tag: member.user.tag, id: member.id, reason });
+        await respond({ embeds: [rrEmbed({ title: 'Deleting this channel', blocks: ['The transcript is already saved.'], colour: BRAND_BAD })] });
+        await channel.delete(`RazorReaper: ticket deleted by ${member.user.tag}`)
+            .catch(e => console.error('[support] Ticket delete failed:', e.message || e));
+        return true;
+    }
+
+    if (closed) return refuse('This ticket is already closed.');
+
+    if (action === 'close') {
+        // closeTicketChannel posts the one public close message itself, once the transcript is
+        // safe — this reply is only the door's receipt.
+        await closeTicketChannel(channel, { tag: member.user.tag, id: member.id, reason });
+        return respond({ embeds: [okEmbed('✅ Ticket closed.')], ephemeral: true }).then(() => true);
+    }
+
+    if (action === 'enableai') {
+        if (!state || ai.HUMAN_ONLY.has(state.cat)) return refuse('This category is answered by a person, never automatically.');
+        if (ticketAi(channel.id, state)) return refuse('The AI is already answering in this ticket.');
+        if ((aiReplyCount.get(channel.id) || 0) >= AI_MAX_REPLIES) return refuse(`This ticket already used its ${AI_MAX_REPLIES} automatic answers — a human takes it from here.`);
+        if (support.budget.exhausted()) return refuse('Today\'s automatic-answer budget is spent — a human takes it from here.');
+        if (!support.enabled) return refuse('No automatic answering is configured on this server.');
+        aiReplyCount.set(channel.id, 0);
+        setTicketAi(channel.id, true);
+        await retireHandoffButtons(channel, message);
+        return respond({ embeds: [rrEmbed({ title: 'AI is back on', blocks: ['Ask your next question and I\'ll answer.'], colour: BRAND_GOOD })] }).then(() => true);
+    }
+
+    if (action === 'disableai') {
+        if (!ticketAi(channel.id, state)) return refuse('The AI is already off in this ticket.');
+        setTicketAi(channel.id, false);
+        reportWaiting.stop(channel.id);
+        // Into the CHANNEL, not through `respond`: this message and its live Re-enable button are
+        // what a restarted bot reads the AI's state back from (rebuildTicketState).
+        await channel.send({
+            embeds: [rrEmbed({ title: 'AI is off', blocks: ['A human takes it from here.'] })],
+            components: [aiBackRow()],
+        });
+        return true;
+    }
+    return refuse(`I only know ${TICKET_COMMANDS.map(c => `\`/${c}\``).join(', ')}.`);
+}
+
 // ── Panel, modal and ticket buttons ───────────────────────────────────────────
 // Its own listener, keyed on customId: the /help, /steal and /roles menus in this file use
 // in-memory collectors that die with the process, which is fine for a menu that lives 30 seconds
@@ -1523,39 +1708,29 @@ client.on('interactionCreate', async (interaction) => {
             return refuse('This ticket is already closed.');
         }
 
-        if (interaction.customId === 'ticket:close') {
-            // No reply of its own: closeTicketChannel posts the one close message, after the
-            // transcript is safe, so a second click can never produce a second one.
-            await interaction.deferUpdate();
-            return closeTicketChannel(channel, { tag: interaction.user.tag, id: interaction.user.id });
+        // ── Close, Delete, Re-enable AI ───────────────────────────────────────
+        // Three of the five ticket actions, and the buttons are only a door into the same
+        // runTicketAction the slash commands and "@bot close" go through — guards, order and
+        // wording included. Close and Delete outlive Discord's three-second reply window
+        // (transcript, DM, #ticket-log, panel archive), so those two defer first and the action's
+        // receipt arrives as an ephemeral follow-up.
+        const buttonAction = { 'ticket:close': 'close', [TICKET_BUTTONS.del]: 'delete', [TICKET_BUTTONS.aiOn]: 'enableai' }[interaction.customId];
+        if (buttonAction) {
+            if (buttonAction !== 'enableai') await interaction.deferUpdate();
+            return runTicketAction(buttonAction, channel, interaction.member, (payload) =>
+                (interaction.deferred || interaction.replied)
+                    ? interaction.followUp({ ...payload, ephemeral: true })
+                    : interaction.reply(payload),
+            { message: interaction.message });
         }
 
         if (interaction.customId === 'ticket:human') {
             setTicketAi(channel.id, false);
             reportWaiting.stop(channel.id);
             return interaction.reply({
-                content: `<@${OWNER_ID}>`,
+                ...(await humanPing(channel.guild)),
                 embeds: [rrEmbed({ title: 'A human is coming', blocks: [`${interaction.user} asked for a person.\nThe AI is off in this ticket.`] })],
                 components: [aiBackRow()],
-            });
-        }
-
-        // ── Re-enable AI ──────────────────────────────────────────────────────
-        // Opener or staff. It refuses on the two limits it cannot lift, because turning the AI
-        // back on into an exhausted budget would just post the same hand-off again.
-        if (interaction.customId === TICKET_BUTTONS.aiOn) {
-            if (ticketAi(channel.id, state)) return refuse('The AI is already answering in this ticket.');
-            const done = aiReplyCount.get(channel.id) || 0;
-            if (done >= AI_MAX_REPLIES) return refuse(`This ticket already used its ${AI_MAX_REPLIES} automatic answers — a human takes it from here.`);
-            if (support.budget.exhausted()) return refuse('Today\'s automatic-answer budget is spent — a human takes it from here.');
-            if (!support.enabled) return refuse('No automatic answering is configured on this server.');
-            aiReplyCount.set(channel.id, 0);
-            setTicketAi(channel.id, true);
-            // The button that brought it back is spent, and a greyed one is how a restarted bot
-            // knows the hand-off it rides on has been answered.
-            await consumeButtons(interaction.message);
-            return interaction.reply({
-                embeds: [rrEmbed({ title: 'AI is back on', blocks: ['Ask your next question and I\'ll answer.'], colour: BRAND_GOOD })],
             });
         }
 
@@ -1599,19 +1774,6 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        // ── Delete ticket ─────────────────────────────────────────────────────
-        // The button rides on the bot's own "Ticket closed" message, but that message STAYS on
-        // screen when a ticket is re-opened (channelUpdate below un-closes it), so the button
-        // alone is not proof. It is gated on the same evidence as everything above — the close
-        // this process recorded, or the name — and never on the name alone: asking the NAME is
-        // what refused the owner's delete while the rename sat in Discord's edit queue.
-        if (interaction.customId === TICKET_BUTTONS.del) {
-            if (!staff) return refuse('Only staff can delete a ticket channel.');
-            if (!isClosed) return refuse('This ticket is open again — close it before deleting it.');
-            await interaction.reply({ embeds: [rrEmbed({ title: 'Deleting this channel', blocks: ['The transcript is already saved.'], colour: BRAND_BAD })] });
-            return channel.delete(`RazorReaper: ticket deleted by ${interaction.user.tag}`)
-                .catch(e => console.error('[support] Ticket delete failed:', e.message || e));
-        }
     } catch (e) {
         console.error('[support] Interaction failed:', e.message || e);
         if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
@@ -2009,6 +2171,12 @@ const slashCommands = [
         .addUserOption(o => o.setName('user').setDescription('The user to add to this ticket').setRequired(true)),
     new SlashCommandBuilder().setName('close').setDescription('Close the current ticket')
         .addStringOption(o => o.setName('reason').setDescription('Reason for closing the ticket').setRequired(false)),
+    new SlashCommandBuilder().setName('transcript').setDescription('Get this ticket\'s transcript (use inside a ticket channel)'),
+    new SlashCommandBuilder().setName('delete').setDescription('Staff — close if needed, then delete this ticket channel'),
+    new SlashCommandBuilder().setName('enableai').setDescription('Let the AI answer in this ticket again'),
+    new SlashCommandBuilder().setName('disableai').setDescription('Stop the AI answering in this ticket'),
+    new SlashCommandBuilder().setName('ticketping').setDescription('Owner — choose who is pinged when a ticket asks for a human')
+        .addUserOption(o => o.setName('user').setDescription('Toggle the support-ping role for this member').setRequired(true)),
     new SlashCommandBuilder().setName('say').setDescription('Send a message as the bot')
         .addStringOption(o => o.setName('message').setDescription('The message to send').setRequired(true))
         .addChannelOption(o => o.setName('channel').setDescription('Channel to send in (default: current)').addChannelTypes(ChannelType.GuildText).setRequired(false)),
@@ -2090,6 +2258,12 @@ client.once('ready', async () => {
     } catch (err) {
         console.error('[RazorReaper] Failed to register slash commands:', err);
     }
+
+    // The bot does not create this role — it is made once by hand and pinned in bot.env, because
+    // finding roles by name is what left this server with duplicates.
+    console.log(HUMAN_PING_ROLE_ID
+        ? `[support] "I need a human" pings the holders of role ${HUMAN_PING_ROLE_ID}.`
+        : '[support] HUMAN_PING_ROLE_ID is not set — "I need a human" pings the owner.');
 
     // Set bot bio + banner
     try {
@@ -2343,6 +2517,10 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/queue`', value: 'See how many tickets are open' },
                     { name: '`/ticketinfo`', value: 'Info about current ticket *(use inside a ticket channel)*' },
                     { name: '`/adduser` `user`', value: 'Add someone to current ticket *(use inside a ticket channel)*' },
+                    { name: '`/close` `[reason]` · `/transcript`', value: 'Close this ticket, or get the conversation as a file' },
+                    { name: '`/enableai` · `/disableai`', value: 'Turn automatic answers in this ticket back on, or off' },
+                    { name: '`/delete`', value: 'Staff — close (if it is still open) and delete this ticket channel' },
+                    { name: `@${client.user.username} <command>`, value: 'The same five inside a ticket: mention me and add `close`, `transcript`, `delete`, `enableai` or `disableai`' },
                 ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
             server: () => new EmbedBuilder()
                 .setColor(CYAN).setTitle('📊 Server Commands')
@@ -2527,24 +2705,64 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ embeds: [okEmbed(`✅ Added ${target} to this ticket.`)] });
     }
 
-    // ── /close ────────────────────────────────────────────────────────────────
-    if (commandName === 'close') {
-        if (!isTicketChannel(channel)) return interaction.reply({ embeds: [errEmbed('❌ Use this inside a ticket channel.')], ephemeral: true });
-        if (!isStaff(member) && !channel.permissionOverwrites.cache.has(interaction.user.id)) {
-            return interaction.reply({ embeds: [errEmbed('❌ No permission.')], ephemeral: true });
+    // ── /close /transcript /delete /enableai /disableai ───────────────────────
+    // The second door into runTicketAction — same guards, same wording as the buttons and as
+    // "@bot close". The reply is ephemeral throughout: a transcript posted into the channel
+    // would be a leak, and the actions that have something to SAY say it in the channel already.
+    if (TICKET_COMMANDS.includes(commandName)) {
+        if (!ANY_TICKET_NAME_RE.test(channel?.name || '')) {
+            return interaction.reply({ embeds: [errEmbed('❌ Use this inside a ticket channel.')], ephemeral: true });
         }
-        if (closedTickets.has(channel.id) || transcribedTickets.has(channel.id)) {
-            return interaction.reply({ embeds: [errEmbed('❌ This ticket is already closed.')], ephemeral: true });
-        }
-        // The public close message is closeTicketChannel's, posted once the transcript is safe —
-        // this only keeps the command from timing out while that happens.
+        // Closing, deleting and building a transcript all outlive the three-second reply window.
         await interaction.deferReply({ ephemeral: true });
-        await closeTicketChannel(channel, {
-            tag: interaction.user.tag,
-            id: interaction.user.id,
-            reason: interaction.options.getString('reason'),
+        let said = false;
+        try {
+            await runTicketAction(commandName, channel, member, (payload) => {
+                said = true;
+                return interaction.editReply(payload);
+            }, { reason: interaction.options.getString('reason') || '' });
+        } catch (e) {
+            console.error(`[support] /${commandName} failed:`, e.message || e);
+            if (!said) return interaction.editReply({ embeds: [errEmbed('❌ Something went wrong — please try again.')] }).catch(() => {});
+        }
+        // disableai only posts into the channel — the deferred reply still has to be answered.
+        if (!said) await interaction.editReply({ embeds: [okEmbed('✅ Done.')] }).catch(() => {});
+        return;
+    }
+
+    // ── /ticketping ───────────────────────────────────────────────────────────
+    // Who gets pinged by "I need a human", without leaving Discord's own member menu behind:
+    // the role IS the setting, this command just toggles it for the owner.
+    if (commandName === 'ticketping') {
+        if (interaction.user.id !== OWNER_ID) {
+            return interaction.reply({ embeds: [errEmbed('❌ You are not authorized to use this command.')], ephemeral: true });
+        }
+        const role = HUMAN_PING_ROLE_ID && guild?.roles.cache.get(HUMAN_PING_ROLE_ID);
+        if (!role) {
+            return interaction.reply({ embeds: [errEmbed('❌ No support-ping role is configured (`HUMAN_PING_ROLE_ID`) — tickets ping you.')], ephemeral: true });
+        }
+        const target = interaction.options.getMember('user');
+        if (!target) return interaction.reply({ embeds: [errEmbed('❌ That member is not in this server.')], ephemeral: true });
+        await interaction.deferReply({ ephemeral: true });
+        const had = target.roles.cache.has(role.id);
+        try {
+            await (had ? target.roles.remove(role) : target.roles.add(role));
+        } catch (e) {
+            return interaction.editReply({ embeds: [errEmbed(`❌ Could not change the role: ${e.message || e}`)] });
+        }
+        const now = [...role.members.keys()].slice(0, HUMAN_PING_MAX).map(id => `<@${id}>`);
+        return interaction.editReply({
+            embeds: [rrEmbed({
+                title: had ? 'Removed' : 'Added',
+                blocks: [
+                    `${target} ${had ? 'is no longer' : 'is now'} pinged when a ticket asks for a human.`,
+                    `Pinged now: ${now.length ? now.join(' ') : 'nobody — so you are'}`,
+                ],
+                colour: had ? BRAND_BAD : BRAND_GOOD,
+                footer: null,
+            })],
+            allowedMentions: { parse: [] },
         });
-        return interaction.editReply({ embeds: [okEmbed('✅ Ticket closed.')] });
     }
 
     // ── /say ──────────────────────────────────────────────────────────────────

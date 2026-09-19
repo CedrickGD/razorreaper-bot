@@ -42,6 +42,11 @@
 | `/ticketinfo` | View info about the current ticket | — | Everyone |
 | `/adduser <user>` | Add a user to the current ticket | `user` (required) | Everyone |
 | `/close [reason]` | Close the current ticket | `reason` (optional) | Staff / Ticket Owner |
+| `/transcript` | Get this ticket's conversation as an HTML file (ephemeral) | — | Staff / Ticket Owner |
+| `/delete` | Close the ticket if it is still open, then delete the channel | — | Staff |
+| `/enableai` | Let the AI answer in this ticket again | — | Staff / Ticket Owner |
+| `/disableai` | Stop the AI answering in this ticket | — | Staff / Ticket Owner |
+| `/ticketping <user>` | Toggle the support-ping role — who "I need a human" pings | `user` (required) | **Bot owner only** |
 | `/say <message> [channel]` | Send a message as the bot | `message` (required), `channel` (optional) | Staff |
 | `/clear <amount> <filter> [user]` | Delete messages in a channel | `amount` (required), `filter` (required: All/User/Bots), `user` (optional) | Staff |
 | `/purge <amount>` | Quick bulk-delete messages (1–100) | `amount` (required) | Staff |
@@ -54,6 +59,13 @@
 | `/stealsticker [name]` | Steal a sticker (searches last 10 messages) | `name` (optional) | Manage Expressions |
 | `/changeformat <file>` | Convert image or video to a different format | `file` (required attachment) | Everyone |
 | `/roles [user]` | Interactive role selector — ephemeral dropdown(s) to sync roles | `user` (optional, default: self) | **Server owner only** |
+
+## Inside a ticket: `@RazorReaper <command>`
+
+A message in a ticket channel that **starts** with a mention of the bot runs the same five ticket
+actions as the slash commands and the ticket buttons: `close [reason]`, `transcript`, `delete`,
+`enableai`, `disableai` (a leading `/` is allowed, case does not matter). The message never
+reaches the AI. `transcript` arrives as a DM — the channel only gets a one-line confirmation.
 
 ### Supported Formats for `/changeformat`
 

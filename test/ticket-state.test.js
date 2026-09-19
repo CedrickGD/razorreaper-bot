@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const {
     buildTopic, parseTopic, rebuildTicketState, nextTicketNumber, ticketChannelName, checkLimits,
-    slowmodeSeconds, deletableTickets, makeWaiting, SLOWMODE_MAX, TICKET_BUTTONS,
+    slowmodeSeconds, deletableTickets, makeWaiting, parseBotCommand,
+    SLOWMODE_MAX, TICKET_BUTTONS, TICKET_COMMANDS,
 } = require('../ticket-state');
 
 const HOUR = 60 * 60 * 1000;
@@ -187,6 +188,85 @@ test('channels without one of our topics are invisible to the limits', () => {
 test('the limits are configurable (staff could be given more headroom)', () => {
     const channels = [ch('ticket-0001', '1'), ch('closed-0002', '1', 2)];
     assert.deepStrictEqual(checkLimits(channels, '1', NOW, { maxOpen: 2, maxPerDay: 5 }), { ok: true });
+});
+
+// ── limits, per category ──────────────────────────────────────────────────────
+// The owner asked for one open ticket PER CATEGORY: a licence question and a bug report are two
+// conversations, and closing one to ask the other is what he did not want to do any more.
+
+test('an open ticket only blocks its own category', () => {
+    const channels = [ch('ticket-0001', '1', 1, 'license')];
+    assert.deepStrictEqual(checkLimits(channels, '1', NOW, { cat: 'bug' }), { ok: true });
+    assert.deepStrictEqual(checkLimits(channels, '1', NOW, { cat: 'license' }),
+        { ok: false, reason: 'open', open: 'ticket-0001' });
+});
+
+test('a topic from before categories existed counts as "other"', () => {
+    const legacy = { name: 'ticket-0001', topic: 'rr-ticket opener=1 ai=on replies=0', createdTimestamp: NOW - HOUR };
+    assert.deepStrictEqual(checkLimits([legacy], '1', NOW, { cat: 'other' }),
+        { ok: false, reason: 'open', open: 'ticket-0001' });
+    assert.deepStrictEqual(checkLimits([legacy], '1', NOW, { cat: 'bug' }), { ok: true });
+});
+
+test('a ticket this process has closed is not open, whatever the channel is still called', () => {
+    // The close rename is not awaited any more — it can sit in Discord's queue for minutes.
+    const closing = { ...ch('ticket-0001', '1', 1, 'bug'), closed: true };
+    assert.deepStrictEqual(checkLimits([closing], '1', NOW, { cat: 'bug' }), { ok: true });
+    assert.deepStrictEqual(checkLimits([{ ...closing, closed: false }], '1', NOW, { cat: 'bug' }),
+        { ok: false, reason: 'open', open: 'ticket-0001' });
+});
+
+test('without a category every open ticket still counts (the old behaviour)', () => {
+    const channels = [ch('ticket-0001', '1', 1, 'license')];
+    assert.deepStrictEqual(checkLimits(channels, '1', NOW), { ok: false, reason: 'open', open: 'ticket-0001' });
+});
+
+test('the daily cap still bites, one category at a time', () => {
+    const channels = [ch('closed-0001', '1', 2, 'bug'), ch('closed-0002', '1', 5, 'license'), ch('closed-0003', '1', 6, 'install')];
+    assert.deepStrictEqual(checkLimits(channels, '1', NOW, { cat: 'scripts' }), { ok: false, reason: 'daily', count: 3 });
+    // …and a cap derived from the number of categories leaves room for one of each.
+    assert.deepStrictEqual(checkLimits(channels, '1', NOW, { cat: 'scripts', maxPerDay: 6 }), { ok: true });
+});
+
+// ── "@bot close" ──────────────────────────────────────────────────────────────
+
+test('a mention at the start of the message is a command', () => {
+    for (const text of ['<@42> close', '<@!42> close', '  <@42>   /CLOSE  ']) {
+        assert.deepStrictEqual(parseBotCommand(text, '42'), { action: 'close', reason: '' }, text);
+    }
+});
+
+test('everything after the command word is the reason', () => {
+    assert.deepStrictEqual(parseBotCommand('<@42> close solved, thanks', '42'),
+        { action: 'close', reason: 'solved, thanks' });
+    assert.deepStrictEqual(parseBotCommand('<@42> transcript', '42'), { action: 'transcript', reason: '' });
+});
+
+test('all five commands are reachable this way', () => {
+    for (const c of TICKET_COMMANDS) {
+        assert.deepStrictEqual(parseBotCommand(`<@42> ${c}`, '42'), { action: c, reason: '' });
+    }
+});
+
+test('a mention with an unknown word asks for the list, not for nothing', () => {
+    for (const text of ['<@42> foo', '<@42>', '<@42> /', '<@42> closed']) {
+        assert.deepStrictEqual(parseBotCommand(text, '42'), { action: '', reason: '' }, text);
+    }
+});
+
+test('a mention that is not at the start is a sentence about the bot, not an order', () => {
+    for (const text of ['ask <@42> close', 'close <@42>', 'please <@42> delete this']) {
+        assert.strictEqual(parseBotCommand(text, '42'), null, text);
+    }
+});
+
+test('another bot\'s mention, or none at all, is none of our business', () => {
+    assert.strictEqual(parseBotCommand('<@99> close', '42'), null);
+    assert.strictEqual(parseBotCommand('close', '42'), null);
+    assert.strictEqual(parseBotCommand('', '42'), null);
+    assert.strictEqual(parseBotCommand(null, '42'), null);
+    // No bot id (the gateway has not handed us one yet) must never match either.
+    assert.strictEqual(parseBotCommand('<@42> close', ''), null);
 });
 
 // ── Slowmode ──────────────────────────────────────────────────────────────────

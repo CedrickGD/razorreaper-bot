@@ -143,10 +143,17 @@ function ticketChannelName(number) {
 /**
  * Per-member limits, answered entirely from channels that already exist — no counter to persist.
  * Closed tickets keep their channel (renamed to closed-N), so the 24h history is right there.
- * @param {{name: string, topic: string|null, createdTimestamp: number}[]} channels
+ *
+ * The open limit is per CATEGORY when the caller names one: a member with a License ticket open
+ * can still report a bug, they just cannot open a second License ticket. Topics from before
+ * categories existed read as `other`, which is a category like any other here.
+ * @param {{name: string, topic: string|null, createdTimestamp: number, closed?: boolean}[]} channels
+ *        `closed` is the caller's own bookkeeping: the close rename is no longer awaited and can
+ *        sit in Discord's queue for minutes, so the NAME alone would keep a closed ticket "open".
  * @param {string} userId
  * @param {number} now
- * @param {{maxOpen?: number, maxPerDay?: number}} limits
+ * @param {{maxOpen?: number, maxPerDay?: number, cat?: string}} limits
+ *        no `cat` = every open ticket of this member counts, whatever it is about.
  * @returns {{ok: true}|{ok: false, reason: 'open'|'daily', open?: string, count?: number}}
  */
 function checkLimits(channels, userId, now = Date.now(), limits = {}) {
@@ -158,8 +165,9 @@ function checkLimits(channels, userId, now = Date.now(), limits = {}) {
     let recent = 0;
     for (const ch of channels || []) {
         if (!ANY_RE.test(ch.name || '')) continue;
-        if (parseTopic(ch.topic)?.opener !== userId) continue;
-        if (OPEN_RE.test(ch.name)) {
+        const topic = parseTopic(ch.topic);
+        if (topic?.opener !== userId) continue;
+        if (OPEN_RE.test(ch.name) && !ch.closed && (limits.cat === undefined || topic.cat === limits.cat)) {
             openCount++;
             if (!open) open = ch.name;
         }
@@ -168,6 +176,28 @@ function checkLimits(channels, userId, now = Date.now(), limits = {}) {
     if (openCount >= maxOpen) return { ok: false, reason: 'open', open };
     if (recent >= maxPerDay) return { ok: false, reason: 'daily', count: recent };
     return { ok: true };
+}
+
+// ── "@bot close" ──────────────────────────────────────────────────────────────
+/** What you can do to a ticket. The slash commands, the buttons and @bot all use these words. */
+const TICKET_COMMANDS = ['close', 'transcript', 'delete', 'enableai', 'disableai'];
+
+/**
+ * A ticket command typed at the bot instead of picked from the slash menu. The message must START
+ * with the mention: "ask @RazorReaper to close this" is a sentence about the bot, not an order to
+ * it, and a member quoting the bot mid-sentence must never trigger anything.
+ * @param {string} content  the raw message text
+ * @param {string} botId    this bot's user id — another bot's mention is not our command
+ * @returns {{action: string, reason: string}|null}  null when the message is not addressed to us;
+ *          `action: ''` when it is but the word after the mention is not one of ours (the caller
+ *          then lists them), otherwise the command and everything after it as the reason.
+ */
+function parseBotCommand(content, botId) {
+    const m = /^<@!?(\d+)>([\s\S]*)$/.exec(String(content ?? '').trim());
+    if (!m || !botId || m[1] !== String(botId)) return null;
+    const [word = '', ...rest] = m[2].trim().split(/\s+/);
+    const action = word.replace(/^\//, '').toLowerCase();
+    return TICKET_COMMANDS.includes(action) ? { action, reason: rest.join(' ') } : { action: '', reason: '' };
 }
 
 // ── Message cooldown ──────────────────────────────────────────────────────────
@@ -238,6 +268,6 @@ function makeWaiting(ttlMs = 30 * 60 * 1000, now = () => Date.now()) {
 
 module.exports = {
     buildTopic, parseTopic, rebuildTicketState, nextTicketNumber, ticketChannelName, checkLimits,
-    slowmodeSeconds, deletableTickets, makeWaiting,
-    TOPIC_TAG, SLOWMODE_MAX, TICKET_BUTTONS,
+    slowmodeSeconds, deletableTickets, makeWaiting, parseBotCommand,
+    TOPIC_TAG, SLOWMODE_MAX, TICKET_BUTTONS, TICKET_COMMANDS,
 };
