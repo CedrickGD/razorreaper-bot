@@ -164,19 +164,21 @@ function formatForm(category, fields) {
 
 /**
  * Split the NEED_REPORT sentinel off an answer. The marker is an exact string the prompt tells
- * the model to emit on its own line; `answer()` is not a JSON call, so a marker in the text is
- * the smallest signal that exists here — and it must never reach the member.
+ * the model to emit as the LAST line, and only that position counts as the signal: a member can
+ * put the literal marker into the ticket, and the last turns of the ticket go into the prompt, so
+ * a marker quoted back mid-sentence is member text, not the model asking for client data.
+ * Stripping still covers every occurrence — the marker must never reach the member either way.
  * @returns {{text: string, needsReport: boolean}}
  */
 function splitSentinel(answer) {
     const raw = String(answer ?? '');
-    const needsReport = raw.includes(NEED_REPORT);
-    if (!needsReport) return { text: raw.trim(), needsReport: false };
+    const needsReport = raw.trimEnd().endsWith(NEED_REPORT);
+    if (!raw.includes(NEED_REPORT)) return { text: raw.trim(), needsReport: false };
     const text = raw.split(NEED_REPORT).join('')
         .replace(/[ \t]{2,}/g, ' ')
         .replace(/\n{3,}/g, '\n\n')
         .trim();
-    return { text, needsReport: true };
+    return { text, needsReport };
 }
 
 /**

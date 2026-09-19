@@ -287,10 +287,17 @@ test('the sentinel is stripped from the answer and reported separately', () => {
     });
 });
 
-test('a sentinel mid-sentence is removed without leaving a double space', () => {
+// The member's own text reaches the model. If quoting the marker at them were enough to trigger
+// the report step, the member would drive it — so only the marker the prompt asks for (the last
+// line) counts, while the strip still covers every position.
+test('a sentinel mid-sentence is removed but asks for nothing', () => {
     assert.deepStrictEqual(splitSentinel(`before ${NEED_REPORT} after`), {
-        text: 'before after', needsReport: true,
+        text: 'before after', needsReport: false,
     });
+});
+
+test('a trailing sentinel still counts through whitespace', () => {
+    assert.strictEqual(splitSentinel(`Try this.\n${NEED_REPORT}\n  `).needsReport, true);
 });
 
 test('an ordinary answer is returned untouched and asks for nothing', () => {

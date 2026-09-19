@@ -98,6 +98,15 @@ function infoEmbed(desc, title)  { return embed(CYAN,   desc, title); }
 function errEmbed(desc)          { return embed(0xff4444, desc); }
 function okEmbed(desc)           { return embed(0x00cc66, desc); }
 
+// The verify surface is a support surface: #verify's panel is an rrEmbed, so the replies /verify
+// gives right underneath it are too — otherwise a customer gets the rebranded panel and an
+// off-brand answer to it in the same breath. These two keep the brand rules (five-word title, two
+// short lines a block) without repeating the same rrEmbed options thirteen times; the generic
+// helpers above stay where they are for the moderation commands, whose long lists do not fit
+// those rules. No footer: these are one-line ephemeral replies, the way the ticket buttons refuse.
+const verifyOk = (title, ...blocks) => rrEmbed({ title, blocks, colour: BRAND_GOOD, footer: null });
+const verifyBad = (title, ...blocks) => rrEmbed({ title, blocks, colour: BRAND_BAD, footer: null });
+
 // ── License-verified community gate ─────────────────────────────────────────────
 // Turns the server into a paid-only community: only members whose Discord is linked to a valid
 // RazorReaper license (checked against the admin panel) get the "Verified Customer" role.
@@ -330,9 +339,21 @@ const VERIFY_PANEL_TITLE = 'Unlock the Community';
 // A panel is simply the bot's own message carrying a known embed title. Both panels (#verify and
 // #support) are found this way, so neither needs an id stored anywhere and a deleted panel just
 // gets reposted on the next start.
-async function findOwnPanel(channel, title) {
-    const msgs = await channel.messages.fetch({ limit: 100 });
-    return msgs.find(m => m.author.id === client.user.id && m.embeds[0]?.title === title) || null;
+// #ticket-log is the one channel where a panel is NOT the newest message — it collects one row
+// per ticket, so a ticket that stays open while others come and go has its row pushed down. That
+// is what `pages` is for; the two real panels stay at one page, which is what they always did.
+// ponytail: 100 messages a page, a handful of pages — a row older than that gets a second row in
+// the log instead of an edit. Store the message id if that ever becomes the normal case.
+async function findOwnPanel(channel, title, pages = 1) {
+    let before;
+    for (let page = 0; page < pages; page++) {
+        const msgs = await channel.messages.fetch({ limit: 100, ...(before ? { before } : {}) });
+        const hit = msgs.find(m => m.author.id === client.user.id && m.embeds[0]?.title === title);
+        if (hit) return hit;
+        if (msgs.size < 100) return null;
+        before = msgs.last().id;
+    }
+    return null;
 }
 
 // One source for the panel's role sentence — used both when posting a fresh panel and when
@@ -599,6 +620,26 @@ function ticketLogChannel(guild) {
 }
 
 /**
+ * The highest ticket number #ticket-log has ever seen. Auto-delete takes closed channels away, so
+ * the channel list is no longer the full history of the numbers handed out; the log keeps one row
+ * per ticket and the rows are posted in order, so the newest page carries the highest number.
+ * Best-effort like the rest of the log: no log channel, no floor, and numbering is what it was.
+ * ponytail: one page. It would take 100 tickets logged between two opens to read a stale floor,
+ * and the cost of that is a repeated number, never a lost ticket.
+ */
+async function highestLoggedTicket(guild) {
+    const channel = ticketLogChannel(guild);
+    if (!channel) return 0;
+    const msgs = await channel.messages.fetch({ limit: 100 }).catch(() => null);
+    let highest = 0;
+    for (const m of msgs?.values() || []) {
+        const n = Number(/^Ticket (\d+)$/.exec(m.embeds[0]?.title || '')?.[1]);
+        if (Number.isFinite(n) && n > highest) highest = n;
+    }
+    return highest;
+}
+
+/**
  * Post this ticket's entry — or, when it is already there, edit it. The entry itself comes from
  * ticketLogEntry() in brand.js, which is where the wording and the block limits are tested.
  * Best-effort throughout: the log is a convenience for staff and must never be the reason a
@@ -615,7 +656,8 @@ async function writeTicketLog(guild, entry, { colour = BRAND, files, edit = fals
             embeds: [rrEmbed({ title, blocks, colour, thumb: brandThumb(guild, client.user), timestamp: true })],
             ...(files ? { files } : {}),
         };
-        const existing = edit ? await findOwnPanel(channel, title).catch(() => null) : null;
+        // Three pages back: a ticket may have been open while 300 others were logged.
+        const existing = edit ? await findOwnPanel(channel, title, 3).catch(() => null) : null;
         if (existing) return await existing.edit(payload);
         return await channel.send(payload);
     } catch (e) {
@@ -761,7 +803,7 @@ async function openTicket(interaction, categoryKey, fields) {
             console.log(`[support] Rejected a ${categoryKey} form from ${user.tag} (${verdict.verdict}).`);
             // Staff see the rejection too, and the panel counts it — the owner asked for all
             // tickets, and a form that never became a channel is still a support contact.
-            archiveFalseTopic(guild, user, categoryKey, reason, fields).catch(e =>
+            archiveFalseTopic(guild, user, categoryKey, reason, fields, interaction.id).catch(e =>
                 console.error('[support] False-topic archive failed:', e.message || e));
             return;
         }
@@ -775,6 +817,8 @@ async function openTicket(interaction, categoryKey, fields) {
     // ensureLifetimeRole shares its in-flight create to avoid making the role twice.
     const P = PermissionsBitField.Flags;
     const staffRoles = guild.roles.cache.filter(r => STAFF_ROLES.includes(r.name));
+    // Auto-delete frees the numbers of channels it removes; #ticket-log remembers them.
+    const numberFloor = await highestLoggedTicket(guild);
     let channel;
     try {
         const link = ticketCreateChain.then(() => {
@@ -783,7 +827,7 @@ async function openTicket(interaction, categoryKey, fields) {
             const again = checkTicketLimits();
             if (!again.ok) throw Object.assign(new Error('ticket limit'), { ticketLimit: again });
             return guild.channels.create({
-                name: ticketChannelName(nextTicketNumber(guild.channels.cache.map(c => c.name))),
+                name: ticketChannelName(nextTicketNumber(guild.channels.cache.map(c => c.name), numberFloor)),
                 type: ChannelType.GuildText,
                 parent: (TICKETS_CATEGORY_ID && guild.channels.cache.get(TICKETS_CATEGORY_ID)?.id)
                     || guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === 'tickets')?.id
@@ -992,19 +1036,36 @@ async function fetchClientContext(body) {
     return ai.formatClientContext(data.context) || null;
 }
 
+/**
+ * Everything the model needs about a ticket, off ONE history read: the form, the last turns, and
+ * the scan itself for whoever also has to count replies in it. The form is read back out of the
+ * opening embed rather than stored anywhere — the last 12 turns alone would eventually drop the
+ * original problem statement, and the embed's field names are already the labels the model
+ * expects. Both callers (a follow-up, and the second pass after a support report) need exactly
+ * this, so it is written once.
+ * @returns {Promise<{ordered: any[], fields: Record<string,string>, history: {role: string, content: string}[]}>}
+ */
+async function readTicketContext(channel, state) {
+    const recent = await channel.messages.fetch({ limit: TICKET_SCAN });
+    const ordered = [...recent.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    const opening = ordered.find(msg => msg.author.id === client.user.id && msg.embeds[0]?.fields?.length);
+    return {
+        ordered,
+        fields: Object.fromEntries((opening?.embeds[0].fields || []).map(f => [f.name, f.value])),
+        history: ordered
+            .filter(msg => (msg.author.id === client.user.id && msg.content && !msg.embeds.length) || msg.author.id === state.opener)
+            .map(msg => ({ role: msg.author.id === client.user.id ? 'assistant' : 'user', content: msg.content }))
+            .filter(h => h.content)
+            .slice(-TICKET_HISTORY),
+    };
+}
+
 /** Answer again, this time with the client data as the freshest turn. */
 async function answerWithClientContext(channel, state, block) {
     reportWaiting.stop(channel.id);
-    // The opening embed is the only copy of the form — the same read-back the follow-up uses.
-    const recent = await channel.messages.fetch({ limit: TICKET_SCAN }).catch(() => null);
-    const ordered = recent ? [...recent.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp) : [];
-    const opening = ordered.find(msg => msg.author.id === client.user.id && msg.embeds[0]?.fields?.length);
-    const fields = Object.fromEntries((opening?.embeds[0].fields || []).map(f => [f.name, f.value]));
-    const history = ordered
-        .filter(msg => (msg.author.id === client.user.id && msg.content && !msg.embeds.length) || msg.author.id === state.opener)
-        .map(msg => ({ role: msg.author.id === client.user.id ? 'assistant' : 'user', content: msg.content }))
-        .filter(h => h.content)
-        .slice(-TICKET_HISTORY);
+    // The client data is the point of this pass, so an unreadable history does not cancel it.
+    const { fields, history } = await readTicketContext(channel, state)
+        .catch(() => ({ fields: {}, history: [] }));
     await runAiReply(channel, { category: state.cat, fields, history, data: block });
 }
 
@@ -1064,8 +1125,7 @@ client.on('messageCreate', async (m) => {
             return answerWithClientContext(m.channel, state, block);
         }
 
-        const recent = await m.channel.messages.fetch({ limit: TICKET_SCAN });
-        const ordered = [...recent.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+        const { ordered, fields, history } = await readTicketContext(m.channel, state);
         // Whichever knows more: the counter this process kept, or what is still visible in the scan
         // (the only source that survives a restart). Answers from before a "Re-enable AI" do not
         // count — `from` in the topic is where this round started.
@@ -1079,17 +1139,6 @@ client.on('messageCreate', async (m) => {
             });
             return;
         }
-        const history = ordered
-            .filter(msg => (msg.author.id === client.user.id && msg.content && !msg.embeds.length) || msg.author.id === state.opener)
-            .map(msg => ({ role: msg.author.id === client.user.id ? 'assistant' : 'user', content: msg.content }))
-            .filter(h => h.content)
-            .slice(-TICKET_HISTORY);
-
-        // The form is read back out of the opening embed rather than stored anywhere: the last 12
-        // turns alone would eventually drop the original problem statement, and the embed's field
-        // names are already the labels the model expects.
-        const opening = ordered.find(msg => msg.author.id === client.user.id && msg.embeds[0]?.fields?.length);
-        const fields = Object.fromEntries((opening?.embeds[0].fields || []).map(f => [f.name, f.value]));
         await runAiReply(m.channel, { category: state.cat, fields, history });
     } catch (e) {
         console.error('[support] Follow-up handler failed:', e.message || e);
@@ -1151,7 +1200,11 @@ async function closeTicketChannel(channel, closedBy = null) {
     const state = parseTopic(channel.topic);
     const guild = channel.guild;
 
-    // Stand the legacy rename handler down BEFORE the rename fires.
+    // Stand the legacy rename handler down BEFORE the rename fires — and stand a second close
+    // down as well. Two clicks, or a click and /close, both land while the rename is still in
+    // flight and both still see an open ticket: without this the transcript is built twice, the
+    // opener is DM'd twice and the close spends two of the channel's two PATCHes per 10 minutes.
+    if (transcribedTickets.has(channel.id)) return;
     transcribedTickets.add(channel.id);
 
     const ownerId = await resolveTicketOwner(channel).catch(() => null);
@@ -1248,8 +1301,13 @@ async function sweepClosedTickets() {
  * A form that never became a channel is still a support contact: staff see it in #ticket-log and
  * the panel counts it. Reuses the ordinary transcript renderer over one synthetic message, so
  * there is no second HTML template to keep in step.
+ * @param {string} anchorId  the id of the form submission this rejects. The panel keys the archive
+ *        on `channel_id` and takes Discord snowflakes only (17-20 digits), so a made-up id would
+ *        be refused with a 400 and the rejection would never be counted — which is the one thing
+ *        the owner asked for here. An interaction id is a real snowflake, it is unique per
+ *        rejection, and a retry repeats it, so the upsert still lands on one row.
  */
-async function archiveFalseTopic(guild, user, categoryKey, reason, fields) {
+async function archiveFalseTopic(guild, user, categoryKey, reason, fields, anchorId) {
     const now = Date.now();
     const form = Object.entries(fields).filter(([, v]) => v && v.trim()).map(([k, v]) => `${k}: ${v}`).join('\n');
     const snaps = [{
@@ -1270,7 +1328,7 @@ async function archiveFalseTopic(guild, user, categoryKey, reason, fields) {
     }, { colour: BRAND_BAD });
 
     await archiveTicket({
-        channelId: `ft-${user.id}-${now}`,
+        channelId: anchorId,
         ticketNo: 0,
         channelName: 'false-topic',
         discordId: user.id,
@@ -2021,14 +2079,16 @@ client.on('guildMemberAdd', async (member) => {
     }
 
     // Not verified yet — DM instructions (best-effort; many users have DMs closed).
-    const oauthHint = VERIFY_API_BASE
-        ? `\n\n**Prefer one-click linking?** Open:\n${VERIFY_API_BASE}/api/discord/oauth-start?key=YOUR-KEY`
-        : '';
     member.send({
-        embeds: [infoEmbed(
-            `This community is for **RazorReaper license holders**. To unlock access, run **/verify** with your license key:\n\n\`/verify key:XXXX-XXXX-XXXX-XXXX\`${oauthHint}`,
-            '🔒 One step to unlock the community',
-        )],
+        embeds: [rrEmbed({
+            title: '🔒 One step to join',
+            blocks: [
+                'This community is for **RazorReaper licence holders**.',
+                'Run `/verify key:XXXX-XXXX-XXXX-XXXX` in the server.',
+                VERIFY_API_BASE && `Prefer one click? Open:\n${VERIFY_API_BASE}/api/discord/oauth-start?key=YOUR-KEY`,
+            ],
+            thumb: brandThumb(member.guild, client.user),
+        })],
     }).catch(() => {});
 });
 
@@ -2042,7 +2102,7 @@ client.on('interactionCreate', async (interaction) => {
     // ── /verify ─────────────────────────────────────────────────────────────────
     if (commandName === 'verify') {
         if (!verifyConfigured()) {
-            return interaction.reply({ embeds: [errEmbed('⚠️ Verification is not set up on this server yet.')], ephemeral: true });
+            return interaction.reply({ embeds: [verifyBad('Verification not set up', 'Nobody has configured licence checks on this server yet.')], ephemeral: true });
         }
 
         // ── Staff manual grant: /verify user:@member — permanently mark someone Verified,
@@ -2050,10 +2110,10 @@ client.on('interactionCreate', async (interaction) => {
         const targetUser = interaction.options.getUser('user');
         if (targetUser) {
             if (!member || !isStaff(member)) {
-                return interaction.reply({ embeds: [errEmbed('❌ Only staff can grant Verified to another member.')], ephemeral: true });
+                return interaction.reply({ embeds: [verifyBad('Staff only', 'Only staff can grant Verified to another member.')], ephemeral: true });
             }
             if (targetUser.bot) {
-                return interaction.reply({ embeds: [errEmbed('❌ You can\'t verify a bot.')], ephemeral: true });
+                return interaction.reply({ embeds: [verifyBad('Not a member', 'A bot cannot hold a licence.')], ephemeral: true });
             }
             await interaction.deferReply({ ephemeral: true });
             try {
@@ -2063,28 +2123,28 @@ client.on('interactionCreate', async (interaction) => {
                     manual: true,
                 });
                 if (!data || !data.ok) {
-                    return interaction.editReply({ embeds: [errEmbed('❌ Couldn\'t record the grant. Please try again shortly.')] });
+                    return interaction.editReply({ embeds: [verifyBad('Grant not recorded', 'The panel did not take it.\nTry again in a minute.')] });
                 }
                 const granted = await grantVerifiedRole(guild || verifyGuild(), targetUser.id, data.lifetime === true);
                 console.log(`[verify] Manual grant: ${interaction.user.tag} -> ${targetUser.tag} (${targetUser.id}), role=${granted}`);
                 return interaction.editReply({
-                    embeds: [okEmbed(granted
-                        ? `✅ **${targetUser.tag}** now permanently holds the ${verifiedRoleMention()} role — the license sweep won't revoke it.`
-                        : `✅ Grant recorded for **${targetUser.tag}**, but I couldn't assign the role (check my role position). It'll apply on the next sweep.`)],
+                    embeds: [granted
+                        ? verifyOk('✅ Granted', `**${targetUser.tag}** now holds ${verifiedRoleMention()} permanently.\nThe licence sweep will not revoke it.`)
+                        : verifyOk('✅ Grant recorded', `I could not assign the role to **${targetUser.tag}** — check my role position.\nIt applies on the next sweep.`)],
                 });
             } catch (e) {
                 console.error('[verify] Manual grant failed:', e.message || e);
-                return interaction.editReply({ embeds: [errEmbed('❌ Couldn\'t record the grant. Please try again shortly.')] });
+                return interaction.editReply({ embeds: [verifyBad('Grant not recorded', 'The panel did not take it.\nTry again in a minute.')] });
             }
         }
 
         // Keep /verify to its dedicated channel — running it in #general etc. just points there.
         if (VERIFY_CHANNEL_ID && interaction.channelId !== VERIFY_CHANNEL_ID) {
-            return interaction.reply({ embeds: [errEmbed(`❌ Please use \`/verify\` in <#${VERIFY_CHANNEL_ID}>.`)], ephemeral: true });
+            return interaction.reply({ embeds: [verifyBad('Wrong channel', `Please run \`/verify\` in <#${VERIFY_CHANNEL_ID}>.`)], ephemeral: true });
         }
         const key = (interaction.options.getString('key') || '').trim();
         if (!key) {
-            return interaction.reply({ embeds: [errEmbed('❌ Please provide your license key: `/verify key:XXXX-XXXX-XXXX-XXXX`')], ephemeral: true });
+            return interaction.reply({ embeds: [verifyBad('Key missing', 'Run `/verify key:XXXX-XXXX-XXXX-XXXX`.')], ephemeral: true });
         }
         await interaction.deferReply({ ephemeral: true });
         try {
@@ -2095,10 +2155,10 @@ client.on('interactionCreate', async (interaction) => {
             });
 
             if (!data || !data.ok) {
-                return interaction.editReply({ embeds: [errEmbed('❌ Verification is temporarily unavailable. Please try again shortly.')] });
+                return interaction.editReply({ embeds: [verifyBad('Verification unavailable', 'I could not reach the licence server.\nPlease try again shortly.')] });
             }
             if (!data.verified) {
-                return interaction.editReply({ embeds: [errEmbed(`❌ ${data.message || 'That license could not be verified.'}`)] });
+                return interaction.editReply({ embeds: [verifyBad('Licence not verified', shortLine(data.message, 220) || 'That licence could not be verified.')] });
             }
 
             // License is valid + link recorded — grant the Verified role (in this guild, or the
@@ -2106,13 +2166,13 @@ client.on('interactionCreate', async (interaction) => {
             const targetGuild = guild || verifyGuild();
             const granted = await grantVerifiedRole(targetGuild, interaction.user.id, data.lifetime === true);
             return interaction.editReply({
-                embeds: [okEmbed(granted
-                    ? '✅ **Verified!** Your license is linked and your access is unlocked. Welcome to the community.'
-                    : '✅ **License verified & linked.** I couldn\'t assign your role automatically — please ping a staff member.')],
+                embeds: [granted
+                    ? verifyOk('✅ Verified', 'Your licence is linked and your access is unlocked.\nWelcome to the community.')
+                    : verifyOk('✅ Licence linked', 'I could not assign your role automatically.\nPlease ping a staff member.')],
             });
         } catch (e) {
             console.error('[verify] Command failed:', e.message || e);
-            return interaction.editReply({ embeds: [errEmbed('❌ Verification is temporarily unavailable. Please try again shortly.')] });
+            return interaction.editReply({ embeds: [verifyBad('Verification unavailable', 'I could not reach the licence server.\nPlease try again shortly.')] });
         }
     }
 

@@ -52,13 +52,18 @@ function parseTopic(topic) {
 }
 
 /**
- * Next free ticket number: one past the highest `ticket-N` / `closed-N` in the guild, so numbers
- * never repeat even after a ticket is closed (closed channels keep their number) — the same
- * ticket-N/closed-N convention the existing /close + transcript handlers key on.
+ * Next free ticket number: one past the highest `ticket-N` / `closed-N` in the guild — the same
+ * ticket-N/closed-N convention the existing /close + transcript handlers key on — and never below
+ * `floor`. The channel list used to be the whole history, because a closed ticket kept its channel
+ * and therefore its number. Auto-delete removes those channels a day after the close, so on its
+ * own the list would hand out 1 again after a quiet weekend and #ticket-log would end up with two
+ * rows called "Ticket 1". `floor` is the highest number a record that outlives the channels still
+ * knows about (index.js reads it off #ticket-log).
  * @param {string[]} names  every channel name in the guild
+ * @param {number} floor    highest number already issued, 0 when nothing else knows
  */
-function nextTicketNumber(names) {
-    let highest = 0;
+function nextTicketNumber(names, floor = 0) {
+    let highest = Number.isFinite(floor) && floor > 0 ? Math.floor(floor) : 0;
     for (const name of names || []) {
         const n = Number(ANY_RE.exec(name || '')?.[1]);
         if (Number.isFinite(n) && n > highest) highest = n;

@@ -59,6 +59,18 @@ test('numbering starts at 1 in a server that has never had a ticket', () => {
     assert.strictEqual(nextTicketNumber(['general', 'verify', 'closed-tickets-archive']), 1);
 });
 
+// Auto-delete removes closed channels, so the channel list stops being the whole history of the
+// numbers handed out. Without the floor a swept server starts again at 1 and two different
+// tickets end up sharing a number — and a #ticket-log title.
+test('a number the channels have forgotten is not handed out twice', () => {
+    assert.strictEqual(nextTicketNumber(['general'], 42), 43);
+    assert.strictEqual(nextTicketNumber(['ticket-0007'], 42), 43);
+    assert.strictEqual(nextTicketNumber(['closed-0099'], 42), 100, 'the channels may know more');
+    for (const floor of [0, -5, NaN, undefined, null]) {
+        assert.strictEqual(nextTicketNumber(['ticket-0007'], floor), 8, String(floor));
+    }
+});
+
 test('ticket numbers are padded to four digits', () => {
     assert.strictEqual(ticketChannelName(7), 'ticket-0007');
     assert.strictEqual(ticketChannelName(12345), 'ticket-12345');
