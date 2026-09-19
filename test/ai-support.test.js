@@ -5,6 +5,7 @@ const {
     redact, clean, makeBudget, parseJsonish, normaliseTriage, formatForm,
     buildProviders, createSupport, BudgetExhausted, CATEGORY_KEYS,
     openaiProvider, TRIAGE_SCHEMA,
+    splitSentinel, formatClientContext, NEED_REPORT, ANSWER_RULES,
 } = require('../ai-support');
 
 const quiet = () => {};
@@ -164,7 +165,9 @@ test('the first healthy provider answers and the rest are never called', async (
         stub('claude', ok('from claude')),
         stub('gemini', async () => { geminiCalls++; return { text: 'x', usage: {} }; }),
     ]);
-    assert.deepStrictEqual(await s.answer({ category: 'bug', ticket: 't' }), { text: 'from claude', truncated: false });
+    assert.deepStrictEqual(await s.answer({ category: 'bug', ticket: 't' }), {
+        text: 'from claude', needsReport: false, truncated: false, provider: 'claude',
+    });
     assert.strictEqual(geminiCalls, 0);
 });
 
@@ -272,4 +275,100 @@ test('the triage call carries no knowledge base — that is the whole point of i
     assert.ok(!seen.system[0].text.includes('KB'));
     assert.strictEqual(seen.maxTokens, 256);
     assert.ok(seen.json, 'triage must ask for structured output');
+});
+
+// ── The support-report sentinel ───────────────────────────────────────────────
+// The marker is how a plain-text answer asks for the member's client data. It must never reach
+// the member, and it must never be invented by accident.
+
+test('the sentinel is stripped from the answer and reported separately', () => {
+    assert.deepStrictEqual(splitSentinel(`Try this first.\n\n${NEED_REPORT}`), {
+        text: 'Try this first.', needsReport: true,
+    });
+});
+
+test('a sentinel mid-sentence is removed without leaving a double space', () => {
+    assert.deepStrictEqual(splitSentinel(`before ${NEED_REPORT} after`), {
+        text: 'before after', needsReport: true,
+    });
+});
+
+test('an ordinary answer is returned untouched and asks for nothing', () => {
+    assert.deepStrictEqual(splitSentinel('  Open My account and read the version.  '), {
+        text: 'Open My account and read the version.', needsReport: false,
+    });
+});
+
+test('near-misses are not the sentinel', () => {
+    for (const text of ['[[need_report]]', '[NEED_REPORT]', 'NEED_REPORT', '']) {
+        assert.strictEqual(splitSentinel(text).needsReport, false, text);
+    }
+});
+
+test('the answer rules document the sentinel and the language rule the owner asked for', () => {
+    assert.ok(ANSWER_RULES.includes(NEED_REPORT));
+    assert.match(ANSWER_RULES, /at most ONCE per ticket/);
+    assert.match(ANSWER_RULES, /whatever language that is/);
+});
+
+test('answer() surfaces the sentinel, and the second pass never asks twice', async () => {
+    const s = support([stub('claude', ok(`Here you go.\n${NEED_REPORT}`))]);
+    const first = await s.answer({ category: 'bug', ticket: 't' });
+    assert.deepStrictEqual(first, { text: 'Here you go.', needsReport: true, truncated: false, provider: 'claude' });
+    const second = await s.answer({ category: 'bug', ticket: 't', data: 'RazorReaper client data…' });
+    assert.strictEqual(second.needsReport, false, 'a pass that already carries the data must not ask again');
+});
+
+test('the client data block is the LAST turn, as a user turn', async () => {
+    let seen = null;
+    const s = support([stub('claude', async (req) => { seen = req; return { text: 'ok', usage: {} }; })]);
+    await s.answer({
+        category: 'bug', ticket: 't', data: 'CLIENT DATA',
+        history: [{ role: 'user', content: 'still broken' }],
+    });
+    const last = seen.messages[seen.messages.length - 1];
+    assert.deepStrictEqual(last, { role: 'user', content: 'CLIENT DATA' });
+});
+
+// ── The panel's client data goes through the redactor ─────────────────────────
+
+test('the context block reads the whole contract shape', () => {
+    const block = formatClientContext({
+        app_version: '1.5.2',
+        platform: 'Windows',
+        os_version: '10.0.26200',
+        last_seen_at: '2026-09-18T20:00:00Z',
+        installs: 2,
+        licence: { plan: 'monthly', status: 'active', expiresAt: '2026-10-01', lifetime: false, suspended: false },
+        errors: [{ code: 'RR-E1003', count: 12, last_at: '2026-09-18T19:55:00Z' }],
+        report: {
+            report_id: 'FB-0A1B2C3D4E5F',
+            created_at: '2026-09-19T08:00:00Z',
+            message: 'Fed Suit does nothing',
+            diagnostics: [{ provider: 'automation', status: 'ok', lines: ['Fed Suit: default hotkey'] }],
+        },
+    });
+    assert.match(block, /App version: 1\.5\.2/);
+    assert.match(block, /Licence: monthly, active, expires 2026-10-01/);
+    assert.match(block, /RR-E1003 ×12/);
+    assert.match(block, /FB-0A1B2C3D4E5F/);
+    assert.match(block, /automation \[ok\]: Fed Suit: default hotkey/);
+});
+
+test('panel data is redacted exactly like member text — it is input too', () => {
+    const block = formatClientContext({
+        app_version: '1.5.2',
+        report: { report_id: 'FB-1', message: 'mail bob@example.com, box 192.168.2.201, log C:\\Users\\Cedrick\\rr.txt' },
+    });
+    assert.ok(!block.includes('bob@example.com'), block);
+    assert.ok(!block.includes('192.168.2.201'), block);
+    assert.ok(!block.includes('Cedrick'), block);
+});
+
+test('an empty or missing context produces no block at all', () => {
+    for (const v of [null, undefined, '', 0]) assert.strictEqual(formatClientContext(v), '');
+});
+
+test('a member with no licence is said so, not left blank', () => {
+    assert.match(formatClientContext({ app_version: '1.5.2', licence: null }), /Licence: none found/);
 });
