@@ -1,0 +1,2 @@
+# The KB staleness test compares bytes with what tools/build-kb.mjs writes (LF).
+kb/*.md text eol=lf
