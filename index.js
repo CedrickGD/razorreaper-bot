@@ -567,7 +567,7 @@ const aiOn = new Map();              // channelId -> is the AI answering here; u
 const aiReplyCount = new Map();      // channelId -> answers posted here since the last re-enable
 const ticketProvider = new Map();    // channelId -> the provider that last answered, for the archive
 const reportAsked = new Set();       // channelIds where the support report was already requested
-const humanPinged = new Set();       // channelIds where a person has already been called
+const humanPinged = new Set();       // channelIds where a person was already called or took over
 const closedTickets = new Map();     // channelId -> when it was closed, from the moment it closes
 const hydrated = new Set();          // channelIds already rebuilt in this process
 // "Waiting for the support report" is a third state next to on/off: the AI stays quiet in that
@@ -1039,6 +1039,11 @@ async function hydrateTicket(channel) {
     if (live.ai && !wholeTicket && !live.sawHandoff) {
         console.log(`[support] ${channel.name}: over ${TICKET_SCAN} messages and no hand-off inside the scan — leaving the AI off.`);
     }
+    // A hand-off in the history is also the record that somebody was called: every message that
+    // carries the Re-enable button is posted by a path that pings a human or IS one. Without this
+    // the restart forgets it, "I need a human" pings again and leaves a second live Re-enable
+    // button behind — the two-buttons state this whole rebuild exists to avoid.
+    if (live.sawHandoff) humanPinged.add(channel.id);
     aiReplyCount.set(channel.id, Math.max(aiReplyCount.get(channel.id) || 0, live.replies));
     if (live.reportAsked) reportAsked.add(channel.id);
     if (live.waitingSince) reportWaiting.start(channel.id, live.waitingSince);
@@ -1307,6 +1312,11 @@ client.on('messageCreate', async (m) => {
             if (ticketAi(m.channelId, state) && m.member && isStaff(m.member)) {
                 setTicketAi(m.channelId, false);
                 reportWaiting.stop(m.channelId);
+                // Here a human is not called, they are typing — but it is the same fact, and it is
+                // written down the same way: without it "I need a human" would post a SECOND live
+                // Re-enable button next to this one, and the newest of the two decides the AI's
+                // state after the next restart, undoing a re-enable staff had already clicked.
+                humanPinged.add(m.channelId);
                 await m.channel.send({
                     embeds: [rrEmbed({ title: 'A human took over', blocks: ['I\'ll stay out of the way.'] })],
                     components: [aiBackRow()],
@@ -1577,6 +1587,7 @@ async function runClose(channel, closedBy = null) {
     aiReplyCount.delete(channel.id);
     ticketProvider.delete(channel.id);
     reportAsked.delete(channel.id);
+    humanPinged.delete(channel.id);
     ticketMessageCache.delete(channel.id);
 
     // Last: the member's close is over either way, and whoever awaited us (the delete door) has
@@ -2123,9 +2134,12 @@ client.on('channelDelete', async (ch) => {
         if (!ANY_TICKET_NAME_RE.test(name)) return;
         const snaps = ticketMessageCache.get(ch.id) || null;
         ticketMessageCache.delete(ch.id);
-        // The channel is gone: so is anything this process still remembered about it.
+        // The channel is gone: so is anything this process still remembered about it. Up here
+        // rather than in the block below, which two early returns skip — a ticket closed from
+        // outside would otherwise keep its "a human was called" flag for the life of the process.
         closedTickets.delete(ch.id);
         hydrated.delete(ch.id);
+        humanPinged.delete(ch.id);
         // Already transcribed = the close path ran; this is the auto-delete or the Delete button
         // finishing the job, and the panel already holds that ticket as "closed".
         if (transcribedTickets.has(ch.id)) { ticketOwners.delete(ch.id); return; }
