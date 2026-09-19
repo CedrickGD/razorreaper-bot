@@ -1013,6 +1013,16 @@ const ticketAi = (channelId, state) => aiOn.get(channelId) ?? (state?.ai !== fal
 const setTicketAi = (channelId, on) => aiOn.set(channelId, on);
 
 /**
+ * What staff and the panel are told about a ticket: its TOTAL automatic answers, counted off the
+ * transcript that is already in hand. aiReplyCount is the CAP counter — a "Re-enable AI" resets it
+ * by design — and reporting that made an answered ticket close with "0 AI replies". Both counters
+ * stay as the floor, for the record whose history could not be read at all. One rule, one place:
+ * the close and the delete-without-a-close both report through here.
+ */
+const totalAiReplies = (channelId, snaps, state) =>
+    Math.max(countAutoAnswers(snaps), aiReplyCount.get(channelId) || 0, state?.replies || 0);
+
+/**
  * Rebuild this process's memory of a ticket from the ticket's own history — once per ticket, on
  * the first thing that happens in it after a restart (a deploy landed in the middle of the
  * owner's first real ticket, so this is not theoretical). Returns the messages it read, so the
@@ -1532,11 +1542,7 @@ async function runClose(channel, closedBy = null) {
     if (!snaps.length) snaps = ticketMessageCache.get(channel.id) || [];
     const html = snaps.length ? renderTranscriptHtml(guild.name, ticketName, snaps) : '';
 
-    // What staff and the panel are told is the ticket's TOTAL automatic answers, counted off the
-    // transcript that is already in hand. aiReplyCount is the CAP counter — a "Re-enable AI"
-    // resets it by design — and reporting that made an answered ticket close with "0 AI replies".
-    // It stays as the floor for the close whose history could not be read at all.
-    const replies = Math.max(countAutoAnswers(snaps), aiReplyCount.get(channel.id) || 0, state?.replies || 0);
+    const replies = totalAiReplies(channel.id, snaps, state);
     const provider = ticketProvider.get(channel.id) || null;
     // Cache only: the opener wrote in this channel minutes ago, and a tag is not worth a fetch.
     const openerTag = (ownerId && client.users.cache.get(ownerId)?.tag) || null;
@@ -1793,10 +1799,12 @@ async function runTicketAction(action, channel, member, respond, { reason = '', 
     if (action === 'disableai') {
         // The one hand-off producer: /disableai, "@bot disableai" and the "I need a human" button
         // are the same thing said three ways — the AI steps aside and a person is called. Refused
-        // only when BOTH are already true, so a ticket the AI was merely switched off in (staff
-        // took over, a restart) can still call someone, once.
+        // once BOTH are true, and "a person has it" is written down by a ping, by staff typing in
+        // the ticket and by staff switching the AI off — three ways of the same fact, so the word
+        // here is "has it", not "was pinged". Passing it twice is what leaves a ticket with two
+        // live Re-enable buttons, and the newer one overrules the re-enable staff already clicked.
         if (!ticketAi(channel.id, state) && humanPinged.has(channel.id)) {
-            return refuse('The AI is off here and a human has been called.');
+            return refuse('The AI is off here and a human already has this ticket.');
         }
         setTicketAi(channel.id, false);
         reportWaiting.stop(channel.id);
@@ -2214,7 +2222,7 @@ client.on('channelDelete', async (ch) => {
             openedAt: ch.createdTimestamp,
             closedAt: Date.now(),
             closedBy: null,
-            aiReplies: Math.max(aiReplyCount.get(ch.id) || 0, state?.replies || 0),
+            aiReplies: totalAiReplies(ch.id, snaps, state),
             messageCount: snaps.length,
             provider: ticketProvider.get(ch.id) || null,
             transcriptHtml: html,
