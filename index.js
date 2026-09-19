@@ -150,6 +150,11 @@ function verifyGuild() {
 // it is manageable straight away. The resolved id is remembered for the rest of the process.
 let lifetimeRoleId = LIFETIME_ROLE_ID_ENV || null;
 let warnedLifetimeMissing = false;
+// Three call sites reach this function (ready, /verify + guildMemberAdd via grantVerifiedRole,
+// reconcile) and any two of them can be inside the create() await together — both would see no
+// role and create a second "Lifetime". Sharing the in-flight create, the way fetchGuildMembers
+// shares its fetch below, makes the creation happen exactly once.
+let lifetimeRoleCreate = null;
 async function ensureLifetimeRole(guild) {
     if (!guild) return null;
     if (lifetimeRoleId) {
@@ -168,14 +173,18 @@ async function ensureLifetimeRole(guild) {
         return null;
     }
     try {
-        const role = await guild.roles.create({
-            name: 'Lifetime',
-            color: 0xf0b132,
-            mentionable: false,
-            reason: 'RazorReaper: badge for lifetime licence holders',
-        });
+        if (!lifetimeRoleCreate) {
+            lifetimeRoleCreate = guild.roles.create({
+                name: 'Lifetime',
+                color: 0xf0b132,
+                mentionable: false,
+                reason: 'RazorReaper: badge for lifetime licence holders',
+            }).then(role => { console.log(`[verify] Created the Lifetime role (${role.id}).`); return role; });
+            // A failed create must not be cached — the next sweep gets to try again.
+            lifetimeRoleCreate.catch(() => { lifetimeRoleCreate = null; });
+        }
+        const role = await lifetimeRoleCreate;
         lifetimeRoleId = role.id;
-        console.log(`[verify] Created the Lifetime role (${role.id}).`);
         return role;
     } catch (e) {
         console.error('[verify] Failed to create the Lifetime role:', e.message || e);
