@@ -12,7 +12,8 @@ const path = require('path');
 const os = require('os');
 const { execFile } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
-const { initNotifier, stopNotifier } = require('./notifier');
+const { initNotifier, stopNotifier, channelList } = require('./notifier');
+const { planRoleChanges } = require('./role-plan');
 
 // GuildMessages (non-privileged) lets the notifier receive message events in
 // watched channels. NOTE: Discord withholds .content AND .embeds/.attachments of
@@ -95,6 +96,9 @@ const VERIFY_GUILD_ID = process.env.VERIFY_GUILD_ID || process.env.GUILD_ID || '
 const VERIFY_CHANNEL_ID = process.env.VERIFY_CHANNEL_ID || '1529936856307863653'; // #verify
 const MEMBER_ROLE_ID = process.env.MEMBER_ROLE_ID || '1487508255050567690'; // Member — every human gets this on join
 const RECONCILE_MINUTES = Number(process.env.VERIFY_RECONCILE_MINUTES || 30);
+// Extra badge on top of the customer role for lifetime licences. No hardcoded default: when the
+// env var is empty the bot finds a role named "Lifetime" in the home guild, or creates one.
+const LIFETIME_ROLE_ID_ENV = process.env.LIFETIME_ROLE_ID || '';
 const verifiedRoleMention = () => `<@&${VERIFIED_ROLE_ID}>`;
 
 function verifyConfigured() {
@@ -112,11 +116,19 @@ async function verifyApi(pathname, body) {
     return { status: res.status, data };
 }
 
-async function grantVerifiedRole(guild, userId) {
+// Grant the customer role, plus the Lifetime badge when the panel says the licence is one.
+async function grantVerifiedRole(guild, userId, lifetime = false) {
     try {
         if (!guild) return false;
         const member = await guild.members.fetch(userId).catch(() => null);
         if (!member) return false;
+        if (lifetime) {
+            const role = await ensureLifetimeRole(guild);
+            if (role && !member.roles.cache.has(role.id)) {
+                await member.roles.add(role.id, 'RazorReaper lifetime license')
+                    .catch(e => console.error('[verify] Failed to grant Lifetime role:', e.message || e));
+            }
+        }
         if (member.roles.cache.has(VERIFIED_ROLE_ID)) return true;
         await member.roles.add(VERIFIED_ROLE_ID, 'RazorReaper license verified');
         return true;
@@ -132,30 +144,123 @@ function verifyGuild() {
     return client.guilds.cache.first() || null;
 }
 
-// Periodic sweep: strip the Verified role from anyone whose license no longer validates
-// (revoked / expired / suspended in the admin panel). Bounded and best-effort.
+// ── Lifetime role ─────────────────────────────────────────────────────────────
+// LIFETIME_ROLE_ID wins; otherwise an existing role named "Lifetime" is adopted, and only if
+// there is none does the bot create it. A self-created role lands below the bot's own role, so
+// it is manageable straight away. The resolved id is remembered for the rest of the process.
+let lifetimeRoleId = LIFETIME_ROLE_ID_ENV || null;
+let warnedLifetimeMissing = false;
+async function ensureLifetimeRole(guild) {
+    if (!guild) return null;
+    if (lifetimeRoleId) {
+        const role = guild.roles.cache.get(lifetimeRoleId);
+        // A configured id that resolves to nothing would silently disable the badge — say so once.
+        if (!role && !warnedLifetimeMissing) {
+            warnedLifetimeMissing = true;
+            console.error(`[verify] Lifetime role ${lifetimeRoleId} does not exist in this guild — check LIFETIME_ROLE_ID.`);
+        }
+        return role || null;
+    }
+    const existing = guild.roles.cache.find(r => r.name.toLowerCase() === 'lifetime');
+    if (existing) { lifetimeRoleId = existing.id; return existing; }
+    if (!guild.members.me?.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
+        console.error('[verify] No Manage Roles permission — cannot create the Lifetime role. Set LIFETIME_ROLE_ID instead.');
+        return null;
+    }
+    try {
+        const role = await guild.roles.create({
+            name: 'Lifetime',
+            color: 0xf0b132,
+            mentionable: false,
+            reason: 'RazorReaper: badge for lifetime licence holders',
+        });
+        lifetimeRoleId = role.id;
+        console.log(`[verify] Created the Lifetime role (${role.id}).`);
+        return role;
+    } catch (e) {
+        console.error('[verify] Failed to create the Lifetime role:', e.message || e);
+        return null;
+    }
+}
+
+// ── Shared member fetch ───────────────────────────────────────────────────────
+// The licence reconcile and the Member backfill both need the whole member list, and Discord
+// rate-limits gateway opcode 8 when two of those land together ("Request with opcode 8 was rate
+// limited"). One shared, short-lived fetch keeps the two sweeps off each other's toes. The
+// members it hands back are live objects, so only guild membership itself can be a few minutes
+// stale — and joiners already get their roles from guildMemberAdd.
+const MEMBERS_TTL_MS = 5 * 60_000;
+let membersFetch = { at: 0, promise: null };
+function fetchGuildMembers(guild) {
+    if (membersFetch.promise && Date.now() - membersFetch.at < MEMBERS_TTL_MS) return membersFetch.promise;
+    const promise = guild.members.fetch();
+    membersFetch = { at: Date.now(), promise };
+    // A failed fetch must not be cached — but swallow it here, the caller handles the rejection.
+    promise.catch(() => { if (membersFetch.promise === promise) membersFetch = { at: 0, promise: null }; });
+    return promise;
+}
+
+// Periodic sweep: ONE bulk call to the panel, then make Discord match it — customer role ⇔ an
+// active link, Lifetime role ⇔ an active lifetime link. It grants as well as strips, so a link
+// the owner creates in the admin panel lands without the member running /verify. Every decision
+// that could mass-strip lives in planRoleChanges (role-plan.js) and is unit-tested.
 async function reconcileVerifiedRoles() {
     if (!verifyConfigured()) return;
     const guild = verifyGuild();
     if (!guild) return;
-    let stripped = 0;
+
+    let data = null;
     try {
-        const members = await guild.members.fetch();
-        const holders = members.filter(m => !m.user.bot && m.roles.cache.has(VERIFIED_ROLE_ID));
-        for (const [, m] of holders) {
-            try {
-                const { data } = await verifyApi('/api/discord/status', { discord_id: m.id });
-                if (data && data.ok && !data.active) {
-                    await m.roles.remove(VERIFIED_ROLE_ID, 'License no longer valid (reconcile)').catch(() => {});
-                    stripped++;
-                }
-            } catch { /* skip this member on a transient error */ }
-        }
+        ({ data } = await verifyApi('/api/discord/links', {}));
     } catch (e) {
-        console.error('[verify] Reconcile sweep failed:', e.message || e);
+        console.error('[verify] Reconcile: /api/discord/links call failed —', e.message || e, '— nothing changed.');
         return;
     }
-    if (stripped) console.log(`[verify] Reconcile: stripped Verified Customer role from ${stripped} member(s).`);
+
+    let members;
+    try {
+        members = await fetchGuildMembers(guild);
+    } catch (e) {
+        console.error('[verify] Reconcile: member fetch failed:', e.message || e);
+        return;
+    }
+
+    const lifetimeRole = await ensureLifetimeRole(guild);
+    // Collection#map returns a plain array — role-plan.js stays free of discord.js types.
+    const snapshot = members.map(m => ({ id: m.id, bot: m.user.bot, roles: [...m.roles.cache.keys()] }));
+    const plan = planRoleChanges(data, snapshot, {
+        verified: VERIFIED_ROLE_ID,
+        lifetime: lifetimeRole?.id || null,
+    });
+    if (!plan.ok) {
+        console.error(`[verify] Reconcile aborted — ${plan.reason}. No roles changed.`);
+        return;
+    }
+
+    // Same editability guard the Member backfill uses: a role above the bot silently fails on
+    // every single member otherwise.
+    const manageable = (roleId) => Boolean(guild.roles.cache.get(roleId)?.editable);
+    for (const roleId of [VERIFIED_ROLE_ID, lifetimeRole?.id]) {
+        if (roleId && !manageable(roleId)) {
+            console.error(`[verify] Role ${roleId} is above my highest role — skipping it this sweep.`);
+        }
+    }
+
+    let added = 0;
+    let removed = 0;
+    for (const change of plan.changes) {
+        const m = members.get(change.id);
+        if (!m) continue;
+        const add = change.add.filter(manageable);
+        const remove = change.remove.filter(manageable);
+        try {
+            if (add.length) { await m.roles.add(add, 'RazorReaper license active (reconcile)'); added += add.length; }
+            if (remove.length) { await m.roles.remove(remove, 'RazorReaper license no longer valid (reconcile)'); removed += remove.length; }
+        } catch (e) {
+            console.error(`[verify] Reconcile: role update failed for ${m.user.tag}:`, e.message || e);
+        }
+    }
+    if (added || removed) console.log(`[verify] Reconcile: ${added} role(s) granted, ${removed} stripped across ${plan.changes.length} member(s).`);
 }
 
 // ── Member auto-role ──────────────────────────────────────────────────────────
@@ -170,7 +275,7 @@ async function backfillMemberRole() {
     if (!role) { console.error('[member-role] Member role not found — check MEMBER_ROLE_ID.'); return; }
     if (!role.editable) { console.error('[member-role] Member role is above my highest role — cannot assign it.'); return; }
     try {
-        const members = await guild.members.fetch();
+        const members = await fetchGuildMembers(guild);
         const missing = members.filter(m => !m.user.bot && !m.roles.cache.has(MEMBER_ROLE_ID));
         let added = 0;
         for (const [, m] of missing) {
@@ -190,6 +295,15 @@ async function backfillMemberRole() {
 // panel vanished entirely a fresh one is posted.
 const VERIFY_PANEL_TITLE = 'Unlock the Community';
 
+// One source for the panel's role sentence — used both when posting a fresh panel and when
+// re-syncing the live one, so the two can never drift apart.
+function verifyRoleLine(guild) {
+    const roleName = guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'Verified Customer';
+    const lifetimeName = lifetimeRoleId ? guild.roles.cache.get(lifetimeRoleId)?.name : null;
+    return `You instantly get the **${roleName}** role.`
+        + (lifetimeName ? ` Lifetime licences also get **${lifetimeName}**.` : '');
+}
+
 function buildVerifyPanelEmbed(guild) {
     const chanRef = (part) => {
         const c = guild.channels.cache.find(ch =>
@@ -205,10 +319,10 @@ function buildVerifyPanelEmbed(guild) {
             '**How to verify**\n🔑 Run `/verify` right here and paste your license key:\n' +
             '```/verify key:XXXX-XXXX-XXXX-XXXX```\n' +
             'Your reply is private — nobody else sees your key.\n\n' +
-            `You instantly get the **${guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'Verified Customer'}** role.`
+            verifyRoleLine(guild)
         )
         .addFields(
-            { name: 'What you unlock', value: `✨ ${chanRef('releases')} — new builds first\n\n${chanRef('changelog')} — full patch notes\n\nverified-only areas`, inline: true },
+            { name: 'What you unlock', value: `✨ ${chanRef('lounge')} — the customers-only lounge\n\n${chanRef('releases')} — new builds first\n\n${chanRef('changelog')} — full patch notes`, inline: true },
             { name: "Where's my key?", value: '🛒 In your purchase confirmation from [razorreaper.app](https://razorreaper.app).\n\nNo key yet? Grab RazorReaper there.', inline: true },
         )
         .setFooter({ text: 'RazorReaper • razorreaper.app' });
@@ -227,7 +341,6 @@ async function syncVerifyPanel() {
     const ch = guild.channels.cache.get(VERIFY_CHANNEL_ID);
     if (!ch || !ch.isTextBased()) return;
     try {
-        const roleName = guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'Verified Customer';
         const msgs = await ch.messages.fetch({ limit: 100 });
         const panel = msgs.find(m => m.author.id === client.user.id && m.embeds[0]?.title === VERIFY_PANEL_TITLE);
         if (!panel) {
@@ -235,11 +348,12 @@ async function syncVerifyPanel() {
             console.log('[verify] Panel not found — posted a fresh one.');
             return;
         }
-        // Swap the whole role line for the CURRENT role name in the panel's original bold
+        // Swap the whole role line for the CURRENT role names in the panel's original bold
         // style, wherever the line lives (the panel keeps it in an embed field). Markdown-
-        // agnostic and idempotent: once the line matches, later restarts edit nothing.
-        const stale = /You instantly get the [^\n]*? role\./;
-        const fresh = `You instantly get the **${roleName}** role.`;
+        // agnostic and idempotent: the match deliberately covers the trailing Lifetime sentence
+        // too, so re-running replaces it instead of appending a second copy.
+        const stale = /You instantly get the [^\n]*? role\.(?: Lifetime licences also get [^\n]*)?/;
+        const fresh = verifyRoleLine(guild);
         const old = panel.embeds[0];
         let changed = false;
         const swap = (text) => {
@@ -271,10 +385,74 @@ async function syncVerifyPanel() {
             }
         }
         await panel.edit(edit);
-        console.log(`[verify] Panel updated — role line now names "${roleName}".`);
+        console.log(`[verify] Panel updated — role line now reads "${fresh}".`);
     } catch (e) {
         console.error('[verify] Panel sync failed:', e.message || e);
     }
+}
+
+// ── Community chats ───────────────────────────────────────────────────────────
+// Two rooms the server is supposed to have, made to exist at startup and never duplicated:
+// #reaper-lounge for paying customers only, and a plain members chat. An explicit id wins,
+// then any channel that already looks like it, and only then does the bot create one.
+const CUSTOMER_CHAT_ID = process.env.CUSTOMER_CHAT_ID || '';
+const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID || '';
+
+async function ensureCommunityChannels(guild) {
+    if (!guild) return;
+    const me = guild.members.me;
+    const P = PermissionsBitField.Flags;
+    const canManage = Boolean(me?.permissions.has(P.ManageChannels));
+    let warnedNoPerm = false;
+    // Keep them with the rest of the community rooms — #verify's category is the best anchor.
+    const parent = guild.channels.cache.get(VERIFY_CHANNEL_ID)?.parentId || null;
+
+    const ensure = async (envId, looksLikeIt, spec) => {
+        const existing = (envId && guild.channels.cache.get(envId))
+            || guild.channels.cache.find(c => c.type === ChannelType.GuildText && looksLikeIt(c.name.toLowerCase()));
+        if (existing) return existing;
+        if (!canManage) {
+            if (!warnedNoPerm) {
+                warnedNoPerm = true;
+                console.log('[chats] No Manage Channels permission — not creating the community chats. Create them by hand or set CUSTOMER_CHAT_ID / GENERAL_CHAT_ID.');
+            }
+            return null;
+        }
+        try {
+            const ch = await guild.channels.create({ ...spec, type: ChannelType.GuildText, parent });
+            console.log(`[chats] Created #${ch.name} (${ch.id}).`);
+            return ch;
+        } catch (e) {
+            console.error(`[chats] Failed to create #${spec.name}:`, e.message || e);
+            return null;
+        }
+    };
+
+    // Customers only: invisible to @everyone, open to the customer role (and to the bot, so it
+    // can post there later without an extra permission pass).
+    await ensure(CUSTOMER_CHAT_ID, name => name.includes('lounge'), {
+        name: 'reaper-lounge',
+        topic: 'Customers only — the lounge is open while your RazorReaper licence is active.',
+        permissionOverwrites: [
+            { id: guild.id, deny: [P.ViewChannel] },
+            { id: VERIFIED_ROLE_ID, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
+            ...(me ? [{ id: me.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
+        ],
+        reason: 'RazorReaper: customers-only lounge',
+    });
+
+    // The ordinary room for everyone in the community — skipped entirely if the server already
+    // has any general/chat channel, which it almost always does.
+    await ensure(GENERAL_CHAT_ID, name => name.includes('general') || name.includes('chat'), {
+        name: 'general',
+        topic: 'Open chat for every member of the community.',
+        permissionOverwrites: [
+            { id: guild.id, deny: [P.ViewChannel] },
+            { id: MEMBER_ROLE_ID, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
+            ...(me ? [{ id: me.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
+        ],
+        reason: 'RazorReaper: members chat',
+    });
 }
 
 // ── Ticket transcripts → opener's DMs ─────────────────────────────────────────
@@ -667,6 +845,34 @@ const slashCommands = [
         .addUserOption(o => o.setName('user').setDescription('Staff only — permanently grant this member the Verified Customer role').setRequired(false)),
 ];
 
+// ── Home guild only ───────────────────────────────────────────────────────────
+// This bot exists for the RazorReaper server. Anywhere else it registers no commands, so it
+// would just sit there as dead weight — it leaves instead, on startup and on every new invite.
+// The one exception is a server the notifier is actively reading ARK alerts out of (the watch
+// list is channel-id keyed and deliberately cross-guild); leaving there would kill the alert
+// relay to the desktop clients.
+function notifierWatchesGuild(guild) {
+    try {
+        return channelList().some(c => guild.channels.cache.has(c.channelId));
+    } catch {
+        return false;
+    }
+}
+
+async function leaveForeignGuild(guild) {
+    if (!VERIFY_GUILD_ID || guild.id === VERIFY_GUILD_ID) return;
+    if (notifierWatchesGuild(guild)) {
+        console.log(`[RazorReaper] Staying in "${guild.name}" (${guild.id}) — the notifier watches an alert channel there.`);
+        return;
+    }
+    console.log(`[RazorReaper] Leaving "${guild.name}" (${guild.id}) — not the home guild.`);
+    await guild.leave().catch(e => console.error(`[RazorReaper] Failed to leave ${guild.id}:`, e.message || e));
+}
+
+client.on('guildCreate', (guild) => {
+    leaveForeignGuild(guild).catch(e => console.error('[RazorReaper] guildCreate leave failed:', e.message || e));
+});
+
 // ── Ready ─────────────────────────────────────────────────────────────────────
 client.once('ready', async () => {
     console.log(`[RazorReaper] Online as ${client.user.tag}`);
@@ -677,25 +883,22 @@ client.once('ready', async () => {
           status: 'online',
     });
 
-    // Register slash commands. The bot is a RazorReaper-server bot: with VERIFY_GUILD_ID set,
-    // commands are registered ONLY in that guild (and stale global ones are wiped), so in any
-    // other server it sits in (e.g. as the silent notifier listener) no commands exist at all.
+    // Leave anything that isn't the home guild (or an alert source for the notifier).
+    for (const [, g] of client.guilds.cache) {
+        await leaveForeignGuild(g);
+    }
+
+    // Register slash commands. The bot is a RazorReaper-server bot: commands are registered ONLY
+    // in the home guild (and stale global ones are wiped), so anywhere else — e.g. a server it
+    // only listens in as the notifier — no commands exist at all.
     try {
         const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-        if (VERIFY_GUILD_ID) {
-            console.log('[RazorReaper] Registering slash commands (home guild only)...');
-            await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
-            await rest.put(Routes.applicationGuildCommands(client.user.id, VERIFY_GUILD_ID), {
-                body: slashCommands.map(c => c.toJSON()),
-            });
-            console.log(`[RazorReaper] Slash commands registered for guild ${VERIFY_GUILD_ID}!`);
-        } else {
-            console.log('[RazorReaper] Registering slash commands globally (no VERIFY_GUILD_ID set)...');
-            await rest.put(Routes.applicationCommands(client.user.id), {
-                body: slashCommands.map(c => c.toJSON()),
-            });
-            console.log('[RazorReaper] Slash commands registered globally!');
-        }
+        console.log('[RazorReaper] Registering slash commands (home guild only)...');
+        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+        await rest.put(Routes.applicationGuildCommands(client.user.id, VERIFY_GUILD_ID), {
+            body: slashCommands.map(c => c.toJSON()),
+        });
+        console.log(`[RazorReaper] Slash commands registered for guild ${VERIFY_GUILD_ID}!`);
     } catch (err) {
         console.error('[RazorReaper] Failed to register slash commands:', err);
     }
@@ -727,6 +930,12 @@ client.once('ready', async () => {
     } else if (!verifyConfigured()) {
         console.log('[verify] License gate inactive (set VERIFY_API_BASE, VERIFY_SHARED_SECRET, VERIFIED_ROLE_ID to enable).');
     }
+
+    // Resolve (or create) the Lifetime role and the two community chats before the panel sync,
+    // so the panel can already name them. All three are idempotent — safe on every restart.
+    const homeGuild = verifyGuild();
+    await ensureLifetimeRole(homeGuild);
+    await ensureCommunityChannels(homeGuild).catch(e => console.error('[chats] Setup error:', e.message || e));
 
     // Keep the #verify panel current, and make sure every human holds the Member base role
     // (instant grant on join + startup/periodic backfill for anyone missed while offline).
@@ -780,7 +989,7 @@ client.on('guildMemberAdd', async (member) => {
     try {
         const { data } = await verifyApi('/api/discord/status', { discord_id: member.id });
         if (data && data.ok && data.linked && data.active) {
-            await grantVerifiedRole(member.guild, member.id);
+            await grantVerifiedRole(member.guild, member.id, data.lifetime === true);
             return;
         }
     } catch (e) {
@@ -832,7 +1041,7 @@ client.on('interactionCreate', async (interaction) => {
                 if (!data || !data.ok) {
                     return interaction.editReply({ embeds: [errEmbed('❌ Couldn\'t record the grant. Please try again shortly.')] });
                 }
-                const granted = await grantVerifiedRole(guild || verifyGuild(), targetUser.id);
+                const granted = await grantVerifiedRole(guild || verifyGuild(), targetUser.id, data.lifetime === true);
                 console.log(`[verify] Manual grant: ${interaction.user.tag} -> ${targetUser.tag} (${targetUser.id}), role=${granted}`);
                 return interaction.editReply({
                     embeds: [okEmbed(granted
@@ -871,7 +1080,7 @@ client.on('interactionCreate', async (interaction) => {
             // License is valid + link recorded — grant the Verified role (in this guild, or the
             // configured community guild if the command was used in a DM).
             const targetGuild = guild || verifyGuild();
-            const granted = await grantVerifiedRole(targetGuild, interaction.user.id);
+            const granted = await grantVerifiedRole(targetGuild, interaction.user.id, data.lifetime === true);
             return interaction.editReply({
                 embeds: [okEmbed(granted
                     ? '✅ **Verified!** Your license is linked and your access is unlocked. Welcome to the community.'

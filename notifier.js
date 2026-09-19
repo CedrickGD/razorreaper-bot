@@ -386,4 +386,6 @@ function stopNotifier() {
     }
 }
 
-module.exports = { initNotifier, stopNotifier };
+// channelList is exported so index.js can tell whether a foreign guild is feeding us alerts
+// before it leaves that guild (see leaveForeignGuild).
+module.exports = { initNotifier, stopNotifier, channelList };
