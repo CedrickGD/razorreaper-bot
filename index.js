@@ -5,7 +5,7 @@ if (process.env.REDIRECT_TO) {
     return;
 }
 
-const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder, PermissionsBitField, Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, AttachmentBuilder, SlashCommandBuilder, REST, Routes, ChannelType, ApplicationCommandOptionType } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActivityType, EmbedBuilder, PermissionsBitField, Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, AttachmentBuilder, SlashCommandBuilder, REST, Routes, ChannelType, ApplicationCommandOptionType, OverwriteType } = require('discord.js');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
@@ -438,14 +438,16 @@ async function ensureCommunityChannels(guild) {
     };
 
     // Customers only: invisible to @everyone, open to the customer role (and to the bot, so it
-    // can post there later without an extra permission pass).
+    // can post there later without an extra permission pass). Overwrite types are explicit:
+    // without them discord.js resolves each id through its caches and the create throws
+    // "Supplied parameter is not a cached User or Role" (seen live on the first deploy).
     await ensure(CUSTOMER_CHAT_ID, name => name.includes('lounge'), {
         name: 'reaper-lounge',
         topic: 'Customers only — the lounge is open while your RazorReaper licence is active.',
         permissionOverwrites: [
-            { id: guild.id, deny: [P.ViewChannel] },
-            { id: VERIFIED_ROLE_ID, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
-            ...(me ? [{ id: me.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
+            { id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] },
+            { id: VERIFIED_ROLE_ID, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
+            ...(me ? [{ id: me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
         ],
         reason: 'RazorReaper: customers-only lounge',
     });
@@ -456,9 +458,9 @@ async function ensureCommunityChannels(guild) {
         name: 'general',
         topic: 'Open chat for every member of the community.',
         permissionOverwrites: [
-            { id: guild.id, deny: [P.ViewChannel] },
-            { id: MEMBER_ROLE_ID, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
-            ...(me ? [{ id: me.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
+            { id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] },
+            { id: MEMBER_ROLE_ID, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
+            ...(me ? [{ id: me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
         ],
         reason: 'RazorReaper: members chat',
     });
