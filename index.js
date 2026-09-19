@@ -567,7 +567,7 @@ const aiOn = new Map();              // channelId -> is the AI answering here; u
 const aiReplyCount = new Map();      // channelId -> answers posted here since the last re-enable
 const ticketProvider = new Map();    // channelId -> the provider that last answered, for the archive
 const reportAsked = new Set();       // channelIds where the support report was already requested
-const humanPinged = new Set();       // channelIds where a person was already called or took over
+const humanPinged = new Set();       // channelIds where a real ping went out — written by humanPing() alone
 const closedTickets = new Map();     // channelId -> when it was closed, from the moment it closes
 const hydrated = new Set();          // channelIds already rebuilt in this process
 // "Waiting for the support report" is a third state next to on/off: the AI stays quiet in that
@@ -788,9 +788,10 @@ const aiBackRow = () => new ActionRowBuilder().addComponents(
  * does not cache a failed fetch, one rate-limited attempt cannot strand this on "owner only" for
  * the life of the process. allowedMentions is explicit so nothing ELSE in the message can ping.
  *
- * Every ping in this file goes through here, so this is also where "somebody has been called in
- * this ticket" is written down — the guard that stops "I need a human" pinging the same people
- * again is then impossible to forget at a new call site.
+ * Every ping in this file goes through here, and here ALONE is `humanPinged` written: it means
+ * exactly "a real ping went out for this ticket", never "a human is around somewhere". Staff
+ * typing in the ticket or switching the AI off does not write it — a staff member who then walks
+ * away must not leave the member with no way left to call anyone.
  * @param {string|null} channelId  the ticket this ping is for, when it is for one
  * @returns {Promise<{content: string, allowedMentions: object}>} spread into the message payload
  */
@@ -1058,11 +1059,11 @@ async function hydrateTicket(channel) {
     if (live.ai && !wholeTicket && !live.sawHandoff) {
         console.log(`[support] ${channel.name}: over ${TICKET_SCAN} messages and no hand-off inside the scan — leaving the AI off.`);
     }
-    // A hand-off in the history is also the record that somebody was called: every message that
-    // carries the Re-enable button is posted by a path that pings a human or IS one. Without this
-    // the restart forgets it, "I need a human" pings again and leaves a second live Re-enable
-    // button behind — the two-buttons state this whole rebuild exists to avoid.
-    if (live.sawHandoff) humanPinged.add(channel.id);
+    // A hand-off in the history is NOT read back as "somebody was pinged": it may have been staff
+    // switching the AI off, and after a restart nobody can tell. The cost of being wrong the other
+    // way is at most one extra ping-only message per ticket per process; the cost of this direction
+    // is a member with no way left to call anyone. The two-buttons state is held by the disableai
+    // branch instead — while the AI is off it never posts a second Re-enable button.
     aiReplyCount.set(channel.id, Math.max(aiReplyCount.get(channel.id) || 0, live.replies));
     if (live.reportAsked) reportAsked.add(channel.id);
     if (live.waitingSince) reportWaiting.start(channel.id, live.waitingSince);
@@ -1341,11 +1342,10 @@ client.on('messageCreate', async (m) => {
             if (ticketAi(m.channelId, state) && m.member && isStaff(m.member)) {
                 setTicketAi(m.channelId, false);
                 reportWaiting.stop(m.channelId);
-                // Here a human is not called, they are typing — but it is the same fact, and it is
-                // written down the same way: without it "I need a human" would post a SECOND live
-                // Re-enable button next to this one, and the newest of the two decides the AI's
-                // state after the next restart, undoing a re-enable staff had already clicked.
-                humanPinged.add(m.channelId);
+                // Nobody was pinged here — a human is typing, which is not the same fact and is not
+                // written down as one: this staff member may say one word and leave, and "I need a
+                // human" has to still reach the team. It stays a hand-off message with the one live
+                // Re-enable button; the disableai branch is what keeps it the only one.
                 await m.channel.send({
                     embeds: [rrEmbed({ title: 'A human took over', blocks: ['I\'ll stay out of the way.'] })],
                     components: [aiBackRow()],
@@ -1798,26 +1798,34 @@ async function runTicketAction(action, channel, member, respond, { reason = '', 
 
     if (action === 'disableai') {
         // The one hand-off producer: /disableai, "@bot disableai" and the "I need a human" button
-        // are the same thing said three ways — the AI steps aside and a person is called. Refused
-        // once BOTH are true, and "a person has it" is written down by a ping, by staff typing in
-        // the ticket and by staff switching the AI off — three ways of the same fact, so the word
-        // here is "has it", not "was pinged". Passing it twice is what leaves a ticket with two
-        // live Re-enable buttons, and the newer one overrules the re-enable staff already clicked.
-        if (!ticketAi(channel.id, state) && humanPinged.has(channel.id)) {
-            return refuse('The AI is off here and a human already has this ticket.');
+        // are the same thing said three ways — the AI steps aside and a person is called. Two
+        // things have to hold at once here, and one of them used to be bought with the other:
+        //   • never a second LIVE Re-enable button, because rebuildTicketState reads the newest one
+        //     as the AI's state and it would overrule a re-enable staff had already clicked;
+        //   • "I need a human" is never a dead end, because the staff member who took this ticket
+        //     may be gone and the member has nobody else to ask.
+        // So the AI being off does not refuse the call — it only takes the BUTTON off the message.
+        if (!ticketAi(channel.id, state)) {
+            // Staff asking for the AI to stop when it already has: nothing to do, nobody to call.
+            if (staff) return refuse('The AI is already off in this ticket.');
+            if (humanPinged.has(channel.id)) return refuse('A human has been called already.');
+            // Ping only, no components: the live Re-enable button already standing in this ticket
+            // stays the only one, and the team gets the call the member asked for.
+            await channel.send({
+                ...(await humanPing(channel.guild, channel.id)),
+                embeds: [rrEmbed({ title: 'A human is called', blocks: [`${member} asked for a person.`] })],
+            });
+            return true;
         }
         setTicketAi(channel.id, false);
         reportWaiting.stop(channel.id);
         // A staff member who switches the AI off IS the human — pinging the team about themselves
-        // is noise — but the ticket has one, and that is written down either way. Every other door
-        // (the opener's /disableai, "@bot disableai", "I need a human") still calls somebody.
-        let call = {};
-        if (staff) humanPinged.add(channel.id);
-        else call = await humanPing(channel.guild, channel.id);
+        // is noise. Every other door (the opener's /disableai, "@bot disableai", "I need a human")
+        // calls somebody, and that ping is the only thing that writes `humanPinged`.
         // Into the CHANNEL, not through `respond`: this message and its live Re-enable button are
         // what a restarted bot reads the AI's state back from (rebuildTicketState).
         await channel.send({
-            ...call,
+            ...(staff ? {} : await humanPing(channel.guild, channel.id)),
             embeds: [rrEmbed({ title: 'AI is off', blocks: ['A human takes it from here.'] })],
             components: [aiBackRow()],
         });
