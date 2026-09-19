@@ -138,11 +138,15 @@ function panelConfigured() {
 }
 
 // POST to the admin panel's Discord API with the shared secret. Returns { status, data }.
+// Bounded: every caller is an interaction or a sweep that has something waiting behind it, and
+// an unreachable NAS otherwise parks a bare fetch for undici's five-minute default. 30 s is long
+// even for the 800 KB transcript upload, which is the biggest body that goes through here.
 async function verifyApi(pathname, body) {
     const res = await fetch(`${VERIFY_API_BASE}${pathname}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${VERIFY_SECRET}` },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30_000),
     });
     const data = await res.json().catch(() => ({}));
     return { status: res.status, data };
@@ -778,17 +782,17 @@ const aiBackRow = () => new ActionRowBuilder().addComponents(
  * The "a human is needed here" ping, in the four places that need one. Individual member mentions
  * rather than `<@&role>`: a ROLE mention only notifies when the role is mentionable or the bot
  * holds Mention Everyone, and a ping that silently notifies nobody is worse than no feature at
- * all. `role.members` is a view on the member cache, so a cold cache is warmed once per process.
- * allowedMentions is explicit so that nothing ELSE in the message can ever ping.
+ * all. `role.members` is a view on the member cache, so a cold cache is warmed through the SAME
+ * fetchGuildMembers the licence sweeps use: its TTL keeps this off their toes, and because it
+ * does not cache a failed fetch, one rate-limited attempt cannot strand this on "owner only" for
+ * the life of the process. allowedMentions is explicit so nothing ELSE in the message can ping.
  * @returns {Promise<{content: string, allowedMentions: object}>} spread into the message payload
  */
-let humanPingFetched = false;
 async function humanPing(guild) {
     const role = HUMAN_PING_ROLE_ID ? guild?.roles?.cache?.get(HUMAN_PING_ROLE_ID) : null;
     if (role) {
-        if (!role.members.size && !humanPingFetched) {
-            humanPingFetched = true;
-            await guild.members.fetch().catch(e => console.error('[support] Could not read the member list:', e.message || e));
+        if (!role.members.size) {
+            await fetchGuildMembers(guild).catch(e => console.error('[support] Could not read the member list:', e.message || e));
         }
         const ids = [...role.members.keys()].slice(0, HUMAN_PING_MAX);
         if (ids.length) return { content: ids.map(id => `<@${id}>`).join(' '), allowedMentions: { users: ids } };
@@ -1347,9 +1351,11 @@ const closedRow = () => new ActionRowBuilder().addComponents(
 );
 
 /**
- * Upload a finished ticket to the panel. Never throws and never blocks the close: one retry on a
- * transport failure, one shorter retry on a 413 (handled inside panelApi.uploadTicket), then it
- * gives up with a log line — a ticket that closes is worth more than a ticket that is archived.
+ * Upload a finished ticket to the panel. Never throws, and nothing the member sees waits for it:
+ * one retry on a transport failure, one shorter retry on a 413 (handled inside
+ * panelApi.uploadTicket), then it gives up with a log line — a ticket that closes is worth more
+ * than a ticket that is archived. The close does await it at the very end, after everything the
+ * member sees is posted, so that /delete cannot destroy the channel mid-upload.
  */
 async function archiveTicket(opts, { guildName, snaps } = {}) {
     if (!panelConfigured()) return null;
@@ -1437,7 +1443,12 @@ async function closeTicketChannel(channel, closedBy = null) {
         });
     }
 
-    archiveTicket({
+    // Started here so it runs alongside the close message and the rename, but AWAITED before this
+    // function resolves: /delete closes and then deletes the channel, and "never delete without
+    // the archive having run" is only true if the caller's await really covers it. archiveTicket
+    // logs its own failures; this catch is for the unexpected throw it does not, which used to
+    // disappear into an empty handler.
+    const archived = archiveTicket({
         channelId: channel.id,
         ticketNo: Number(num) || 0,
         channelName: ticketName,
@@ -1452,7 +1463,8 @@ async function closeTicketChannel(channel, closedBy = null) {
         messageCount: snaps.length,
         provider,
         transcriptHtml: html,
-    }, { guildName: guild.name, snaps }).catch(() => {});
+    }, { guildName: guild.name, snaps })
+        .catch(e => console.error(`[support] Panel archive for ${ticketName} threw:`, e.message || e));
 
     // The one close message, and the only place the Delete button ever appears.
     await channel.send({
@@ -1488,6 +1500,10 @@ async function closeTicketChannel(channel, closedBy = null) {
     ticketProvider.delete(channel.id);
     reportAsked.delete(channel.id);
     ticketMessageCache.delete(channel.id);
+
+    // Last: the member's close is over either way, and whoever awaited us (the delete door) has
+    // now waited for the archive as well. Bounded by verifyApi's timeout.
+    await archived;
 }
 
 // ── Auto-delete ───────────────────────────────────────────────────────────────
