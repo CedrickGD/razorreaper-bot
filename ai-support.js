@@ -5,8 +5,9 @@
 // role-plan.js uses, for the same reason: index.js logs into Discord at require time.
 //
 // Cost is the whole design constraint. Two prompts, not one: triage runs against a few hundred
-// tokens so rejecting junk is nearly free, and only a ticket that survives triage gets the ~46k
-// token knowledge base — cached, so it is paid once per 5-minute window and read at 0.1x after.
+// tokens so rejecting junk is nearly free, and only a ticket that survives triage gets the
+// knowledge base — just its category's slice (~9-13k tokens, not the whole ~46k), and cached, so
+// it is paid once per 5-minute window and read at 0.1x after.
 
 const fs = require('fs');
 const path = require('path');
@@ -67,9 +68,9 @@ function clean(text, max = 1500) {
 /**
  * What one call actually costs the budget. `input` is the WHOLE prompt, cached prefix included —
  * every adapter below normalises to that — and a cached read costs about a tenth of an ordinary
- * input token, so it is counted at a tenth. Counting the 46k-token knowledge base at face value
- * on every answer is what burned 56k of a 400k budget in a SINGLE reply and would have made
- * caching pointless: `in=51566 out=38 cacheR=49222` is ~7.3k, not 56.5k.
+ * input token, so it is counted at a tenth. Counting the knowledge base (then all 46k tokens of
+ * it) at face value on every answer is what burned 56k of a 400k budget in a SINGLE reply and
+ * would have made caching pointless: `in=51566 out=38 cacheR=49222` is ~7.3k, not 56.5k.
  * @param {{input?: number, output?: number, cacheWrite?: number, cacheRead?: number}} usage
  */
 function weighUsage({ input = 0, output = 0, cacheWrite = 0, cacheRead = 0 } = {}) {
@@ -103,14 +104,62 @@ function makeBudget(limit, now = () => Date.now()) {
 
 // ── Knowledge base ────────────────────────────────────────────────────────────
 /**
- * Every kb/*.md concatenated, in filename order so the bytes are identical on every boot — a
- * reordered prefix would silently destroy prompt caching (see the caching docs' invalidator list).
+ * `base` is every kb/*.md except ui.md, concatenated in filename order so the bytes are identical
+ * on every boot — a reordered prefix would silently destroy prompt caching (see the caching docs'
+ * invalidator list). ui.md (~39k of the old ~46k tokens) is split into its `## ` sections instead,
+ * so an answer carries only the pages its category needs (kbFor). `names` are what a member calls
+ * a real page — its title and German nav label — and stay empty for shared components ("## hud").
  */
 function loadKb(dir = path.join(__dirname, 'kb')) {
     let files;
     try { files = fs.readdirSync(dir).filter(f => f.endsWith('.md')).sort(); }
-    catch { return ''; }
-    return files.map(f => fs.readFileSync(path.join(dir, f), 'utf8').trim()).join('\n\n---\n\n');
+    catch { return { base: '', preamble: '', sections: [] }; }
+    const read = (f) => fs.readFileSync(path.join(dir, f), 'utf8').trim();
+    const base = files.filter(f => f !== 'ui.md').map(read).join('\n\n---\n\n');
+    if (!files.includes('ui.md')) return { base, preamble: '', sections: [] };
+
+    const chunks = read('ui.md').split(/^(?=## )/m);
+    const preamble = chunks[0].startsWith('## ') ? '' : chunks.shift().trim();
+    const nav = {};   // page id without '-' -> [EN, DE]
+    for (const [, id, en, de] of chunks.join('').matchAll(/^- page\.([\w-]+): (.*?)(?: {2}\[DE: (.*)\])?$/gm)) {
+        nav[id.replace(/-/g, '')] = [en, de];
+    }
+    const sections = chunks.map(chunk => {
+        const heading = chunk.split('\n', 1)[0].slice(3).trim();
+        const page = heading.match(/^(.*) \((\w+)\)$/);
+        const key = page ? page[2] : heading;
+        const names = page ? [page[1], nav[key]?.[1]].filter(Boolean).map(n => n.toLowerCase()) : [];
+        return { key, names, text: chunk.trim() };
+    });
+    return { base, preamble, sections };
+}
+
+/** ui.md section keys each category always gets. Billing is HUMAN_ONLY and never answered. */
+const UI_PAGES = {
+    install: ['launch', 'update', 'elevation', 'gate', 'home', 'settings', 'troubleshoot', 'whatsnew', 'notfound'],
+    license: ['account', 'license', 'licenseactivated', 'access', 'gate', 'usage', 'home'],
+    scripts: ['scripts', 'autoclicker', 'hotkeys', 'hotkey', 'macro', 'tp', 'vision', 'game'],
+    bug: ['troubleshoot', 'feedback', 'diagnostics', 'settings', 'launch', 'update', 'elevation', 'notify', 'nav'],
+    billing: [],
+    other: ['nav'],
+};
+const MENTION_MAX = 4;   // pages the member named, on top of the category's own
+
+/**
+ * The knowledge base one answer gets: base, then the category's ui.md pages plus up to
+ * MENTION_MAX more the member named in `text`, always in file order so the same selection is the
+ * same bytes (and the same cache entry). A plain string kb is used as is — the tests pass one.
+ */
+function kbFor(kb, category, text = '') {
+    if (typeof kb === 'string') return kb;
+    const wanted = new Set(UI_PAGES[category] || UI_PAGES.other);
+    const words = (n) => new RegExp(`(?<![\\p{L}\\p{N}])${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'iu');
+    kb.sections
+        .filter(s => !wanted.has(s.key) && s.names.some(n => words(n).test(text)))
+        .slice(0, MENTION_MAX)
+        .forEach(s => wanted.add(s.key));
+    const ui = [kb.preamble, ...kb.sections.filter(s => wanted.has(s.key)).map(s => s.text)].filter(Boolean).join('\n\n');
+    return [kb.base, ui].filter(Boolean).join('\n\n---\n\n');
 }
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
@@ -498,7 +547,7 @@ const PARK_MS = 60 * 60 * 1000;
 /**
  * @param {object} opts
  * @param {ReturnType<typeof buildProviders>} opts.providers
- * @param {string} opts.kb          the whole knowledge base, already read from disk
+ * @param {ReturnType<typeof loadKb>|string} opts.kb  loadKb()'s result; a string is sent as is
  * @param {ReturnType<typeof makeBudget>} opts.budget
  * @param {(line: string) => void} [opts.log]
  * @param {() => number} [opts.now]  injectable clock, for the provider park
@@ -508,11 +557,11 @@ function createSupport({ providers, kb, budget, log = console.log, now = () => D
     // a human in minutes, not never, so the provider comes back by itself after the hour instead
     // of staying dead until the next deploy.
     const parked = new Map();
-    // Built once: the system prompt must be byte-identical on every request or the cache — the
-    // only reason a 46k-token knowledge base is affordable — never reads back.
-    const answerSystem = [
+    // The same category and the same named pages give the same bytes (kbFor), so the cache still
+    // reads back — it just keys on the selection instead of one 46k-token whole.
+    const answerSystem = (kbText) => [
         { type: 'text', text: ANSWER_RULES },
-        { type: 'text', text: `# Knowledge base\n\n${kb}`, cache_control: { type: 'ephemeral' } },
+        { type: 'text', text: `# Knowledge base\n\n${kbText}`, cache_control: { type: 'ephemeral' } },
     ];
     const triageSystem = [{ type: 'text', text: TRIAGE_RULES }];
 
@@ -585,10 +634,13 @@ function createSupport({ providers, kb, budget, log = console.log, now = () => D
          */
         async answer({ category, fields, history = [], data = '', ticket }) {
             const messages = [{ role: 'user', content: formatForm(category, fields) }];
+            // What the member wrote — never our own replies or the data block — picks named pages.
+            const said = Object.values(fields || {}).map(String);
             for (const m of history.slice(-12)) {
                 const content = clean(m.content);
                 if (!content) continue;
                 const role = m.role === 'assistant' ? 'assistant' : 'user';
+                if (role === 'user') said.push(content);
                 // Consecutive same-role turns are legal and get merged by the API, so there is
                 // nothing to interleave or pad here.
                 messages.push({ role, content });
@@ -599,7 +651,8 @@ function createSupport({ providers, kb, budget, log = console.log, now = () => D
             if (messages[messages.length - 1].role !== 'user') {
                 messages.push({ role: 'user', content: '(the member is waiting for your answer)' });
             }
-            const out = await run('answer', { system: answerSystem, messages, maxTokens: 1024 }, ticket);
+            const system = answerSystem(kbFor(kb, category, said.join('\n')));
+            const out = await run('answer', { system, messages, maxTokens: 1024 }, ticket);
             if (!out) return null;
             const split = splitSentinel(out.text);
             return {
@@ -616,7 +669,7 @@ function createSupport({ providers, kb, budget, log = console.log, now = () => D
 
 module.exports = {
     CATEGORIES, CATEGORY_KEYS, categoryLabel, HUMAN_ONLY,
-    redact, clean, makeBudget, weighUsage, loadKb,
+    redact, clean, makeBudget, weighUsage, loadKb, kbFor, UI_PAGES, MENTION_MAX,
     parseJsonish, normaliseTriage, formatForm,
     splitSentinel, formatClientContext, accountError,
     buildProviders, claudeProvider, geminiProvider, openaiProvider,

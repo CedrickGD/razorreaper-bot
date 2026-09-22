@@ -340,6 +340,28 @@ test('the answer call sends a cached KB system block and a capped history', asyn
     assert.match(seen.messages[0].content, /Chosen category: bug/);
 });
 
+test('the answer carries its category\'s pages and the ones the member named — not our own', async () => {
+    const kb = {
+        base: 'BASE', preamble: 'PRE',
+        sections: [
+            { key: 'crosshair', names: ['crosshair'], text: '## Crosshair (crosshair)' },
+            { key: 'gamma', names: ['gamma'], text: '## Gamma (gamma)' },
+            { key: 'launch', names: [], text: '## launch' },
+            { key: 'nav', names: [], text: '## nav' },
+        ],
+    };
+    const seen = [];
+    const s = createSupport({
+        providers: [stub('claude', async (req) => { seen.push(req.system[1].text); return { text: 'ok', usage: {} }; })],
+        kb, budget: makeBudget(100_000, () => 0), log: quiet,
+    });
+    await s.answer({ category: 'install', fields: { Problem: 'crosshair gone' },
+        history: [{ role: 'assistant', content: 'try Gamma' }], data: 'gamma', ticket: 't' });
+    await s.answer({ category: 'other', ticket: 't' });
+    assert.strictEqual(seen[0], '# Knowledge base\n\nBASE\n\n---\n\nPRE\n\n## Crosshair (crosshair)\n\n## launch');
+    assert.strictEqual(seen[1], '# Knowledge base\n\nBASE\n\n---\n\nPRE\n\n## nav');
+});
+
 test('an answer is never requested with an assistant turn last', async () => {
     let seen = null;
     const s = support([stub('claude', async (req) => { seen = req; return { text: 'ok', usage: {} }; })]);

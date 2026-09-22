@@ -552,6 +552,8 @@ const HUMAN_PING_MAX = 10;           // a ping list longer than this is noise, n
 
 const aiProviders = ai.buildProviders(process.env);
 const aiKb = ai.loadKb();
+console.log(`[ai] knowledge base per category (≈tokens): ${ai.CATEGORY_KEYS.filter(c => !ai.HUMAN_ONLY.has(c))
+    .map(c => `${c} ${(ai.kbFor(aiKb, c).length / 4000).toFixed(1)}k`).join(', ')}`);
 const support = ai.createSupport({
     providers: aiProviders,
     kb: aiKb,
