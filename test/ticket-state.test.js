@@ -388,6 +388,22 @@ test('a ticket waits from the moment the report was asked for, then stops', () =
     assert.strictEqual(w.active('c1'), null);
 });
 
+// ticket-0006: a question asked during the wait got silence, and Skip never answered it.
+test('a message during the wait is heard once per window, and only while it runs', () => {
+    let now = NOW;
+    const w = makeWaiting(30 * 60 * 1000, () => now);
+    assert.strictEqual(w.hear('c1'), false, 'no wait, nothing to receipt');
+    w.start('c1');
+    assert.strictEqual(w.active('c1').heard, false);
+    assert.strictEqual(w.hear('c1'), true, 'first message gets the receipt');
+    assert.strictEqual(w.hear('c1'), false, 'the second one does not');
+    assert.strictEqual(w.active('c1').heard, true, 'Skip can see there is a question to answer');
+    w.start('c1');
+    assert.strictEqual(w.hear('c1'), true, 'a new window receipts again');
+    now = NOW + 31 * 60 * 1000;
+    assert.strictEqual(w.hear('c1'), false, 'an expired wait hears nothing');
+});
+
 test('a wait expires by itself and cleans up after the 30 minutes', () => {
     let now = NOW;
     const w = makeWaiting(30 * 60 * 1000, () => now);

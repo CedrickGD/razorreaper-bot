@@ -268,9 +268,10 @@ function deletableTickets(channels, { now = Date.now(), hours = 24, closedAt } =
 // ── "Waiting for the support report" ──────────────────────────────────────────
 /**
  * While a ticket waits for the member's support report the AI is WAITING, not off: it answers
- * nothing else in that channel, and the wait ends on the button, on Skip, on a valid Report ID,
- * or by itself after `ttlMs`. In memory on purpose — a 30-minute window is not worth a channel
- * edit, and a restart simply means the AI starts answering again, which is the safe direction.
+ * nothing else in that channel (one receipt, see hear()), and the wait ends on the button, on
+ * Skip, on a valid Report ID, or by itself after `ttlMs`. In memory on purpose — a 30-minute
+ * window is not worth a channel edit, and a restart simply means the AI starts answering again,
+ * which is the safe direction.
  */
 function makeWaiting(ttlMs = 30 * 60 * 1000, now = () => Date.now()) {
     const waiting = new Map();
@@ -278,13 +279,24 @@ function makeWaiting(ttlMs = 30 * 60 * 1000, now = () => Date.now()) {
         /** @returns {number} the moment the report was asked for, used as the `since` filter. */
         // The window is measured from `since`, so a wait rebuilt out of the ticket's history after
         // a restart expires when it was always going to, not 30 minutes after the restart.
-        start(id, since = now()) { waiting.set(id, { since, until: since + ttlMs }); return since; },
-        /** @returns {{since: number, until: number}|null} — expired waits clean themselves up. */
+        start(id, since = now()) { waiting.set(id, { since, until: since + ttlMs, heard: false }); return since; },
+        /** @returns {{since: number, until: number, heard: boolean}|null} — expired waits clean themselves up. */
         active(id) {
             const w = waiting.get(id);
             if (!w) return null;
             if (now() >= w.until) { waiting.delete(id); return null; }
             return w;
+        },
+        /**
+         * The member wrote something that is not a Report ID while the bot waits. True only the
+         * FIRST time in a window — one receipt, not one per message — and it marks the wait
+         * `heard`, so Skip knows there is a question left to answer.
+         */
+        hear(id) {
+            const w = this.active(id);
+            if (!w || w.heard) return false;
+            w.heard = true;
+            return true;
         },
         stop(id) { return waiting.delete(id); },
         get size() { return waiting.size; },

@@ -1251,6 +1251,7 @@ async function runAiReply(channel, { category, fields, history, data = '', opene
 // The AI ends an answer with the NEED_REPORT sentinel when the problem depends on the member's
 // own machine. The bot then points at the app, waits, pulls the data from the panel and asks the
 // model again — the only path in this file where a ticket gets facts the member did not type.
+const REPORT_SKIP_LINE = 'Or press **Skip** to go on without it.';
 async function askForSupportReport(channel) {
     reportAsked.add(channel.id);
     reportWaiting.start(channel.id);
@@ -1475,7 +1476,9 @@ client.on('messageCreate', async (m) => {
                 await m.channel.send({
                     embeds: [rrEmbed({
                         title: 'Report not found',
-                        blocks: [`Nothing under **${reportId}** yet — give it a minute and send the ID again.`],
+                        // Skip only while its button is still live — after a Skip there is none.
+                        blocks: [`Nothing under **${reportId}** yet — give it a minute and send the ID again.`,
+                            ...(reportWaiting.active(m.channelId) ? [REPORT_SKIP_LINE] : [])],
                         colour: BRAND_BAD,
                     })],
                 }).catch(() => {});
@@ -1483,8 +1486,16 @@ client.on('messageCreate', async (m) => {
             }
             return answerWithClientContext(m.channel, state, block);
         }
-        // The window keeps its one real job: while it runs, the AI answers nothing else here.
-        if (reportWaiting.active(m.channelId)) return;
+        // The window keeps its one real job: while it runs, the AI answers nothing else here. The
+        // member still hears that once, not silence — and Skip answers what they wrote.
+        if (reportWaiting.active(m.channelId)) {
+            if (reportWaiting.hear(m.channelId)) {
+                await m.reply({
+                    embeds: [rrEmbed({ title: 'Waiting for your Report ID', blocks: ['Paste it here, or press **Skip** to go on without it.'] })],
+                }).catch(() => {});
+            }
+            return;
+        }
 
         const { fields, history } = await readTicketContext(m.channel, state, known);
         await runAiReply(m.channel, { category: state.cat, fields, history, opener: state.opener });
@@ -2016,9 +2027,15 @@ client.on('interactionCreate', async (interaction) => {
 
         // ── The support-report step ───────────────────────────────────────────
         if (interaction.customId === 'ticket:report-skip') {
+            // The member asked something while the bot waited and got only the receipt for it:
+            // Skip means "go on without the report", so that question is answered now.
+            const heard = reportWaiting.active(channel.id)?.heard && ticketAi(channel.id, state);
             reportWaiting.stop(channel.id);
             await consumeButtons(interaction.message);
-            return interaction.reply({ embeds: [rrEmbed({ title: 'No problem', blocks: ['Carry on describing it here and I\'ll do my best.'] })] });
+            if (!heard) return interaction.reply({ embeds: [rrEmbed({ title: 'No problem', blocks: ['Carry on describing it here and I\'ll do my best.'] })] });
+            await interaction.reply({ embeds: [rrEmbed({ title: 'No problem', blocks: ['Answering without the report.'] })] });
+            const { fields, history } = await readTicketContext(channel, state);
+            return runAiReply(channel, { category: state.cat, fields, history, opener: state.opener });
         }
 
         if (interaction.customId === TICKET_BUTTONS.reportSent) {
@@ -2033,7 +2050,7 @@ client.on('interactionCreate', async (interaction) => {
             await interaction.editReply({
                 embeds: [block
                     ? rrEmbed({ title: 'Got your report', blocks: ['Reading it now.'], colour: BRAND_GOOD })
-                    : rrEmbed({ title: 'Report not found', blocks: ['I can\'t see a new report for your account yet.', 'Paste the **Report ID** the app showed you — it starts with `FB-`.'], colour: BRAND_BAD })],
+                    : rrEmbed({ title: 'Report not found', blocks: ['I can\'t see a new report for your account yet.', 'Paste the **Report ID** the app showed you — it starts with `FB-`.', REPORT_SKIP_LINE], colour: BRAND_BAD })],
             });
             // Only once the data is actually here: an unanswered prompt keeps its live buttons,
             // which is also what says "still waiting" after a restart.

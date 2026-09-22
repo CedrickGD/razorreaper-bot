@@ -453,6 +453,27 @@ test('answer() surfaces the sentinel, and the second pass never asks twice', asy
     assert.strictEqual(second.needsReport, false, 'a pass that already carries the data must not ask again');
 });
 
+// ticket-0006: the member pasted a Report ID and the data pass answered with the purchase record.
+test('a pass that carries client data never presses the purchase button', async () => {
+    const s = support([stub('claude', ok(`Your record follows.\n${SHOW_PURCHASE}`))]);
+    assert.strictEqual((await s.answer({ category: 'bug', ticket: 't' })).showPurchase, true);
+    const out = await s.answer({ category: 'bug', ticket: 't', data: 'RazorReaper client data…' });
+    assert.strictEqual(out.showPurchase, false);
+    assert.strictEqual(out.text, 'Your record follows.', 'the marker is still stripped');
+});
+
+test('the client data block says it is the report for THIS ticket\'s problem', () => {
+    assert.match(formatClientContext({ app_version: '1.5.2' }),
+        /^RazorReaper client data .*support report for the problem in this ticket — answer THAT problem/);
+});
+
+// ticket-0006 again: "notactive.hint" quoted at the member, and "the knowledge base contains…".
+test('the answer rules keep keys, the knowledge base and sources away from the member', () => {
+    assert.match(ANSWER_RULES, /Quote the on-screen text, never the key before the colon/);
+    assert.match(ANSWER_RULES, /never mention either of them or any other source/);
+    assert.match(ANSWER_RULES, /say you do not know and tell them to press "I need a human"/);
+});
+
 test('the client data block is the LAST turn, as a user turn', async () => {
     let seen = null;
     const s = support([stub('claude', async (req) => { seen = req; return { text: 'ok', usage: {} }; })]);
