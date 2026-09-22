@@ -2305,7 +2305,16 @@ Path: {1}
 - fed.runs: Runs
 - fed.runs.desc: Suits to farm before it stops on its own. 0 keeps going until you stop it.
 - fed.wait: Wait after open
-- fed.wait.desc: Milliseconds to let the inventory finish opening.
+- fed.wait.desc: Longest it waits for the transmitter to open, in milliseconds — it carries on as soon as the panel is up.
+- fed.lagbuffer: Lag buffer
+- fed.lagbuffer.desc: Adds this many milliseconds to the waits for the transmitter to open, the new set to arrive and the pieces to leave — raise it on laggy servers.
+- fed.pieces: Pieces
+- fed.pieces.desc: Only the ticked pieces go into the transmitter; the rest stay on you.
+- fed.piece.head: Helmet
+- fed.piece.chest: Chest
+- fed.piece.hands: Gloves
+- fed.piece.legs: Legs
+- fed.piece.feet: Boots
 - desc.yuty: Spams the Yutyrannus courage roar on an interval while mounted.
 - desc.autowalk: Holds the forward key so you keep running hands-free (released when ARK loses focus).
 - desc.mammoth: Alternates left/right clicks to keep the Mammoth war drum going AFK.
@@ -2410,16 +2419,17 @@ Path: {1}
 - fed.toast.started: Fed-Suit macro started — press {0} to stop.
 - fed.toast.started.nokey: Fed-Suit macro started — stop it on the Scripts page, or bind a hotkey there first.
 - fed.toast.quota: Free monthly limit reached ({0} Fed-Suit starts). Resets next month — Premium is unlimited.
-- fed.toast.stopped.one: Fed-Suit macro stopped — {0} cycle completed.
-- fed.toast.stopped.many: Fed-Suit macro stopped — {0} cycles completed.
+- fed.toast.stopped: Fed-Suit macro stopped — cycles: {0}, pieces moved: {1}.
 - fed.toast.noark: Fed-Suit macro could not run — the ARK window was not available.
-- fed.toast.nomove: Fed-Suit stopped itself — three cycles moved nothing. Check that you are standing at a Tek Transmitter on Genesis 2, that the open key is the one ARK uses, and the interface scale in ARK's options.
-- fed.toast.notopen: Fed-Suit stopped itself — the transmitter inventory did not open. Stand right at the Tek Transmitter and look at it, and close any inventory that is already open before you start.
+- fed.toast.stuck: Fed-Suit stopped itself — the same piece failed three cycles in a row: it either never showed up or would not go into the transmitter (cycles: {0}, pieces moved: {1}). Look at the transmitter and that slot before you start again.
+- fed.toast.full: Fed-Suit stopped itself — the transmitter seems full: two cycles in a row nothing went in although the pieces were there (cycles: {0}, pieces moved: {1}). Make room in the transmitter before you start again.
+- fed.toast.notclosed: Fed-Suit stopped itself — the transmitter did not close (cycles: {0}, pieces moved: {1}). Close it by hand before you start again.
+- fed.toast.nopieces: Tick at least one piece for Fed-Suit to move.
+- fed.toast.notopen: Fed-Suit stopped itself — the transmitter inventory did not open. Stand right at the Tek Transmitter and look at it, make sure it is switched on (the "[E] switch on" prompt), and close any inventory that is already open before you start.
 - fed.toast.badkey.open: Open Transmitter key "{0}" is not a supported key.
 - fed.toast.badkey.exit: Exit Transmitter key "{0}" is not a supported key.
 - fed.toast.badkey.transfer: Transfer key "{0}" is not a supported key.
-- fed.activity.run.one: Fed-Suit run: {0} cycle ({1})
-- fed.activity.run.many: Fed-Suit run: {0} cycles ({1})
+- fed.activity.run: Fed-Suit run: cycles {0}, pieces {1} ({2})
 
 ## Server (server)
 - title: Server Management  [DE: Serververwaltung]
@@ -2550,6 +2560,8 @@ Check Steam under View → Servers → Favorites.
 - startwithark.description: A lightweight watcher launches Razor Reaper as soon as ARK starts.
 - closewithark.title: Close with ARK  [DE: Mit ARK schließen]
 - closewithark.description: Exits Razor Reaper when ARK closes.
+- gamebanner.title: Show script warnings over the game  [DE: Skript-Warnungen über dem Spiel anzeigen]
+- gamebanner.description: Stop and error messages appear at the top of ARK while you play.
 - updates.title: Updates
 - updates.description: Updates install themselves and restart the app. There is no opt-out.
 - elsewhere.title: Elsewhere  [DE: An anderer Stelle]
