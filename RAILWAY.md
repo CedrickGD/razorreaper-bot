@@ -29,6 +29,8 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
    | `VERIFIED_ROLE_ID` | *(role id)* | The `Verified Customer` role granted to license holders. |
    | `MEMBER_ROLE_ID` | *(role id)* | Optional — base `Member` role every human gets on join (hardcoded RazorReaper default). |
    | `VERIFY_GUILD_ID` | *(guild id)* | Optional — hardcoded RazorReaper-server default in `index.js`. |
+   | `STAFF_ROLE_IDS` | *(role ids, comma-separated)* | Optional — staff roles (see tickets, run mod commands). Without it the bot matches Owner/Admin/Moderator/Support Staff by name once and remembers the ids in `ids.json`. |
+   | `WELCOME_CHANNEL_ID` / `RULES_CHANNEL_ID` | *(channel id)* | Optional — where the welcome embed posts / which rules channel it links. Found by name once otherwise and remembered in `ids.json`. |
    | `VERIFY_RECONCILE_MINUTES` | `30` | Optional — how often lapsed licenses lose the role. |
    | `TICKET_TRANSCRIPT_DM` | `true` | Optional — set `false` to stop DM'ing HTML transcripts to ticket openers on close. |
    `PORT` is injected by Railway automatically — do **not** set it. The four `VERIFY_*` role vars

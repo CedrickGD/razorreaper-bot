@@ -24,6 +24,7 @@ const {
     BRAND, BRAND_BAD, BRAND_GOOD,
 } = require('./brand');
 const panelApi = require('./panel-client');
+const { loadIds, saveIds, looseName } = require('./id-store');
 
 // GuildMessages (non-privileged) lets the notifier receive message events in
 // watched channels. NOTE: Discord withholds .content AND .embeds/.attachments of
@@ -62,8 +63,63 @@ try {
 const ACCENT = 0x9b1a1a;
 const CYAN   = 0x00e5ff;
 
-// Role IDs
-const STAFF_ROLES = ['Owner', 'Admin', 'Moderator', 'Support Staff'];
+// ── Pinned ids ────────────────────────────────────────────────────────────────
+// Every channel and role the bot relies on resolves the same way: an env id wins, then the id
+// stored in ids.json (if it still exists), then a loose name match, then — only where the bot
+// creates things — a fresh one. Whatever was found by name or created is stored, so the owner
+// can rename it afterwards and the next start still finds it; that is what stops a restart from
+// making a second "Tickets". Env ids are never written: the env stays the source of truth.
+// Same persistent dir notifier.js keeps channels.json in.
+const IDS_FILE = path.join(process.env.NOTIFIER_DATA_DIR || '/data', 'ids.json');
+const storedIds = loadIds(IDS_FILE);
+const idLog = {};                    // key -> "key=id (source)", printed once on ready
+
+// Records where `found` came from and stores it when it came from a name or a create. `found` is
+// a channel/role, or an array of ids (staffRoles). Returns `found` so callers can return it.
+function pinId(key, found, source) {
+    const id = Array.isArray(found) ? found : found.id;
+    idLog[key] = `${key}=${[].concat(id).join(',') || 'none'} (${source})`;
+    if ((source === 'name' || source === 'created') && [].concat(id).length
+        && JSON.stringify(storedIds[key]) !== JSON.stringify(id)) {
+        storedIds[key] = id;
+        saveIds(IDS_FILE, storedIds);
+    }
+    return found;
+}
+
+// env -> stored -> loose name. `matches(looseName, item)` decides the name step.
+function findPinned(cache, key, envId, matches) {
+    const env = envId && cache.get(envId);
+    if (env) return pinId(key, env, 'env');
+    const stored = typeof storedIds[key] === 'string' && cache.get(storedIds[key]);
+    if (stored) return pinId(key, stored, 'stored');
+    const byName = cache.find(x => matches(looseName(x.name), x));
+    return byName ? pinId(key, byName, 'name') : null;
+}
+
+// Staff roles: STAFF_ROLE_IDS (comma list) wins, then the stored ids, then any role whose loose
+// name is one of these — the live roles carry emoji ("🛡️ Admin"), which is why an exact name
+// match found none of them. Resolved on ready (resolveStaffRoles) into a Set of ids.
+const STAFF_ROLE_IDS_ENV = (process.env.STAFF_ROLE_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+const STAFF_ROLE_NAMES = ['owner', 'admin', 'moderator', 'supportstaff'];
+let staffRoleIds = new Set(STAFF_ROLE_IDS_ENV);
+
+function resolveStaffRoles(guild) {
+    if (!guild) return;
+    const roles = guild.roles.cache;
+    const stored = (Array.isArray(storedIds.staffRoles) ? storedIds.staffRoles : []).filter(id => roles.has(id));
+    const [ids, source] = STAFF_ROLE_IDS_ENV.length ? [STAFF_ROLE_IDS_ENV, 'env']
+        : stored.length ? [stored, 'stored']
+        : [roles.filter(r => STAFF_ROLE_NAMES.includes(looseName(r.name))).map(r => r.id), 'name'];
+    staffRoleIds = new Set(ids);
+    pinId('staffRoles', ids, source);
+}
+
+// Staff roles as ticket-channel overwrites; an id that is not a role here would fail the create.
+function staffOverwrites(guild, allow) {
+    return [...staffRoleIds].filter(id => guild.roles.cache.has(id))
+        .map(id => ({ id, type: OverwriteType.Role, allow }));
+}
 
 // Warn storage (in-memory, resets on restart - good enough for a small server)
 const warns = {};
@@ -72,7 +128,7 @@ const warns = {};
 function isStaff(member) {
     return member.id === member.guild.ownerId ||
            member.permissions.has(PermissionsBitField.Flags.Administrator) ||
-           member.roles.cache.some(r => STAFF_ROLES.includes(r.name));
+           member.roles.cache.some(r => staffRoleIds.has(r.id));
 }
 
 // Ticket Tool names tickets ticket-0001, ticket-0002 …, this bot pads to the same four digits,
@@ -181,9 +237,9 @@ function verifyGuild() {
 }
 
 // ── Lifetime role ─────────────────────────────────────────────────────────────
-// LIFETIME_ROLE_ID wins; otherwise an existing role named "Lifetime" is adopted, and only if
-// there is none does the bot create it. A self-created role lands below the bot's own role, so
-// it is manageable straight away. The resolved id is remembered for the rest of the process.
+// LIFETIME_ROLE_ID wins; otherwise the stored id, then an existing role named "Lifetime" is
+// adopted, and only if there is none does the bot create it. A self-created role lands below the
+// bot's own role, so it is manageable straight away. Found-by-name and created ids are pinned.
 let lifetimeRoleId = LIFETIME_ROLE_ID_ENV || null;
 let warnedLifetimeMissing = false;
 // Three call sites reach this function (ready, /verify + guildMemberAdd via grantVerifiedRole,
@@ -193,16 +249,16 @@ let warnedLifetimeMissing = false;
 let lifetimeRoleCreate = null;
 async function ensureLifetimeRole(guild) {
     if (!guild) return null;
-    if (lifetimeRoleId) {
-        const role = guild.roles.cache.get(lifetimeRoleId);
+    if (LIFETIME_ROLE_ID_ENV) {
+        const role = guild.roles.cache.get(LIFETIME_ROLE_ID_ENV);
         // A configured id that resolves to nothing would silently disable the badge — say so once.
         if (!role && !warnedLifetimeMissing) {
             warnedLifetimeMissing = true;
-            console.error(`[verify] Lifetime role ${lifetimeRoleId} does not exist in this guild — check LIFETIME_ROLE_ID.`);
+            console.error(`[verify] Lifetime role ${LIFETIME_ROLE_ID_ENV} does not exist in this guild — check LIFETIME_ROLE_ID.`);
         }
-        return role || null;
+        return role ? pinId('lifetimeRole', role, 'env') : null;
     }
-    const existing = guild.roles.cache.find(r => r.name.toLowerCase() === 'lifetime');
+    const existing = findPinned(guild.roles.cache, 'lifetimeRole', '', name => name === 'lifetime');
     if (existing) { lifetimeRoleId = existing.id; return existing; }
     if (!guild.members.me?.permissions.has(PermissionsBitField.Flags.ManageRoles)) {
         console.error('[verify] No Manage Roles permission — cannot create the Lifetime role. Set LIFETIME_ROLE_ID instead.');
@@ -221,7 +277,7 @@ async function ensureLifetimeRole(guild) {
         }
         const role = await lifetimeRoleCreate;
         lifetimeRoleId = role.id;
-        return role;
+        return pinId('lifetimeRole', role, 'created');
     } catch (e) {
         console.error('[verify] Failed to create the Lifetime role:', e.message || e);
         return null;
@@ -370,8 +426,9 @@ function verifyRoleLine(guild) {
 }
 
 function buildVerifyPanelEmbed(guild) {
-    const chanRef = (part) => {
-        const c = guild.channels.cache.find(ch =>
+    // `pinnedId` first (the lounge is the bot's own channel); the rest are the owner's, by name.
+    const chanRef = (part, pinnedId) => {
+        const c = (pinnedId && guild.channels.cache.get(pinnedId)) || guild.channels.cache.find(ch =>
             (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) && ch.name.includes(part));
         return c ? `<#${c.id}>` : `#${part}`;
     };
@@ -383,7 +440,7 @@ function buildVerifyPanelEmbed(guild) {
             verifyRoleLine(guild),
         ],
         fields: [
-            { name: 'What you unlock', value: `${chanRef('lounge')} — the customers-only lounge\n${chanRef('releases')} — new builds first\n${chanRef('changelog')} — full patch notes`, inline: true },
+            { name: 'What you unlock', value: `${chanRef('lounge', CUSTOMER_CHAT_ID || storedIds.customerChat)} — the customers-only lounge\n${chanRef('releases')} — new builds first\n${chanRef('changelog')} — full patch notes`, inline: true },
             { name: "Where's my key?", value: 'In your purchase confirmation from [razorreaper.app](https://razorreaper.app).', inline: true },
         ],
         thumb: brandThumb(guild, client.user),
@@ -452,13 +509,13 @@ async function syncVerifyPanel() {
 const CUSTOMER_CHAT_ID = process.env.CUSTOMER_CHAT_ID || '';
 const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID || '';
 
-// Find-or-create, idempotent: an explicit id wins, then anything that already looks like it, and
-// only then is one created. Shared by the community chats and by the support channel + Tickets
-// category below, so there is exactly one place that knows how to not duplicate a channel.
+// Find-or-create, idempotent: an explicit id wins, then the id pinned under storeKey, then
+// anything whose loose name (looseName) looks like it, and only then is one created. Shared by
+// the community chats and by the support channel + Tickets category below, so there is exactly
+// one place that knows how to not duplicate a channel.
 let warnedNoChannelPerm = false;
-async function ensureChannel(guild, { envId, type = ChannelType.GuildText, looksLikeIt, ...spec }) {
-    const existing = (envId && guild.channels.cache.get(envId))
-        || guild.channels.cache.find(c => c.type === type && looksLikeIt(c.name.toLowerCase()));
+async function ensureChannel(guild, { envId, storeKey, type = ChannelType.GuildText, looksLikeIt, ...spec }) {
+    const existing = findPinned(guild.channels.cache, storeKey, envId, (name, c) => c.type === type && looksLikeIt(name));
     if (existing) return existing;
     if (!guild.members.me?.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
         if (!warnedNoChannelPerm) {
@@ -470,7 +527,7 @@ async function ensureChannel(guild, { envId, type = ChannelType.GuildText, looks
     try {
         const ch = await guild.channels.create({ ...spec, type });
         console.log(`[chats] Created ${ch.name} (${ch.id}).`);
-        return ch;
+        return pinId(storeKey, ch, 'created');
     } catch (e) {
         console.error(`[chats] Failed to create ${spec.name}:`, e.message || e);
         return null;
@@ -483,13 +540,13 @@ async function ensureCommunityChannels(guild) {
     const P = PermissionsBitField.Flags;
     // Keep them with the rest of the community rooms — #verify's category is the best anchor.
     const parent = guild.channels.cache.get(VERIFY_CHANNEL_ID)?.parentId || null;
-    const ensure = (envId, looksLikeIt, spec) => ensureChannel(guild, { envId, looksLikeIt, parent, ...spec });
+    const ensure = (storeKey, envId, looksLikeIt, spec) => ensureChannel(guild, { storeKey, envId, looksLikeIt, parent, ...spec });
 
     // Customers only: invisible to @everyone, open to the customer role (and to the bot, so it
     // can post there later without an extra permission pass). Overwrite types are explicit:
     // without them discord.js resolves each id through its caches and the create throws
     // "Supplied parameter is not a cached User or Role" (seen live on the first deploy).
-    await ensure(CUSTOMER_CHAT_ID, name => name.includes('lounge'), {
+    await ensure('customerChat', CUSTOMER_CHAT_ID, name => name.includes('lounge'), {
         name: 'reaper-lounge',
         topic: 'Customers only — the lounge is open while your RazorReaper licence is active.',
         permissionOverwrites: [
@@ -502,7 +559,7 @@ async function ensureCommunityChannels(guild) {
 
     // The ordinary room for everyone in the community — skipped entirely if the server already
     // has any general/chat channel, which it almost always does.
-    await ensure(GENERAL_CHAT_ID, name => name.includes('general') || name.includes('chat'), {
+    await ensure('generalChat', GENERAL_CHAT_ID, name => name.includes('general') || name.includes('chat'), {
         name: 'general',
         topic: 'Open chat for every member of the community.',
         permissionOverwrites: [
@@ -578,6 +635,17 @@ const reportWaiting = makeWaiting();
 let ticketCreateChain = Promise.resolve();  // serialises ticket numbering + creation
 let warnedNoMessageContent = false;
 let ticketLogChannelId = TICKET_LOG_CHANNEL_ID || null;
+// Resolved by ensureSupportChannels on ready: new tickets go under the category, /ticket and the
+// welcome embed link the support channel — by id, whatever the owner has renamed them to.
+let ticketsCategoryId = TICKETS_CATEGORY_ID || null;
+let supportChannelId = SUPPORT_CHANNEL_ID || null;
+const supportChannelRef = (guild) =>
+    (supportChannelId && guild?.channels.cache.has(supportChannelId) ? `<#${supportChannelId}>` : 'the support channel');
+// The welcome embed's channels, found once on ready (env -> stored -> loose name).
+const WELCOME_CHANNEL_ID = process.env.WELCOME_CHANNEL_ID || '';
+const RULES_CHANNEL_ID = process.env.RULES_CHANNEL_ID || '';
+let welcomeChannelId = null;
+let rulesChannelId = null;
 
 // ── Support channel + Tickets category ────────────────────────────────────────
 async function ensureSupportChannels(guild) {
@@ -587,6 +655,7 @@ async function ensureSupportChannels(guild) {
 
     const category = await ensureChannel(guild, {
         envId: TICKETS_CATEGORY_ID,
+        storeKey: 'ticketsCategory',
         type: ChannelType.GuildCategory,
         looksLikeIt: name => name === 'tickets',
         name: 'Tickets',
@@ -596,6 +665,7 @@ async function ensureSupportChannels(guild) {
     // Read-only for members: the panel is the only way in, so nobody can bury it under chatter.
     const channel = await ensureChannel(guild, {
         envId: SUPPORT_CHANNEL_ID,
+        storeKey: 'supportChannel',
         looksLikeIt: name => name === 'support',
         name: 'support',
         topic: 'Open a support ticket — pick a category in the panel above.',
@@ -610,10 +680,10 @@ async function ensureSupportChannels(guild) {
     // Staff-only ticket log: one entry per ticket, edited on close and carrying the transcript.
     // Same find-or-create as everything else; the overwrites are the ticket-channel template
     // minus the opener, with explicit OverwriteTypes for the same cached-id reason.
-    const staffRoles = guild.roles.cache.filter(r => STAFF_ROLES.includes(r.name));
     const log = await ensureChannel(guild, {
         envId: TICKET_LOG_CHANNEL_ID,
-        looksLikeIt: name => name === 'ticket-log',
+        storeKey: 'ticketLog',
+        looksLikeIt: name => name === 'ticketlog',
         name: 'ticket-log',
         topic: 'Every ticket, for staff. The transcript is attached when a ticket closes.',
         parent: category?.id || null,
@@ -621,11 +691,13 @@ async function ensureSupportChannels(guild) {
             { id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] },
             { id: OWNER_ID, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
             ...(me ? [{ id: me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks] }] : []),
-            ...staffRoles.map(r => ({ id: r.id, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] })),
+            ...staffOverwrites(guild, [P.ViewChannel, P.SendMessages, P.ReadMessageHistory]),
         ],
         reason: 'RazorReaper: staff ticket log',
     });
     if (log) ticketLogChannelId = log.id;
+    if (category) ticketsCategoryId = category.id;
+    if (channel) supportChannelId = channel.id;
     return { category, channel, log };
 }
 
@@ -636,8 +708,7 @@ async function ensureSupportChannels(guild) {
 function ticketLogChannel(guild) {
     if (!guild) return null;
     const byId = ticketLogChannelId && guild.channels.cache.get(ticketLogChannelId);
-    if (byId?.isTextBased?.()) return byId;
-    return guild.channels.cache.find(c => c.type === ChannelType.GuildText && c.name === 'ticket-log') || null;
+    return byId?.isTextBased?.() ? byId : null;
 }
 
 /**
@@ -899,7 +970,6 @@ async function openTicket(interaction, categoryKey, fields) {
     // moment would both claim the same number — the creations are chained instead, the same way
     // ensureLifetimeRole shares its in-flight create to avoid making the role twice.
     const P = PermissionsBitField.Flags;
-    const staffRoles = guild.roles.cache.filter(r => STAFF_ROLES.includes(r.name));
     // Auto-delete frees the numbers of channels it removes; #ticket-log remembers them.
     const numberFloor = await highestLoggedTicket(guild);
     let channel;
@@ -912,9 +982,7 @@ async function openTicket(interaction, categoryKey, fields) {
             return guild.channels.create({
                 name: ticketChannelName(nextTicketNumber(guild.channels.cache.map(c => c.name), numberFloor)),
                 type: ChannelType.GuildText,
-                parent: (TICKETS_CATEGORY_ID && guild.channels.cache.get(TICKETS_CATEGORY_ID)?.id)
-                    || guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name.toLowerCase() === 'tickets')?.id
-                    || null,
+                parent: (ticketsCategoryId && guild.channels.cache.get(ticketsCategoryId)?.id) || null,
                 // The ONLY topic write before the close: the facts that cannot change. Billing is
                 // decided here too, because it is decided here — nothing flips it later, and this
                 // way it survives a restart without a second channel edit.
@@ -928,7 +996,7 @@ async function openTicket(interaction, categoryKey, fields) {
                     { id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] },
                     { id: user.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.AttachFiles, P.EmbedLinks] },
                     ...(guild.members.me ? [{ id: guild.members.me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory, P.ManageChannels, P.EmbedLinks] }] : []),
-                    ...staffRoles.map(r => ({ id: r.id, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] })),
+                    ...staffOverwrites(guild, [P.ViewChannel, P.SendMessages, P.ReadMessageHistory]),
                 ],
                 reason: `RazorReaper support ticket for ${user.tag}`,
             });
@@ -2501,6 +2569,8 @@ client.once('ready', async () => {
     // Resolve (or create) the Lifetime role and the two community chats before the panel sync,
     // so the panel can already name them. All three are idempotent — safe on every restart.
     const homeGuild = verifyGuild();
+    // Staff first: the ticket-log overwrites below are built from these ids.
+    resolveStaffRoles(homeGuild);
     await ensureLifetimeRole(homeGuild);
     await ensureCommunityChannels(homeGuild).catch(e => console.error('[chats] Setup error:', e.message || e));
 
@@ -2521,6 +2591,15 @@ client.once('ready', async () => {
     } catch (e) {
         console.error('[support] Setup error:', e.message || e);
     }
+
+    // The welcome embed's two channels — never created, only found (and then pinned).
+    if (homeGuild) {
+        const text = c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildAnnouncement;
+        welcomeChannelId = findPinned(homeGuild.channels.cache, 'welcomeChannel', WELCOME_CHANNEL_ID, (n, c) => text(c) && n.includes('welcome'))?.id || null;
+        rulesChannelId = findPinned(homeGuild.channels.cache, 'rulesChannel', RULES_CHANNEL_ID, (n, c) => text(c) && n.includes('rules'))?.id || null;
+    }
+    // One line with every id and where it came from (env|stored|name|created) for the deploy check.
+    console.log(`[ids] resolved: ${Object.values(idLog).join(' ') || 'none'}`);
 
     // Keep the #verify panel current, and make sure every human holds the Member base role
     // (instant grant on join + startup/periodic backfill for anyone missed while offline).
@@ -2552,15 +2631,16 @@ client.on('guildMemberAdd', async (member) => {
 client.on('guildMemberAdd', async (member) => {
     // Home-guild only: never post welcomes into other servers the bot merely listens in.
     if (VERIFY_GUILD_ID && member.guild.id !== VERIFY_GUILD_ID) return;
-    const ch = member.guild.channels.cache.find(c => c.name.includes('welcome'));
+    const ch = welcomeChannelId && member.guild.channels.cache.get(welcomeChannelId);
     if (!ch) return;
+    const rules = rulesChannelId && member.guild.channels.cache.has(rulesChannelId) ? `<#${rulesChannelId}>` : '#rules';
     const e = new EmbedBuilder()
       .setColor(ACCENT)
       .setTitle('⚡ Welcome to RazorReaper!')
       .setDescription(
               `Hey ${member}, welcome to the community!\n\n` +
-              `📋 Read the rules in <#${member.guild.channels.cache.find(c=>c.name.includes('rules'))?.id || 'rules'}>\n` +
-              `🎟️ Need help? Open a ticket in create-ticket\n` +
+              `📋 Read the rules in ${rules}\n` +
+              `🎟️ Need help? Open a ticket in ${supportChannelRef(member.guild)}\n` +
               `🌐 Visit us at **razorreaper.app**`
             )
       .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
@@ -2863,8 +2943,7 @@ client.on('interactionCreate', async (interaction) => {
     if (commandName === 'ticket') {
         const userTickets = guild.channels.cache.filter(c => isTicketChannel(c) && c.permissionOverwrites.cache.has(interaction.user.id));
         if (userTickets.size === 0) {
-            const createCh = guild.channels.cache.find(c => c.name.includes('create-ticket'));
-            return interaction.reply({ embeds: [infoEmbed(`❌ You have no open tickets.\n\nOpen one in ${createCh ? `<#${createCh.id}>` : 'create-ticket'}!`)], ephemeral: true });
+            return interaction.reply({ embeds: [infoEmbed(`❌ You have no open tickets.\n\nOpen one in ${supportChannelRef(guild)}!`)], ephemeral: true });
         }
         const list = userTickets.map(c => `• ${c} — \`${c.name}\``).join('\n');
         return interaction.reply({ embeds: [infoEmbed(`🎟️ Your open ticket${userTickets.size > 1 ? 's' : ''}:\n${list}`)], ephemeral: true });
