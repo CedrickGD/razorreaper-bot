@@ -134,15 +134,20 @@ function loadKb(dir = path.join(__dirname, 'kb')) {
     return { base, preamble, sections };
 }
 
-/** ui.md section keys each category always gets. Billing is HUMAN_ONLY and never answered. */
+/**
+ * ui.md section keys each category always gets. Billing is HUMAN_ONLY and never answered.
+ * hud, uw, compact and dinolevel are bare `## key` pages with no title to mention, so they live here.
+ */
 const UI_PAGES = {
     install: ['launch', 'update', 'elevation', 'gate', 'home', 'settings', 'troubleshoot', 'whatsnew', 'notfound'],
     license: ['account', 'license', 'licenseactivated', 'access', 'gate', 'usage', 'home'],
-    scripts: ['scripts', 'autoclicker', 'hotkeys', 'hotkey', 'macro', 'tp', 'vision', 'game'],
-    bug: ['troubleshoot', 'feedback', 'diagnostics', 'settings', 'launch', 'update', 'elevation', 'notify', 'nav'],
+    scripts: ['scripts', 'autoclicker', 'hotkeys', 'hotkey', 'macro', 'tp', 'uw', 'vision', 'game'],
+    bug: ['troubleshoot', 'feedback', 'diagnostics', 'settings', 'launch', 'update', 'elevation', 'notify', 'hud', 'nav'],
     billing: [],
-    other: ['nav'],
+    other: ['nav', 'compact', 'dinolevel'],
 };
+// A titled page whose body the generator writes under a separate bare key: Sky Changer's is 'sky'.
+const PAIRED = { customlab: ['sky'] };
 const MENTION_MAX = 4;   // pages the member named, on top of the category's own
 
 /**
@@ -158,6 +163,7 @@ function kbFor(kb, category, text = '') {
         .filter(s => !wanted.has(s.key) && s.names.some(n => words(n).test(text)))
         .slice(0, MENTION_MAX)
         .forEach(s => wanted.add(s.key));
+    for (const [k, extra] of Object.entries(PAIRED)) if (wanted.has(k)) extra.forEach(e => wanted.add(e));
     const ui = [kb.preamble, ...kb.sections.filter(s => wanted.has(s.key)).map(s => s.text)].filter(Boolean).join('\n\n');
     return [kb.base, ui].filter(Boolean).join('\n\n---\n\n');
 }
@@ -669,7 +675,7 @@ function createSupport({ providers, kb, budget, log = console.log, now = () => D
 
 module.exports = {
     CATEGORIES, CATEGORY_KEYS, categoryLabel, HUMAN_ONLY,
-    redact, clean, makeBudget, weighUsage, loadKb, kbFor, UI_PAGES, MENTION_MAX,
+    redact, clean, makeBudget, weighUsage, loadKb, kbFor, UI_PAGES, PAIRED, MENTION_MAX,
     parseJsonish, normaliseTriage, formatForm,
     splitSentinel, formatClientContext, accountError,
     buildProviders, claudeProvider, geminiProvider, openaiProvider,

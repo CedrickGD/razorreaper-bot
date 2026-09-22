@@ -6,7 +6,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
-const { loadKb, kbFor, UI_PAGES, MENTION_MAX, CATEGORY_KEYS, HUMAN_ONLY } = require('../ai-support');
+const { loadKb, kbFor, UI_PAGES, PAIRED, MENTION_MAX, CATEGORY_KEYS, HUMAN_ONLY } = require('../ai-support');
 
 const CLIENT = process.env.RR_CLIENT_DIR || 'C:/Users/cedri/source/repos/CedrickGD/RazorReaper';
 const haveClient = fs.existsSync(path.join(CLIENT, 'RazorReaper', 'Resources', 'i18n', 'en.json'));
@@ -34,6 +34,9 @@ test('every category maps to ui.md sections that really exist', () => {
     for (const [cat, pages] of Object.entries(UI_PAGES)) {
         for (const key of pages) assert.ok(keys.has(key), `UI_PAGES.${cat} names a missing section: ${key}`);
     }
+    for (const [key, extra] of Object.entries(PAIRED)) {
+        for (const k of [key, ...extra]) assert.ok(keys.has(k), `PAIRED names a missing section: ${k}`);
+    }
 });
 
 test('each answered category carries a fraction of the whole knowledge base', () => {
@@ -50,6 +53,12 @@ test('a page the member names comes along, in English or German; a component nam
     assert.ok(has(kbFor(kb, 'other', 'mein fadenkreuz ist weg'), 'crosshair'));
     assert.ok(!has(kbFor(kb, 'other', 'Crosshairs everywhere'), 'crosshair'), 'whole words only');
     assert.strictEqual(kbFor(kb, 'other', 'the hud overlay is broken'), kbFor(kb, 'other', ''));
+});
+
+test('naming Sky Changer brings its body (the bare "sky" section) along', () => {
+    assert.ok(!has(kbFor(kb, 'other', ''), 'sky'));
+    assert.ok(has(kbFor(kb, 'other', 'Sky Changer will not apply'), 'sky'));
+    assert.ok(has(kbFor(kb, 'bug', 'der Himmel-Wechsler geht nicht'), 'sky'));
 });
 
 test('named pages are capped, and the output is file order whatever the mention order', () => {
