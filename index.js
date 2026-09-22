@@ -2586,7 +2586,7 @@ client.once('ready', async () => {
             + `, auto-delete ${TICKET_AUTO_DELETE_HOURS > 0 ? `${TICKET_AUTO_DELETE_HOURS}h after close` : 'off'}`
             + `, panel ${panelConfigured() ? 'connected' : 'not configured'}.`);
         console.log(support.enabled
-            ? `[support] AI answering ACTIVE — providers: ${aiProviders.map(p => `${p.name}(${p.model})`).join(', ')}, budget ${support.budget.limit} tokens/day, KB ~${Math.ceil(aiKb.length / 4)} tokens.`
+            ? `[support] AI answering ACTIVE — providers: ${aiProviders.map(p => `${p.name}(${p.model})`).join(', ')}, budget ${support.budget.limit} tokens/day (KB size per category: see the [ai] line above).`
             : '[support] No AI key configured — tickets still work, they just say a human will answer.');
     } catch (e) {
         console.error('[support] Setup error:', e.message || e);
