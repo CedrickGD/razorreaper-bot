@@ -18,7 +18,6 @@ Defaults and min/max below are read straight from the shipped code.
 ## Anti-AFK (id `antiafk`)
 Opens/closes inventory on an interval to avoid the idle kick.
 - IntervalSeconds — default 600 (allowed 30…3600)
-- InventoryKey — default "I"
 - invkey: Inventory key
 - invkey.desc: Toggles your inventory — prefilled from your ARK 'Show my inventory' binding.
 - interval: Interval (seconds)
@@ -75,15 +74,10 @@ Repeats a chat command (default /download) on an interval.
 
 ## Auto-Walk (id `autowalk`)
 Holds the forward key so you keep running hands-free (released when ARK loses focus).
-- ForwardKey — default "W"
-- SprintKey — default "LeftShift"
 
 ## Crafting (id `crafting`)
 Crafts at Fabricator/Chem Bench/Replicator — Watcher or Walk mode, with ping compensation.
-- AccessKey — default "F"
-- CraftKey — default "E"
 - CraftPresses — default 3 (allowed 1…20)
-- ForwardKey — default "W"
 - MatchThresholdPercent — default 90 (allowed 50…100)
 - Mode — default CraftingMode.Watcher
 - PingCompensationMs — default 0 (allowed 0…3000)
@@ -166,61 +160,48 @@ While the Tek Saddle buff is up and you hold left-click, spams extra clicks.
 - ClickDelayMs — default 20 (allowed 5…500)
 - MatchThresholdPercent — default 90 (allowed 50…100)
 
-## Turret Filler (id `turretfill`)
-Fills the turret inventory you have open — a set amount, or until it stops taking.
-- Amount — default TurretFillAmount.WholeStack
-- ChangeThresholdPercent — default 0.2 (allowed 0.02…10)
-- FilterSettleMs — default 250 (allowed 100…2000)
-- FilterText — default ""
-- MatchThresholdPercent — default 90 (allowed 50…100)
-- Mode — default TurretFillMode.EvenSplit
-- PressDelayMs — default 200 (allowed 60…2000)
-- PressesPerTurret — default 1 (allowed 1…20)
-- TransferKey — default "T"
-- cursorwarning: Presses move whatever your cursor hovers. Hover your own ammo, not the turret's — the script cannot tell the two sides apart.
-- mode: Mode
-- mode.desc: Even split sends a set amount; Fill keeps going until nothing moves; Filter only types the search text and stops.
-- mode.evensplit: Even split
-- mode.fill: Fill
-- mode.filteronly: Filter only
-- amount: Transfer amount
-- amount.desc: What one press moves: the whole hovered stack (T), half (Shift+T), or one item (Ctrl+T).
-- amount.stack: Whole stack
-- amount.half: Half stack
-- amount.single: One item
-- presses: Presses per turret
-- presses.desc: Even split sends exactly this many. Fill stops earlier when nothing moves.
-- transferkey.desc: Prefilled from your ARK 'Transfer item' binding.
-- pressdelay: Delay between presses
-- pressdelay.desc: Raise it on a laggy server — a press the server has not answered yet reads as 'nothing moved'.
-- changethreshold: Change threshold
-- changethreshold.desc: How much of the calibrated area has to change for a press to count. Lower it if real transfers read as 'nothing moved'.
-- usefilter: Filter by ammo type
-- usefilter.desc: Types the name into the inventory search box first, so only that ammo is left to hover. Needs both points below.
-- filtertext: Ammo name
-- filtertext.desc: Part of the item name as your game spells it, e.g. Advanced Rifle
-- settle: Filter settle time
-- settle.desc: How long the list gets to redraw before the first press.
-- point.search: Search box
-- point.slot: First ammo slot
-- point.set: Set at {0}, {1}
-- point.notset: Not set — hover the spot, then Capture.
-- point.capture: Capture
-- point.clear: Clear
-- point.countdown: Hover the spot — {0} s
-- activity.noinventory: Turret Filler: no inventory detected
-- activity.done: Turret Filler: {0} of {1} presses moved something (last change {2} %)
-
 ## Turret Manager (id `turret`)
-When a turret inventory is open, presses transfer to refill its ammo.
-- MatchThresholdPercent — default 90 (allowed 50…100)
-- ScanIntervalMs — default 500 (allowed 100…5000)
-- TransferKey — default "T"
-- TransferPresses — default 3 (allowed 1…20)
-- threshold.desc: Similarity % at which the turret inventory counts as open.
-- transferkey.desc: Pushes ammo into the turret — prefilled from your ARK 'Transfer item' binding.
-- presses: Transfer presses
-- presses.desc: Presses per detection.
+Fills every turret you open — Transfer All until it takes nothing more, or a set number of ammo stacks. Runs in the background.
+- BulletStacks — default 1 (allowed 1…100)
+- CalcBulletStack — default TurretAmmoCalculator.DefaultBulletStack (allowed 1…1_000_000)
+- CalcBullets (allowed 0…100_000_000)
+- CalcHeavyTurrets (allowed 0…10000)
+- CalcShardStack — default TurretAmmoCalculator.DefaultShardStack (allowed 1…1_000_000)
+- CalcShards (allowed 0…100_000_000)
+- CalcTekTurrets (allowed 0…10000)
+- Fill — default TurretFill.Max
+- LagBufferMs (allowed 0…1000)
+- ShardStacks — default 1 (allowed 1…100)
+- transferkey.desc: Moves one whole stack — prefilled from your ARK 'Transfer item' binding.
+- howto: Switch it on and play: open a turret's inventory as usual and it is filled once, then the script waits until you close it. It finds your Advanced Rifle Bullets (Auto and Heavy turrets) or Element Shards (Tek turret) by their look — nothing to calibrate, any game language.
+- fill: Fill
+- fill.desc: Max clicks Transfer All until the turret takes nothing more. Stacks moves a set number of whole stacks per turret with the transfer key.
+- fill.max: Max
+- fill.stacks: Stacks
+- bulletstacks: Bullet stacks
+- bulletstacks.desc: Whole stacks of Advanced Rifle Bullets each Auto or Heavy turret gets.
+- shardstacks: Shard stacks
+- shardstacks.desc: Whole stacks of Element Shards each Tek turret gets.
+- lagbuffer.desc: Adds this many milliseconds to the wait for the turret to show what arrived — raise it on laggy servers.
+- tooltiphint: ARK asks to confirm Transfer All while inventory item tooltips are on — switch Inventory item tooltips off in ARK's options.
+- calc.title: Ammo calculator
+- calc.desc: How many whole stacks each turret gets from what you carry. Stack sizes are editable for modded servers.
+- calc.heavy: Auto & Heavy turrets (bullets)
+- calc.tek: Tek turrets (shards)
+- calc.turrets: Turrets
+- calc.bullets: Bullets on hand
+- calc.shards: Shards on hand
+- calc.stacksize: Stack size
+- calc.even: Even split: {1} per turret (stacks: {0}), left over: {2}
+- calc.cover: Stacks per turret: {0} — covers {1} of {2}, {3} short
+- calc.cover.all: Stacks per turret: {0} — enough for all {1}
+- calc.noturrets: Enter how many turrets.
+- calc.use: Use per-turret stacks
+- toast.noammo: Turret Manager: no Advanced Rifle Bullets or Element Shards in view in your inventory.
+- toast.tooknothing: Turret Manager: the turret took nothing — it is full, or your ammo does not fit this turret.
+- toast.transferall: Turret Manager: Transfer All changed nothing twice — the turret is full, or ARK is asking to confirm (switch Inventory item tooltips off in ARK's options).
+- activity.filled: Turret Manager: {0} transfer(s) went into the turret
+- experimental.note: Not confirmed in game yet — if a turret is not filled, send a support report from Feedback & Support.
 
 ## Yuty (id `yuty`)
 Spams the Yutyrannus courage roar on an interval while mounted.
