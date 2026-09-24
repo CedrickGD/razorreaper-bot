@@ -605,36 +605,29 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - library.empty: Imported images appear here. Use the Import options below.
 - import: Import
 - import.image: Import image or video
-- import.workshopfile: Import Crosshair X workshop file
-- import.workshopfolder: Import Crosshair X workshop folder
-- code.label: From game code (Valorant / CS2)  [DE: Aus einem Spielcode (Valorant / CS2)]
-- code.placeholder: Paste a Valorant string or CSGO-XXXXX-… code
-- code.hint: Covers color, length, thickness, gap, dot and outline. Press Enter to import. Rust's own export code isn't readable — use "Import Crosshair X workshop file" for Rust.
-- guide.toggle: How do I find a crosshair to import?
-- guide.image.title: Image file (any game)  [DE: Bilddatei (jedes Spiel)]
-- guide.image.text: Use "Import image or video". Animated GIFs play frame by frame. PNGs with transparency render cleanly with per-pixel alpha.
-- guide.workshop.title: Steam Workshop (Crosshair X)
-- guide.workshop.text: In Steam: Library → Crosshair X → right-click → Properties → Installed Files → Browse → open the workshop folder. Either drag a .png straight in with "Import image or video", or hand the folder to "Import Crosshair X workshop folder" — we pick the first image and parse any config next to it.
-- guide.valorant.title: Valorant
-- guide.valorant.text: In-game: Settings → Crosshair → "Export profile code" at the top right. Paste the whole string above; it looks like 0;P;c;5;u;FFFFFFFF;h;0;m;1;0l;4;… Sites like valorant.crosshairs.gg share them too.
-- guide.cs2.title: CS2 / CSGO
-- guide.cs2.text: In-game: Settings → Crosshair → "Share or Import" gives you a code (CSGO-XXXXX-XXXXX-…, five groups of five). Or take one from a pro-crosshair site and paste it above. Match share codes look identical but are not crosshairs — we say so if you paste one.
-- guide.rust.title: Rust
-- guide.rust.text: Rust's Export gives a code too, but Facepunch never published how it is encoded, so we would only be guessing at what it says. Use "Import Crosshair X workshop file" instead — Crosshair X ships Rust profiles and those import exactly. An image import of the crosshair PNG works for any game as well.
+- code.label: Paste a RazorReaper crosshair code  [DE: RazorReaper-Fadenkreuz-Code einfügen]
+- code.placeholder: RR1-…
+- code.hint: Share yours with "Copy code" and find more in the Discord presets forum. Press Enter to import.
+- code.copy: Copy code
+- code.copy.tooltip: Copy this crosshair as a code anyone can paste into RazorReaper
+- code.copy.image: An image crosshair has no code — the picture stays on this PC
+- code.copied: Crosshair code copied.
+- code.error.copy: Couldn't copy the code: {0}
+- code.error.gamecode: That's a CS2/Valorant code — RazorReaper only reads its own crosshair codes.
+- code.error.notacode: That isn't a crosshair code. RazorReaper codes start with RR1-.
+- code.error.newer: That code comes from a newer RazorReaper. Update the app to read it.
+- code.error.damaged: That crosshair code is incomplete or damaged — copy it again in full.
+- code.savedname: Code {0}
+- code.imported: Crosshair code imported and saved as '{0}'.
 - hotkey: Hotkey
 - hotkey.toggle: Toggle overlay
 - hotkey.hint: Works globally — even while a game has focus. Default F8.
-- describe: {0} · {1} · size {2} · thickness {3} · gap {4} · outline {5} · {6}%
-- describe.dot: · dot {0}
 - toast.deleted: Deleted from library.
 - error.openfolder: Error opening folder: {0}
 - toast.loaded: Loaded '{0}'.
 - toast.saved: Saved '{0}'.
 - toast.imported: Image imported.
 - error.picker: Image picker failed: {0}
-- toast.savedcode: Saved '{0}' · {1}
-- toast.workshopimported: Imported '{0}'.
-- error.workshop: Workshop import failed: {0}
 - error.saveprofile: Saving profile failed: {0}
 - toast.overlay.enabled: Crosshair overlay enabled.
 - toast.overlay.disabled: Crosshair overlay disabled.
@@ -644,11 +637,6 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - import.error.frames: Couldn't extract frames from '{0}'. Try converting it to PNG/GIF first.
 - import.error.decode: Couldn't decode '{0}' — unrecognised image format.
 - import.error.image: Image import failed: {0}
-- import.error.workshoptype: Unrecognized workshop file type: {0}
-- import.error.workshopmissing: Workshop path doesn't exist.
-- import.error.workshopempty: No usable image or config found in workshop file.
-- import.error.code: Couldn't read that crosshair code.
-- import.error.codefailed: Code import failed: {0}
 - library.toast.copied: Copied: {0}
 - library.error.copy: Couldn't copy path: {0}
 - library.error.delete: Delete failed: {0}
