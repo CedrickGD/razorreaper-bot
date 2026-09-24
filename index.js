@@ -27,6 +27,7 @@ const embedBuilder = require('./embed-builder');
 const panelApi = require('./panel-client');
 const { loadIds, saveIds, looseName } = require('./id-store');
 const { diffInvites, newStore, parseStore, isFake, recordJoin, recordLeave, countsFor, leaderboard } = require('./invite-tracker');
+const ga = require('./giveaways');
 
 // GuildMessages (non-privileged) lets the notifier receive message events in
 // watched channels. NOTE: Discord withholds .content AND .embeds/.attachments of
@@ -2720,6 +2721,28 @@ const slashCommands = [
     new SlashCommandBuilder().setName('invites').setDescription('How many members someone brought in')
         .addUserOption(o => o.setName('user').setDescription('Whose invites (leave empty for yourself)').setRequired(false)),
     new SlashCommandBuilder().setName('inviteleaderboard').setDescription('The top 10 inviters of the server'),
+    new SlashCommandBuilder().setName('giveaway').setDescription('Staff — giveaways: members react 🎉 to join, winners are drawn at the end')
+        .addSubcommand(s => s.setName('start').setDescription('Post a giveaway')
+            .addStringOption(o => o.setName('prize').setDescription('What the winner gets').setRequired(true).setMaxLength(200))
+            .addStringOption(o => o.setName('duration').setDescription('How long: 30m, 12h, 2d, 1w or combos like 1d12h').setRequired(true))
+            .addIntegerOption(o => o.setName('winners').setDescription('How many winners (default 1)').setMinValue(1).setMaxValue(10))
+            .addChannelOption(o => o.setName('channel').setDescription('Where to post it (default: here)').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)))
+        .addSubcommand(s => s.setName('end').setDescription('Draw the winners now')
+            .addStringOption(o => o.setName('message').setDescription('Link or id of the giveaway message').setRequired(true)))
+        .addSubcommand(s => s.setName('reroll').setDescription('Draw new winners from the same entries')
+            .addStringOption(o => o.setName('message').setDescription('Link or id of the giveaway message').setRequired(true))
+            .addIntegerOption(o => o.setName('winners').setDescription('How many (default: as many as before)').setMinValue(1).setMaxValue(10)))
+        .addSubcommand(s => s.setName('cancel').setDescription('End it without winners')
+            .addStringOption(o => o.setName('message').setDescription('Link or id of the giveaway message').setRequired(true)))
+        .addSubcommand(s => s.setName('list').setDescription('The giveaways that are running')),
+    new SlashCommandBuilder().setName('invitecontest').setDescription('Invite contest — whoever brings in the most members wins')
+        .addSubcommand(s => s.setName('start').setDescription('Staff — start the invite contest')
+            .addStringOption(o => o.setName('duration').setDescription('How long: 30m, 12h, 2d, 1w or combos like 1d12h').setRequired(true))
+            .addStringOption(o => o.setName('prize').setDescription('What the winner gets').setRequired(true).setMaxLength(200))
+            .addIntegerOption(o => o.setName('winners').setDescription('How many winners (default 1)').setMinValue(1).setMaxValue(5))
+            .addChannelOption(o => o.setName('channel').setDescription('Where to post it (default: here)').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)))
+        .addSubcommand(s => s.setName('status').setDescription('The top 10 and your own rank'))
+        .addSubcommand(s => s.setName('end').setDescription('Staff — finish the contest now')),
     new SlashCommandBuilder().setName('ticket').setDescription('View your open tickets'),
     new SlashCommandBuilder().setName('queue').setDescription('See how many tickets are open'),
     new SlashCommandBuilder().setName('ticketinfo').setDescription('View info about the current ticket (use inside a ticket channel)'),
@@ -2803,6 +2826,10 @@ client.once('ready', async () => {
     // Before the first await: a join that arrives while ready runs queues behind this snapshot.
     inviteChain = inviteChain.then(() => initInvites(verifyGuild()))
         .catch(e => console.error('[invites] Setup error:', e.message || e));
+    // Right away too: whatever ended while the bot was down is drawn now, not in 30 s.
+    const runGiveaways = () => giveawayTick().catch(e => console.error('[giveaways] Tick error:', e.message || e));
+    runGiveaways();
+    setInterval(runGiveaways, 30_000);
 
     // Leave anything that isn't the home guild.
     for (const [, g] of client.guilds.cache) {
@@ -2994,6 +3021,298 @@ client.on('guildMemberRemove', (member) => {
     inviteChain = inviteChain.then(() => { if (inviteStore && recordLeave(inviteStore, member.id)) saveInvitesSoon(); })
         .catch(e => console.error('[invites] Leave tracking failed:', e.message || e));
 });
+
+// ── Giveaways & the invite contest ────────────────────────────────────────────
+// Owner, 2026-09-24: react 🎉 to join a giveaway, winners are drawn when it ends; and an invite
+// contest the member with the most invites wins. The rules live in giveaways.js; this part posts,
+// draws and keeps /data/giveaways.json. One 30 s ticker (started on ready) finishes whatever is
+// due, also what ended while the bot was down. The bot hands out no prizes: winners are told to
+// open a ticket, the owner takes it from there.
+const GIVEAWAYS_FILE = path.join(process.env.NOTIFIER_DATA_DIR || '/data', 'giveaways.json');
+const giveaways = (() => {
+    let raw = null;
+    try { raw = fs.readFileSync(GIVEAWAYS_FILE, 'utf8'); } catch { /* first run */ }
+    const s = raw == null ? null : ga.parseStore(raw);
+    if (raw != null && !s) console.warn(`[giveaways] ${GIVEAWAYS_FILE} is unreadable — starting empty.`);
+    return s || ga.newStore();
+})();
+const saveGiveaways = () => saveIds(GIVEAWAYS_FILE, giveaways);
+const giveawayBusy = new Set();     // message ids being drawn or edited right now — never twice at once
+const giveawayWarned = new Set();   // message ids whose failure is already logged
+const GONE_CODES = new Set([10003, 10008]);  // Unknown Channel / Unknown Message: the post was deleted
+const DURATION_HELP = 'Duration: `30m`, `12h`, `2d`, `1w` or combos like `1d12h` — 1 minute to 60 days.';
+const many = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const stamp = (ms, style) => `<t:${Math.floor(ms / 1000)}:${style}>`;
+const mentionList = ids => ids.map(id => `<@${id}>`).join(', ');
+const winnersLine = ids => `${ids.length === 1 ? 'Winner' : 'Winners'}: ${mentionList(ids)}`;
+const postLink = (guild, item) => `https://discord.com/channels/${guild.id}/${item.channelId}/${item.messageId}`;
+const fetchPost = async item => (await client.channels.fetch(item.channelId)).messages.fetch(item.messageId);
+const standingsText = (rows, n) =>
+    rows.slice(0, n).map(r => `**${r.rank}.** <@${r.inviterId}> · ${many(r.count, 'invite')}`).join('\n') || 'No invites counted yet.';
+
+function giveawayEmbed(g, guild) {
+    const active = g.state === 'active';
+    return rrEmbed({
+        title: active ? '🎉 Giveaway' : g.state === 'ended' ? '🎉 Giveaway ended' : '🎉 Giveaway cancelled',
+        blocks: [
+            `**${g.prize}**`,
+            active ? 'React with 🎉 to join.' : g.state === 'ended' && (g.winnerIds.length ? winnersLine(g.winnerIds) : 'No valid entries.'),
+            active ? `Ends ${stamp(g.endsAt, 'R')} (${stamp(g.endsAt, 'f')})` : `Ended ${stamp(g.endsAt, 'f')}`,
+            `${many(g.winners, 'winner')} • hosted by <@${g.hostId}>`,
+        ],
+        colour: active ? BRAND : g.state === 'ended' ? BRAND_GOOD : BRAND_BAD,
+        thumb: brandThumb(guild, client.user),
+    });
+}
+
+function contestEmbed(c, rows, guild) {
+    const active = c.state === 'active';
+    return rrEmbed({
+        title: active ? '🏆 Invite contest' : '🏆 Invite contest ended',
+        blocks: [
+            `**${c.prize}**`,
+            active ? 'Invite people — every member you bring in while the contest runs counts.'
+                : c.winnerIds.length ? winnersLine(c.winnerIds) : 'Nobody brought anyone in.',
+            active ? `Ends ${stamp(c.endsAt, 'R')} (${stamp(c.endsAt, 'f')})` : `Ended ${stamp(c.endsAt, 'f')}`,
+            `${many(c.winners, 'winner')} • hosted by <@${c.hostId}>`,
+            active && `Only members who are still here at the end count; accounts younger than ${INVITE_FAKE_DAYS} days don't.`,
+        ],
+        fields: [{ name: active ? 'Top 5' : 'Final ranking', value: standingsText(rows, active ? 5 : 10) }],
+        colour: active ? BRAND : BRAND_GOOD,
+        thumb: brandThumb(guild, client.user),
+    });
+}
+
+// ONE reply under the post, pinging the winners and nobody else.
+async function announceWinners(msg, ids, prize) {
+    if (!ids.length) return;
+    await msg.reply({
+        content: `🎉 ${mentionList(ids)} won **${prize}**! Open a ticket in ${supportChannelRef(msg.guild)} to claim it.`,
+        allowedMentions: { users: ids, repliedUser: false },
+    });
+}
+
+// Everyone who reacted 🎉, every page, straight from REST: no reaction intent, no cache.
+async function reactionUserIds(g) {
+    const ids = [];
+    let after = '0';
+    for (;;) {
+        const page = await client.rest.get(Routes.channelMessageReaction(g.channelId, g.messageId, encodeURIComponent('🎉')),
+            { query: new URLSearchParams({ limit: '100', after }) });
+        ids.push(...page.filter(u => !u.bot).map(u => u.id));
+        if (page.length < 100) return ids;
+        after = page.at(-1).id;
+    }
+}
+
+// Draws — or with `rerollCount` draws again, skipping the last winners — and announces. The result
+// is saved BEFORE anything is posted: a crash in between loses the announcement, never draws twice.
+async function drawGiveaway(g, rerollCount = 0) {
+    if (giveawayBusy.has(g.messageId) || g.state !== (rerollCount ? 'ended' : 'active')) return false;
+    giveawayBusy.add(g.messageId);
+    try {
+        const msg = await fetchPost(g);
+        const reacted = await reactionUserIds(g);
+        await fetchGuildMembers(msg.guild);          // from then on the cache follows joins and leaves live
+        const entrants = reacted.filter(id => msg.guild.members.cache.has(id));
+        const winnerIds = ga.pickWinners(entrants, rerollCount || g.winners, undefined, rerollCount ? g.winnerIds : []);
+        Object.assign(g, { state: 'ended', winnerIds });
+        saveGiveaways();
+        await msg.edit({ embeds: [giveawayEmbed(g, msg.guild)] });
+        await announceWinners(msg, winnerIds, g.prize);
+        return true;
+    } finally {
+        giveawayBusy.delete(g.messageId);
+    }
+}
+
+function closeContest(c, winnerIds) {
+    if (giveaways.contest !== c) return;
+    Object.assign(c, { state: 'ended', winnerIds });
+    giveaways.pastContests.push(c);
+    giveaways.contest = null;
+    saveGiveaways();
+}
+
+async function finishContest(c) {
+    if (giveawayBusy.has(c.messageId) || giveaways.contest !== c || !inviteStore) return false;
+    giveawayBusy.add(c.messageId);
+    try {
+        await inviteChain;                           // a join still being diffed counts too
+        const msg = await fetchPost(c);
+        const rows = ga.contestStandings(inviteStore, c, Date.now());
+        closeContest(c, rows.slice(0, c.winners).map(r => r.inviterId));
+        await msg.edit({ embeds: [contestEmbed(c, rows, msg.guild)] });
+        await announceWinners(msg, c.winnerIds, c.prize);
+        return true;
+    } finally {
+        giveawayBusy.delete(c.messageId);
+    }
+}
+
+async function refreshStandings(c) {
+    if (giveawayBusy.has(c.messageId) || giveaways.contest !== c || !inviteStore) return;
+    giveawayBusy.add(c.messageId);
+    try {
+        c.lastStandingsAt = Date.now();              // before the edit: a failing edit also waits 10 minutes
+        saveGiveaways();
+        const msg = await fetchPost(c);
+        await msg.edit({ embeds: [contestEmbed(c, ga.contestStandings(inviteStore, c, Date.now()), msg.guild)] });
+    } finally {
+        giveawayBusy.delete(c.messageId);
+    }
+}
+
+// A deleted post ends its item quietly; anything else (no access, Discord down) is retried on the
+// next tick. Either way it is logged once. Returns the reason for a staff reply.
+function giveawayFailed(item, e, endQuietly) {
+    const gone = GONE_CODES.has(e?.code);
+    if (gone) endQuietly();
+    if (!giveawayWarned.has(item.messageId)) {
+        giveawayWarned.add(item.messageId);
+        console.warn(`[giveaways] ${item.messageId} "${item.prize}": ${gone ? 'message deleted — ended without winners' : `could not finish: ${e?.message || e}`}`);
+    }
+    return gone ? 'Its message was deleted, so it ended without winners.' : `Discord refused: ${e?.message || e}`;
+}
+const endGiveawayQuietly = g => () => {
+    if (g.state !== 'active') return;
+    Object.assign(g, { state: 'ended', winnerIds: [] });
+    saveGiveaways();
+};
+const endContestQuietly = c => () => closeContest(c, []);
+
+async function giveawayTick() {
+    const due = ga.dueItems(giveaways, Date.now());
+    for (const g of due.giveaways) await drawGiveaway(g).catch(e => giveawayFailed(g, e, endGiveawayQuietly(g)));
+    const c = due.contest || due.standings;
+    if (c) await (due.contest ? finishContest(c) : refreshStandings(c)).catch(e => giveawayFailed(c, e, endContestQuietly(c)));
+}
+
+async function giveawayCommand(interaction) {
+    const { commandName, guild, member } = interaction;
+    const sub = interaction.options.getSubcommand();
+    const fail = text => interaction.reply({ embeds: [errEmbed(`❌ ${text}`)], ephemeral: true });
+    const done = (ok, text) => interaction.editReply({ embeds: [ok ? okEmbed(`✅ ${text}`) : errEmbed(`❌ ${text}`)] });
+    if (!(commandName === 'invitecontest' && sub === 'status') && !isStaff(member)) return fail('No permission.');
+    if (commandName === 'invitecontest') return contestCommand(interaction, sub, fail, done);
+
+    if (sub === 'list') {
+        const active = giveaways.giveaways.filter(g => g.state === 'active');
+        return interaction.reply({
+            embeds: [rrEmbed({
+                title: '🎉 Running giveaways',
+                blocks: active.length
+                    ? active.map(g => `[${shortLine(g.prize, 80)}](${postLink(guild, g)})\n<#${g.channelId}> · ends ${stamp(g.endsAt, 'R')}`)
+                    : ['No giveaway is running.'],
+            })],
+            ephemeral: true,
+        });
+    }
+
+    if (sub === 'start') {
+        const ms = ga.parseDuration(interaction.options.getString('duration'));
+        if (!ms) return fail(DURATION_HELP);
+        const target = interaction.options.getChannel('channel') || interaction.channel;
+        const g = {
+            messageId: null, channelId: target.id, prize: interaction.options.getString('prize'),
+            winners: interaction.options.getInteger('winners') || 1, endsAt: Date.now() + ms,
+            hostId: interaction.user.id, state: 'active', winnerIds: [],
+        };
+        await interaction.deferReply({ ephemeral: true });
+        let msg = null;
+        try {
+            msg = await target.send({ embeds: [giveawayEmbed(g, guild)] });
+            await msg.react('🎉');
+        } catch (e) {
+            msg?.delete().catch(() => {});
+            return done(false, `Could not post it in ${target}: ${e.message || e}`);
+        }
+        g.messageId = msg.id;
+        giveaways.giveaways.push(g);
+        saveGiveaways();
+        return done(true, `Giveaway for **${g.prize}** is live in ${target} — it ends ${stamp(g.endsAt, 'R')}.`);
+    }
+
+    const id = interaction.options.getString('message').match(/\d{17,20}/g)?.pop();
+    const g = giveaways.giveaways.find(x => x.messageId === id);
+    if (!g) return fail('No giveaway with that message — paste its link or id.');
+    if (giveawayBusy.has(g.messageId)) return fail('That giveaway is being drawn right now — try again in a moment.');
+    if (sub === 'cancel') {
+        if (g.state !== 'active') return fail('That giveaway is already over.');
+        Object.assign(g, { state: 'cancelled', endsAt: Date.now(), winnerIds: [] });
+        saveGiveaways();
+        await interaction.deferReply({ ephemeral: true });
+        const edited = await fetchPost(g).then(m => m.edit({ embeds: [giveawayEmbed(g, guild)] })).catch(() => null);
+        return done(true, `Cancelled **${g.prize}**${edited ? '' : ' (its message could not be updated)'}.`);
+    }
+    if (sub === 'end' && g.state !== 'active') return fail('That giveaway is already over — `/giveaway reroll` draws new winners.');
+    if (sub === 'reroll' && g.state !== 'ended') {
+        return fail(g.state === 'active' ? 'That giveaway is still running — `/giveaway end` draws it now.' : 'That giveaway was cancelled.');
+    }
+    await interaction.deferReply({ ephemeral: true });
+    if (sub === 'end') g.endsAt = Math.min(g.endsAt, Date.now());
+    try {
+        const count = sub === 'reroll' ? interaction.options.getInteger('winners') || g.winners : 0;
+        if (!(await drawGiveaway(g, count))) return done(false, 'That giveaway is being drawn right now — try again in a moment.');
+    } catch (e) {
+        return done(false, giveawayFailed(g, e, endGiveawayQuietly(g)));
+    }
+    return done(true, g.winnerIds.length ? winnersLine(g.winnerIds) : 'Drawn — no valid entries.');
+}
+
+async function contestCommand(interaction, sub, fail, done) {
+    const { guild } = interaction;
+    const c = giveaways.contest;
+    if (!inviteStore) return fail('The invite tracker is still starting — try again in a moment.');
+    if (sub !== 'start' && !c) return fail('No invite contest is running.');
+
+    if (sub === 'status') {
+        const rows = ga.contestStandings(inviteStore, c, Date.now());
+        const me = rows.find(r => r.inviterId === interaction.user.id);
+        return interaction.reply({
+            embeds: [rrEmbed({
+                title: '🏆 Invite contest',
+                blocks: [`**${c.prize}**\nEnds ${stamp(c.endsAt, 'R')}`, me ? `You: #${me.rank} with ${many(me.count, 'invite')}` : 'You have no counted invites yet.'],
+                fields: [{ name: 'Top 10', value: standingsText(rows, 10) }],
+                thumb: brandThumb(guild, client.user),
+            })],
+            ephemeral: true,
+        });
+    }
+
+    if (sub === 'end') {
+        if (giveawayBusy.has(c.messageId)) return fail('The contest is being updated right now — try again in a moment.');
+        await interaction.deferReply({ ephemeral: true });
+        c.endsAt = Math.min(c.endsAt, Date.now());
+        try {
+            if (!(await finishContest(c))) return done(false, 'The contest is being updated right now — try again in a moment.');
+        } catch (e) {
+            return done(false, giveawayFailed(c, e, endContestQuietly(c)));
+        }
+        return done(true, `Contest over. ${c.winnerIds.length ? winnersLine(c.winnerIds) : 'Nobody brought anyone in.'}`);
+    }
+
+    if (c) return fail(`An invite contest is already running: **${c.prize}**, ends ${stamp(c.endsAt, 'R')} — ${postLink(guild, c)}`);
+    const ms = ga.parseDuration(interaction.options.getString('duration'));
+    if (!ms) return fail(DURATION_HELP);
+    const target = interaction.options.getChannel('channel') || interaction.channel;
+    const now = Date.now();
+    const contest = {
+        messageId: null, channelId: target.id, prize: interaction.options.getString('prize'),
+        winners: interaction.options.getInteger('winners') || 1, startsAt: now, endsAt: now + ms,
+        hostId: interaction.user.id, state: 'active', winnerIds: [], lastStandingsAt: now,
+    };
+    giveaways.contest = contest;                     // claimed before the first await: a second start is refused
+    try {
+        await interaction.deferReply({ ephemeral: true });
+        contest.messageId = (await target.send({ embeds: [contestEmbed(contest, [], guild)] })).id;
+    } catch (e) {
+        giveaways.contest = null;
+        return done(false, `Could not post it in ${target}: ${e.message || e}`).catch(() => {});
+    }
+    saveGiveaways();
+    return done(true, `Invite contest for **${contest.prize}** is live in ${target} — it ends ${stamp(contest.endsAt, 'R')}.`);
+}
 
 // ── Member auto-role on join ──────────────────────────────────────────────────
 // Every human joiner is a Member from the moment they arrive — verification only adds on top.
@@ -3200,6 +3519,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/status`', value: 'Bot & server status — uptime, ping, open tickets' },
                     { name: '`/rules`', value: 'Display the server rules' },
                     { name: '`/invites` `[user]` · `/inviteleaderboard`', value: 'Who brought how many members in, and the top 10 inviters' },
+                    { name: '`/invitecontest status`', value: 'The running invite contest — the top 10 and your own rank' },
                     { name: '`/verify` `key`', value: 'Verify your RazorReaper license to unlock the community' },
                     { name: '`/ping`', value: 'Check bot latency and WebSocket ping' },
                 ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
@@ -3219,6 +3539,8 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/say` `message` `[channel]`', value: 'Send an announcement as the bot' },
                     { name: '`/buildembed` `[channel]`', value: 'Build a new embed like Discohook — colour, icons, fields, link buttons' },
                     { name: '`/editembed` `message`', value: 'Edit an embed message I sent, in the same builder' },
+                    { name: '`/giveaway` `start` · `end` · `reroll` · `cancel` · `list`', value: 'Giveaways — members react 🎉 to join, winners are drawn at the end' },
+                    { name: '`/invitecontest` `start` · `end`', value: 'An invite contest — the most invites in the set time win' },
                     { name: '`/close` `[reason]`', value: 'Close a ticket channel *(use inside a ticket channel)*' },
                 ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
             staff: () => new EmbedBuilder()
@@ -3330,6 +3652,9 @@ client.on('interactionCreate', async (interaction) => {
             allowedMentions: { parse: [] },
         });
     }
+
+    // ── /giveaway · /invitecontest ────────────────────────────────────────────
+    if (commandName === 'giveaway' || commandName === 'invitecontest') return giveawayCommand(interaction);
 
     // ── /status ───────────────────────────────────────────────────────────────
     if (commandName === 'status') {

@@ -12,6 +12,7 @@
 | `/rules` | Display the server rules | — | Everyone |
 | `/invites [user]` | How many members someone brought in: total (regular + earlier) and the regular · earlier · left · fake breakdown, plus who invited them | `user` (optional, default: self) | Everyone |
 | `/inviteleaderboard` | The top 10 inviters by total, and your own rank if you are not in it | — | Everyone |
+| `/invitecontest status` | The running invite contest: top 10 and your own count and rank (ephemeral) | — | Everyone |
 | `/ticket` | View your open tickets | — | Everyone |
 | `/queue` | See how many tickets are open | — | Everyone |
 | `/ticketinfo` | View info about the current ticket | — | Everyone |
@@ -23,6 +24,11 @@
 | `/disableai` | Stop the AI answering in this ticket | — | Staff / Ticket Owner |
 | `/ticketping <user>` | Toggle the support-ping role — who "I need a human" pings | `user` (required) | **Bot owner only** |
 | `/say <message> [channel]` | Send a message as the bot | `message` (required), `channel` (optional) | Staff |
+| `/giveaway start <prize> <duration> [winners] [channel]` | Post a giveaway; members react 🎉 to join. At the end the bot draws the winners at random (bots and members who left don't count), edits the post and pings the winners once to open a ticket for the prize | `prize` (≤200 chars), `duration` (`30m`, `12h`, `2d`, `1w`, `1d12h`; 1 min – 60 days), `winners` (1–10, default 1), `channel` (optional, default: current) | Staff |
+| `/giveaway end · reroll · cancel <message>` | Draw now · draw new winners from the same entries (previous winners skipped while others are left) · end without winners | `message` (link or id), `winners` (reroll only, optional) | Staff |
+| `/giveaway list` | The running giveaways with link and end time (ephemeral) | — | Staff |
+| `/invitecontest start <duration> <prize> [winners] [channel]` | One invite contest at a time: invites made while it runs count (members still here at the end, accounts ≥ 7 days old); live top 5 in the post, updated every 10 min; at the end the winners are pinged once | `duration` (as `/giveaway`), `prize`, `winners` (1–5, default 1), `channel` (optional) | Staff |
+| `/invitecontest end` | Finish the invite contest now | — | Staff |
 | `/buildembed [channel]` | Discohook-style embed builder in an ephemeral message — title, text, author, footer, images, fields, colour presets or hex, RR logo/avatars as icons, timestamp, up to 5 link buttons, JSON import/export — then sends a NEW message | `channel` (optional, default: current) | Staff |
 | `/editembed message` | The same builder, loaded with a message the bot sent; "Save" edits it in place | `message` (required: the message link) | Staff |
 | `/clear <amount> <filter> [user]` | Delete messages in a channel | `amount` (required), `filter` (required: All/User/Bots), `user` (optional) | Staff |
