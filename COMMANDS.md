@@ -13,7 +13,7 @@
 | `/ticket` | View your open tickets | — | Everyone |
 | `/queue` | See how many tickets are open | — | Everyone |
 | `/ticketinfo` | View info about the current ticket | — | Everyone |
-| `/adduser <user>` | Add a user to the current ticket | `user` (required) | Everyone |
+| `/adduser <user>` | Add a user to the current ticket | `user` (required) | Staff / Ticket Owner |
 | `/close [reason]` | Close the current ticket | `reason` (optional) | Staff / Ticket Owner |
 | `/transcript` | Get this ticket's conversation as an HTML file (ephemeral) | — | Staff / Ticket Owner |
 | `/delete` | Close the ticket if it is still open, then delete the channel | — | Staff |

@@ -1783,6 +1783,13 @@ async function archiveFalseTopic(guild, user, categoryKey, reason, fields, ancho
     }, { guildName: guild.name, snaps });
 }
 
+// Whether `member` opened this ticket. A Ticket Tool leftover has no topic of ours: the permission
+// overwrite is then the only record of who it belongs to, which is what /close has always fallen back on.
+function isTicketOpener(channel, member) {
+    const state = parseTopic(channel?.topic);
+    return state ? member?.id === state.opener : Boolean(channel?.permissionOverwrites?.cache?.has(member?.id));
+}
+
 // ── The five ticket actions, once ─────────────────────────────────────────────
 /**
  * Close, transcript, delete, enableai, disableai — written once and reached through three doors:
@@ -1807,10 +1814,7 @@ async function runTicketAction(action, channel, member, respond, { reason = '', 
     if (!ANY_TICKET_NAME_RE.test(channel?.name || '')) return refuse('Use this inside a ticket channel.');
     const state = parseTopic(channel.topic);
     const staff = Boolean(member && isStaff(member));
-    // A Ticket Tool leftover has no topic of ours: the permission overwrite is then the only
-    // record of who it belongs to, which is what /close has always fallen back on.
-    const opener = state ? member?.id === state.opener : Boolean(channel.permissionOverwrites?.cache?.has(member?.id));
-    if (!opener && !staff) return refuse('Only the person who opened this ticket can do that.');
+    if (!isTicketOpener(channel, member) && !staff) return refuse('Only the person who opened this ticket can do that.');
     // The buttons stay on screen after a restart, and so does this channel: read back what the
     // restart lost before anything decides the ticket is still open, or still has the AI on.
     await hydrateTicket(channel);
@@ -2999,6 +3003,10 @@ client.on('interactionCreate', async (interaction) => {
     // ── /adduser ──────────────────────────────────────────────────────────────
     if (commandName === 'adduser') {
         if (!isTicketChannel(channel)) return interaction.reply({ embeds: [errEmbed('❌ Use this inside a ticket channel.')], ephemeral: true });
+        // Anyone who could type in a ticket used to be able to pull strangers into it.
+        if (!isStaff(member) && !isTicketOpener(channel, member)) {
+            return interaction.reply({ embeds: [rrEmbed({ title: 'Not allowed', blocks: ['Only staff or the person who opened this ticket can add people.'], colour: BRAND_BAD, footer: null })], ephemeral: true });
+        }
         const target = interaction.options.getMember('user');
         await channel.permissionOverwrites.edit(target, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true });
         return interaction.reply({ embeds: [okEmbed(`✅ Added ${target} to this ticket.`)] });
