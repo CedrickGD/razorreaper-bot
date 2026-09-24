@@ -164,16 +164,19 @@ const verifyOk = (title, ...blocks) => rrEmbed({ title, blocks, colour: BRAND_GO
 const verifyBad = (title, ...blocks) => rrEmbed({ title, blocks, colour: BRAND_BAD, footer: null });
 
 // ── License-verified community gate ─────────────────────────────────────────────
-// Turns the server into a paid-only community: only members whose Discord is linked to a valid
-// RazorReaper license (checked against the admin panel) get the "Verified Customer" role.
+// The server is open to everyone; a licence unlocks the customer tiers. Members whose Discord is
+// linked to an active RazorReaper licence (checked against the admin panel) get the customer role
+// (RR-Customer), Lifetime licences the Lifetime role on top — see "Community chats" below.
 // Everything here is inert unless VERIFY_API_BASE + VERIFY_SHARED_SECRET + VERIFIED_ROLE_ID are
 // all configured, so the bot keeps running normally on a server that hasn't opted in.
 // Non-secret IDs carry hardcoded RazorReaper-server defaults so the bot survives a host whose
 // env vars go missing; env vars still win when set.
 const VERIFY_API_BASE = (process.env.VERIFY_API_BASE || '').replace(/\/+$/, '');
 const VERIFY_SECRET = process.env.VERIFY_SHARED_SECRET || '';
-const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1529566161900146689'; // ✅ Verified Customer
+const VERIFIED_ROLE_ID = process.env.VERIFIED_ROLE_ID || '1550887983669059765'; // RR-Customer
 const VERIFY_GUILD_ID = process.env.VERIFY_GUILD_ID || process.env.GUILD_ID || '1487503515512475792';
+// #verify was deleted (2026-09); while this id resolves to nothing /verify works in any channel
+// and no panel is posted. A new #verify only needs VERIFY_CHANNEL_ID set.
 const VERIFY_CHANNEL_ID = process.env.VERIFY_CHANNEL_ID || '1529936856307863653'; // #verify
 const MEMBER_ROLE_ID = process.env.MEMBER_ROLE_ID || '1487508255050567690'; // Member — every human gets this on join
 const RECONCILE_MINUTES = Number(process.env.VERIFY_RECONCILE_MINUTES || 30);
@@ -419,28 +422,24 @@ async function findOwnPanel(channel, title, pages = 1) {
 // One source for the panel's role sentence — used both when posting a fresh panel and when
 // re-syncing the live one, so the two can never drift apart.
 function verifyRoleLine(guild) {
-    const roleName = guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'Verified Customer';
+    const roleName = guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'RR-Customer';
     const lifetimeName = lifetimeRoleId ? guild.roles.cache.get(lifetimeRoleId)?.name : null;
     return `You instantly get the **${roleName}** role.`
         + (lifetimeName ? ` Lifetime licences also get **${lifetimeName}**.` : '');
 }
 
 function buildVerifyPanelEmbed(guild) {
-    // `pinnedId` first (the lounge is the bot's own channel); the rest are the owner's, by name.
-    const chanRef = (part, pinnedId) => {
-        const c = (pinnedId && guild.channels.cache.get(pinnedId)) || guild.channels.cache.find(ch =>
-            (ch.type === ChannelType.GuildText || ch.type === ChannelType.GuildAnnouncement) && ch.name.includes(part));
-        return c ? `<#${c.id}>` : `#${part}`;
-    };
+    // By id only: the owner renames these rooms at will, and a name guess could link the wrong tier.
+    const chanRef = (id, label) => (id && guild.channels.cache.has(id) ? `<#${id}>` : label);
     const e = rrEmbed({
         title: VERIFY_PANEL_TITLE,
         blocks: [
-            '🔒 This server is for RazorReaper licence holders.',
+            '🔓 Everyone can chat here — a licence unlocks the customer chats.',
             'Run `/verify key:XXXX-XXXX-XXXX-XXXX` right here.\nYour reply is private — nobody else sees your key.',
             verifyRoleLine(guild),
         ],
         fields: [
-            { name: 'What you unlock', value: `${chanRef('lounge', CUSTOMER_CHAT_ID || storedIds.customerChat)} — the customers-only lounge\n${chanRef('releases')} — new builds first\n${chanRef('changelog')} — full patch notes`, inline: true },
+            { name: 'What you unlock', value: `${chanRef(CUSTOMER_CHAT_ID || storedIds.customerChat, 'The customer chat')} — any active licence\n${chanRef(lifetimeChatId, 'The lifetime chat')} — Lifetime licences only`, inline: true },
             { name: "Where's my key?", value: 'In your purchase confirmation from [razorreaper.app](https://razorreaper.app).', inline: true },
         ],
         thumb: brandThumb(guild, client.user),
@@ -456,7 +455,10 @@ async function syncVerifyPanel() {
     const guild = verifyGuild();
     if (!guild) return;
     const ch = guild.channels.cache.get(VERIFY_CHANNEL_ID);
-    if (!ch || !ch.isTextBased()) return;
+    if (!ch || !ch.isTextBased()) {
+        console.log(`[verify] Verify channel ${VERIFY_CHANNEL_ID} not found — no panel posted; /verify works in any channel. Set VERIFY_CHANNEL_ID to a new #verify to bring both back.`);
+        return;
+    }
     try {
         const panel = await findOwnPanel(ch, VERIFY_PANEL_TITLE);
         if (!panel) {
@@ -503,11 +505,15 @@ async function syncVerifyPanel() {
 }
 
 // ── Community chats ───────────────────────────────────────────────────────────
-// Two rooms the server is supposed to have, made to exist at startup and never duplicated:
-// #reaper-lounge for paying customers only, and a plain members chat. An explicit id wins,
-// then any channel that already looks like it, and only then does the bot create one.
+// Three tiers (owner, 2026-09-24): rr-chat is for everyone, the customer chat for every active
+// licence (the customer role), the lifetime chat for Lifetime licences only (the Lifetime role).
+// The owner builds and styles those rooms himself; the bot only has to find the two gated ones
+// to link them. The customer chat keeps its find-or-create (CUSTOMER_CHAT_ID is set live); the
+// lifetime chat is found only (LIFETIME_CHAT_ID, resolved on ready) and never created. The
+// everyone chat needs nothing from the bot.
 const CUSTOMER_CHAT_ID = process.env.CUSTOMER_CHAT_ID || '';
-const GENERAL_CHAT_ID = process.env.GENERAL_CHAT_ID || '';
+const LIFETIME_CHAT_ID = process.env.LIFETIME_CHAT_ID || '';
+let lifetimeChatId = null;
 
 // Find-or-create, idempotent: an explicit id wins, then the id pinned under storeKey, then
 // anything whose loose name (looseName) looks like it, and only then is one created. Shared by
@@ -520,7 +526,7 @@ async function ensureChannel(guild, { envId, storeKey, type = ChannelType.GuildT
     if (!guild.members.me?.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
         if (!warnedNoChannelPerm) {
             warnedNoChannelPerm = true;
-            console.log('[chats] No Manage Channels permission — not creating channels. Create them by hand and set CUSTOMER_CHAT_ID / GENERAL_CHAT_ID / SUPPORT_CHANNEL_ID / TICKETS_CATEGORY_ID.');
+            console.log('[chats] No Manage Channels permission — not creating channels. Create them by hand and set CUSTOMER_CHAT_ID / SUPPORT_CHANNEL_ID / TICKETS_CATEGORY_ID.');
         }
         return null;
     }
@@ -555,19 +561,6 @@ async function ensureCommunityChannels(guild) {
             ...(me ? [{ id: me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
         ],
         reason: 'RazorReaper: customers-only lounge',
-    });
-
-    // The ordinary room for everyone in the community — skipped entirely if the server already
-    // has any general/chat channel, which it almost always does.
-    await ensure('generalChat', GENERAL_CHAT_ID, name => name.includes('general') || name.includes('chat'), {
-        name: 'general',
-        topic: 'Open chat for every member of the community.',
-        permissionOverwrites: [
-            { id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] },
-            { id: MEMBER_ROLE_ID, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
-            ...(me ? [{ id: me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
-        ],
-        reason: 'RazorReaper: members chat',
     });
 }
 
@@ -2501,7 +2494,7 @@ const slashCommands = [
         .addUserOption(o => o.setName('user').setDescription('Target user (default: yourself)').setRequired(false)),
     new SlashCommandBuilder().setName('verify').setDescription('Verify your RazorReaper license to unlock the community')
         .addStringOption(o => o.setName('key').setDescription('Your license key (XXXX-XXXX-XXXX-XXXX)').setRequired(false))
-        .addUserOption(o => o.setName('user').setDescription('Staff only — permanently grant this member the Verified Customer role').setRequired(false)),
+        .addUserOption(o => o.setName('user').setDescription('Staff only — permanently grant this member the customer role').setRequired(false)),
 ];
 
 // ── Home guild only ───────────────────────────────────────────────────────────
@@ -2572,8 +2565,8 @@ client.once('ready', async () => {
         console.error('[RazorReaper] Failed to set banner/bio:', err.message || err);
     }
 
-    // License-verification reconcile: periodically strip the Verified Customer role from members
-    // whose license has since lapsed (revoked/expired/suspended in the admin panel).
+    // License-verification reconcile: periodically strip the customer role (and Lifetime) from
+    // members whose license has since lapsed (revoked/expired/suspended in the admin panel).
     if (verifyConfigured() && RECONCILE_MINUTES > 0) {
         const runReconcile = () => reconcileVerifiedRoles().catch(e => console.error('[verify] Reconcile error:', e.message || e));
         setTimeout(runReconcile, 60_000);
@@ -2583,8 +2576,8 @@ client.once('ready', async () => {
         console.log('[verify] License gate inactive (set VERIFY_API_BASE, VERIFY_SHARED_SECRET, VERIFIED_ROLE_ID to enable).');
     }
 
-    // Resolve (or create) the Lifetime role and the two community chats before the panel sync,
-    // so the panel can already name them. All three are idempotent — safe on every restart.
+    // Resolve (or create) the Lifetime role and the customer chat before the panel sync, so the
+    // panel can already name them. Both are idempotent — safe on every restart.
     const homeGuild = verifyGuild();
     // Staff first: the ticket-log overwrites below are built from these ids.
     resolveStaffRoles(homeGuild);
@@ -2609,11 +2602,13 @@ client.once('ready', async () => {
         console.error('[support] Setup error:', e.message || e);
     }
 
-    // The welcome embed's two channels — never created, only found (and then pinned).
+    // The welcome embed's two channels and the lifetime chat — never created, only found (and then pinned).
     if (homeGuild) {
         const text = c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildAnnouncement;
         welcomeChannelId = findPinned(homeGuild.channels.cache, 'welcomeChannel', WELCOME_CHANNEL_ID, (n, c) => text(c) && n.includes('welcome'))?.id || null;
         rulesChannelId = findPinned(homeGuild.channels.cache, 'rulesChannel', RULES_CHANNEL_ID, (n, c) => text(c) && n.includes('rules'))?.id || null;
+        // Only "exclusive": "premium" is the customer chat and "chat" matches every tier.
+        lifetimeChatId = findPinned(homeGuild.channels.cache, 'lifetimeChat', LIFETIME_CHAT_ID, (n, c) => text(c) && n.includes('exclusive'))?.id || null;
     }
     // One line with every id and where it came from (env|stored|name|created) for the deploy check.
     console.log(`[ids] resolved: ${Object.values(idLog).join(' ') || 'none'}`);
@@ -2684,13 +2679,14 @@ client.on('guildMemberAdd', async (member) => {
         console.error('[verify] Join status check failed:', e.message || e);
     }
 
-    // Not verified yet — DM instructions (best-effort; many users have DMs closed).
+    // Not verified yet — DM how a licence unlocks the customer tiers (best-effort; many users
+    // have DMs closed). The server itself is open: rr-chat is for everyone.
     member.send({
         embeds: [rrEmbed({
-            title: '🔒 One step to join',
+            title: '🔓 Unlock the customer chats',
             blocks: [
-                'This community is for **RazorReaper licence holders**.',
-                'Run `/verify key:XXXX-XXXX-XXXX-XXXX` in the server.',
+                'Everyone can chat in **rr-chat**.\nA licence unlocks the customer chat, Lifetime also the lifetime chat.',
+                'Run `/verify key:XXXX-XXXX-XXXX-XXXX` in the server.\nThe reply is private — nobody else sees your key.',
                 VERIFY_API_BASE && `Prefer one click? Open:\n${VERIFY_API_BASE}/api/discord/oauth-start?key=YOUR-KEY`,
             ],
             thumb: brandThumb(member.guild, client.user),
@@ -2716,7 +2712,7 @@ client.on('interactionCreate', async (interaction) => {
         const targetUser = interaction.options.getUser('user');
         if (targetUser) {
             if (!member || !isStaff(member)) {
-                return interaction.reply({ embeds: [verifyBad('Staff only', 'Only staff can grant Verified to another member.')], ephemeral: true });
+                return interaction.reply({ embeds: [verifyBad('Staff only', 'Only staff can grant the customer role to another member.')], ephemeral: true });
             }
             if (targetUser.bot) {
                 return interaction.reply({ embeds: [verifyBad('Not a member', 'A bot cannot hold a licence.')], ephemeral: true });
@@ -2744,8 +2740,10 @@ client.on('interactionCreate', async (interaction) => {
             }
         }
 
-        // Keep /verify to its dedicated channel — running it in #general etc. just points there.
-        if (VERIFY_CHANNEL_ID && interaction.channelId !== VERIFY_CHANNEL_ID) {
+        // Keep /verify to its dedicated channel — but only while that channel exists: #verify was
+        // deleted once and every /verify then answered "Wrong channel" with a dead link. Without
+        // it, anywhere is fine: the reply is ephemeral and slash options are never shown to others.
+        if (VERIFY_CHANNEL_ID && verifyGuild()?.channels.cache.has(VERIFY_CHANNEL_ID) && interaction.channelId !== VERIFY_CHANNEL_ID) {
             return interaction.reply({ embeds: [verifyBad('Wrong channel', `Please run \`/verify\` in <#${VERIFY_CHANNEL_ID}>.`)], ephemeral: true });
         }
         const key = (interaction.options.getString('key') || '').trim();
