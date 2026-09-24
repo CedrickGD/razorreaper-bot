@@ -2991,7 +2991,8 @@ client.on('guildMemberAdd', (member) => {
 
 client.on('guildMemberRemove', (member) => {
     if (VERIFY_GUILD_ID && member.guild.id !== VERIFY_GUILD_ID) return;
-    inviteChain = inviteChain.then(() => { if (inviteStore && recordLeave(inviteStore, member.id)) saveInvitesSoon(); });
+    inviteChain = inviteChain.then(() => { if (inviteStore && recordLeave(inviteStore, member.id)) saveInvitesSoon(); })
+        .catch(e => console.error('[invites] Leave tracking failed:', e.message || e));
 });
 
 // ── Member auto-role on join ──────────────────────────────────────────────────
