@@ -64,7 +64,8 @@ test('each answered category carries a fraction of the whole knowledge base', ()
     for (const cat of CATEGORY_KEYS.filter(c => !HUMAN_ONLY.has(c))) {
         const n = tokens(kbFor(kb, cat, ''));
         assert.ok(n < 16_000, `${cat} is ${n} tokens`);
-        assert.ok(n <= tokens(whole) * 0.3, `${cat} is ${n} of ${tokens(whole)} tokens`);
+        // 0.35, not 0.3: since 1.5.3 the release notes every category carries are ~40 bullets.
+        assert.ok(n <= tokens(whole) * 0.35, `${cat} is ${n} of ${tokens(whole)} tokens`);
     }
 });
 

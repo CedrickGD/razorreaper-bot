@@ -259,13 +259,18 @@ function buildErrors() {
 // ── 5. release.md — the version members are offered right now ─────────────────
 function buildRelease() {
     const xml = read('update.xml');
-    const pick = (tag) => new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(xml)?.[1].trim() || '';
+    // update.xml is XML-escaped (the panel writes &apos; and friends); the model reads plain text.
+    const unescape = (s) => s.replace(/&(amp|lt|gt|quot|apos|#39);/g, (_, e) => ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'" })[e]);
+    const pick = (tag) => unescape(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(xml)?.[1].trim() || '');
+    // The committed <changelog> is a github.com URL that rr-api rewrites at serving time; members get
+    // the public notes page, which also works once the repo is private.
+    const tag = /\/(v[\d.]+)$/.exec(pick('changelog'))?.[1];
     return [
         '# RazorReaper — current release',
         '',
         `- Latest version offered to clients: **${pick('version')}**`,
         `- Mandatory update: ${pick('mandatory') === 'true' ? 'yes' : 'no'}`,
-        `- Public release notes: ${pick('changelog')}`,
+        `- Public release notes: ${tag ? `https://dl.razorreaper.app/release-notes/${tag}` : pick('changelog')}`,
         '',
         '## What changed in this version',
         '',
