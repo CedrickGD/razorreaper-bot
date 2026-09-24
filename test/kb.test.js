@@ -27,6 +27,19 @@ test('the knowledge base loads and stays inside one cached system prompt', () =>
     assert.deepStrictEqual(loadKb(path.join(__dirname, 'no-such-dir')), { base: '', preamble: '', sections: [] });
 });
 
+test('no raw {n} placeholders reach the model', () => {
+    // "Row {0} hotbar key" quoted raw came back to a member verbatim (ticket-0003).
+    assert.doesNotMatch(whole, /\{\d+\}/);
+});
+
+test('every kb/scripts.md heading is a real script with an id', () => {
+    // The *Script.cs glob also matches the ICalibratableScript interface — an empty heading.
+    const scripts = fs.readFileSync(path.join(__dirname, '..', 'kb', 'scripts.md'), 'utf8');
+    const headings = scripts.match(/^## .*$/gm);
+    assert.ok(headings.length > 5);
+    for (const h of headings) assert.match(h, /\(id `/);
+});
+
 test('every category maps to ui.md sections that really exist', () => {
     // A generator rename must fail here, not silently drop a page from every answer.
     const keys = new Set(kb.sections.map(s => s.key));

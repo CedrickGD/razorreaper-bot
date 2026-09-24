@@ -14,6 +14,7 @@ of them and answer most "the script does nothing" tickets:
 - "Match threshold" is a similarity percentage: too high = never matches, too low = false hits.
 
 Defaults and min/max below are read straight from the shipped code.
+`…` inside a text is a value the app fills in (a number, key or name). Say e.g. 'Row 1 hotbar key', never quote the `…`.
 
 ## Anti-AFK (id `antiafk`)
 Opens/closes inventory on an interval to avoid the idle kick.
@@ -44,7 +45,7 @@ Watches a calibrated icon and presses a hotbar key when it appears, disappears, 
 - cooldown.desc: Seconds before it may fire again.
 - livematch: Live match
 - livematch.desc: Similarity of the last scan, and how often it has fired.
-- fired: · {0} fired
+- fired: · … fired
 - region: Icon region
 - toast.needregion: Capture the HUD icon region first (calibration step 1).
 - toast.needreference: Capture a reference snapshot with the icon visible (calibration step 2).
@@ -58,13 +59,13 @@ Watches a calibrated icon and presses a hotbar key when it appears, disappears, 
 - toast.referencecleared: Reference snapshot cleared.
 - toast.badburstkey: That key can't be used for the burst — reset to 5.
 - toast.badhotkey: That combination can't be used as a toggle hotkey — keeping the previous one.
-- toast.hotkeyinuse: Could not register {0} — the combination may be in use by another app.
+- toast.hotkeyinuse: Could not register … — the combination may be in use by another app.
 - toast.noregion: Auto Antidote stopped — no calibrated region for the current resolution.
 - activity.started: Auto Antidote started
 - activity.stopped: Auto Antidote stopped
 - activity.referencecaptured: Auto Antidote reference snapshot captured
 - activity.noregion: Auto Antidote stopped (region missing)
-- activity.triggered: Auto Antidote triggered (#{0})
+- activity.triggered: Auto Antidote triggered (#…)
 - activity.burstfailed: Auto Antidote burst did not complete (game window unavailable?)
 
 ## Auto Download (id `autodownload`)
@@ -107,8 +108,8 @@ Reads the durability numbers next to your armor and swaps in a fresh piece from 
 - ScanIntervalMs — default 1000 (allowed 500…10000)
 - swapbelow: Swap below
 - swapbelow.desc: Durability points left on a piece before it is replaced. An absolute number, so it means the same on any server multiplier.
-- rowkey: Row {0} hotbar key
-- rowkey.badkey: '{0}' is not a key that can be sent — use a single character like 8, or a name like F5.
+- rowkey: Row … hotbar key
+- rowkey.badkey: '…' is not a key that can be sent — use a single character like 8, or a name like F5.
 - rowkey.top: Hotbar slot holding the spare for the top armor row. Leave a row empty to ignore it.
 - rowkey.other: Leave empty if you carry no spare for this row.
 - scan.desc: Milliseconds between reads.
@@ -116,12 +117,10 @@ Reads the durability numbers next to your armor and swaps in a fresh piece from 
 - hint.notrunning: Start the script to see what it reads.
 - hint.waiting: Waiting for ARK to be in the foreground…
 - hint.nonumber: No number recognised — check the calibrated region.
-- hint.swapping: Lowest {0} — at or below {1}, swapping{2}
-- hint.nothing: Lowest {0} — above {1}, nothing to do{2}
-- hint.lastswap: · last swap {0}
-- activity.swapped: Armor swapped — row {0} was at {1}
-
-## ICalibratable
+- hint.swapping: Lowest … — at or below …, swapping…
+- hint.nothing: Lowest … — above …, nothing to do…
+- hint.lastswap: · last swap …
+- activity.swapped: Armor swapped — row … was at …
 
 ## Inv Size (id `invsize`)
 Experimental: Shift+right-click spam to inflate inventory (needs your blueprint hotkeys; lag/loss risk).
@@ -192,15 +191,15 @@ Fills every turret you open — Transfer All until it takes nothing more, or a s
 - calc.bullets: Bullets on hand
 - calc.shards: Shards on hand
 - calc.stacksize: Stack size
-- calc.even: Even split: {1} per turret (stacks: {0}), left over: {2}
-- calc.cover: Stacks per turret: {0} — covers {1} of {2}, {3} short
-- calc.cover.all: Stacks per turret: {0} — enough for all {1}
+- calc.even: Even split: … per turret (stacks: …), left over: …
+- calc.cover: Stacks per turret: … — covers … of …, … short
+- calc.cover.all: Stacks per turret: … — enough for all …
 - calc.noturrets: Enter how many turrets.
 - calc.use: Use per-turret stacks
 - toast.noammo: Turret Manager: no Advanced Rifle Bullets or Element Shards in view in your inventory.
 - toast.tooknothing: Turret Manager: the turret took nothing — it is full, or your ammo does not fit this turret.
 - toast.transferall: Turret Manager: Transfer All changed nothing twice — the turret is full, or ARK is asking to confirm (switch Inventory item tooltips off in ARK's options).
-- activity.filled: Turret Manager: {0} transfer(s) went into the turret
+- activity.filled: Turret Manager: … transfer(s) went into the turret
 - experimental.note: Not confirmed in game yet — if a turret is not filled, send a support report from Feedback & Support.
 
 ## Yuty (id `yuty`)

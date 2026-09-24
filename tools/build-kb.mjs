@@ -33,7 +33,13 @@ const CLIENT = path.resolve(
 );
 
 const read = (...p) => fs.readFileSync(path.join(CLIENT, ...p), 'utf8');
-const readJson = (...p) => JSON.parse(read(...p));
+// i18n texts carry string.Format slots ("Row {0} hotbar key"). Quoted raw, the model repeats the
+// `{0}` to members, so every i18n string is read with its slots already turned into `…`.
+const fill = (s) => s.replace(/\{\d+\}/g, '…');
+const readI18n = (lang) => JSON.parse(read('RazorReaper', 'Resources', 'i18n', `${lang}.json`),
+    (_, v) => typeof v === 'string' ? fill(v) : v);
+const FILLED_NOTE = '`…` inside a text is a value the app fills in (a number, key or name). Say e.g. '
+    + "'Row 1 hotbar key', never quote the `…`.";
 
 // Rough but stable: ~4 characters per token for English/German prose. Only ever used to tell the
 // owner whether the KB still fits one cached system prompt, never to bill anything.
@@ -91,8 +97,8 @@ function buildApp() {
 const DE_NAME_RE = /\.(label|title|name|heading)$|^nav\./;
 
 function buildUi() {
-    const en = readJson('RazorReaper', 'Resources', 'i18n', 'en.json');
-    const de = readJson('RazorReaper', 'Resources', 'i18n', 'de.json');
+    const en = readI18n('en');
+    const de = readI18n('de');
 
     // nav.page.<slug> gives the sidebar name; the de-hyphenated slug is usually the key prefix.
     const pageNames = new Map();
@@ -118,6 +124,7 @@ function buildUi() {
         'sees it. `EN` is the English UI text; `[DE: …]` is the German label for the same control —',
         'use the German one when the member writes German. Lines are `<setting key>: <text>`; a',
         '`.desc` line explains the setting above it.',
+        FILLED_NOTE,
         '',
     ];
     for (const prefix of [...groups.keys()].sort()) {
@@ -141,7 +148,7 @@ function buildUi() {
 const SCRIPTS_DIR = ['RazorReaper', 'Services', 'Automation', 'Scripts'];
 
 function buildScripts() {
-    const en = readJson('RazorReaper', 'Resources', 'i18n', 'en.json');
+    const en = readI18n('en');
     const dir = path.join(CLIENT, ...SCRIPTS_DIR);
     const files = fs.readdirSync(dir).filter(f => f.endsWith('Script.cs')).sort();
 
@@ -162,14 +169,16 @@ function buildScripts() {
         '- "Match threshold" is a similarity percentage: too high = never matches, too low = false hits.',
         '',
         'Defaults and min/max below are read straight from the shipped code.',
+        FILLED_NOTE,
         '',
     ];
 
     for (const file of files) {
         const src = fs.readFileSync(path.join(dir, file), 'utf8');
         const key = /private const string Key = "([^"]+)"/.exec(src)?.[1];
+        if (!key) continue; // ICalibratableScript.cs matches the glob but is an interface, not a script
         const name = /:\s*base\(\s*Key\s*,\s*"([^"]*)"/.exec(src)?.[1] || file.replace(/Script\.cs$/, '');
-        const desc = key && en[`scripts.desc.${key}`];
+        const desc = en[`scripts.desc.${key}`];
 
         // `public int IntervalMs { get; set; } = 5000;` → default; Math.Clamp(X, lo, hi) → range.
         const defaults = new Map();
@@ -181,7 +190,7 @@ function buildScripts() {
             ranges.set(m[1], [m[2].trim(), m[3].trim()]);
         }
 
-        out.push(`## ${name}${key ? ` (id \`${key}\`)` : ''}`);
+        out.push(`## ${name} (id \`${key}\`)`);
         if (desc) out.push(desc);
         const props = [...new Set([...defaults.keys(), ...ranges.keys()])].sort();
         for (const prop of props) {
@@ -191,12 +200,10 @@ function buildScripts() {
             out.push(`- ${prop}${def ? ` — default ${def}` : ''}${range ? ` (allowed ${range[0]}…${range[1]})` : ''}`);
         }
         // The script's own i18n block: field labels, per-field explanations, warnings.
-        if (key) {
-            for (const [k, v] of Object.entries(en)) {
-                if (!k.startsWith(`scripts.${key}.`)) continue;
-                if (SECRET_KEY_RE.test(k)) continue;
-                out.push(`- ${k.slice(`scripts.${key}.`.length)}: ${v}`);
-            }
+        for (const [k, v] of Object.entries(en)) {
+            if (!k.startsWith(`scripts.${key}.`)) continue;
+            if (SECRET_KEY_RE.test(k)) continue;
+            out.push(`- ${k.slice(`scripts.${key}.`.length)}: ${v}`);
         }
         out.push('');
     }
@@ -205,7 +212,7 @@ function buildScripts() {
 
 // ── 4. errors.md — the RR-Exxxx catalogue ────────────────────────────────────
 function buildErrors() {
-    const en = readJson('RazorReaper', 'Resources', 'i18n', 'en.json');
+    const en = readI18n('en');
     const codes = new Map(); // constant name -> RR-Exxxx
     const constSrc = read('RazorReaper', 'Diagnostics', 'AppErrorCodes.cs');
     for (const m of constSrc.matchAll(/public const string (\w+)\s*=\s*"([^"]+)"/g)) codes.set(m[1], m[2]);
