@@ -32,6 +32,14 @@ test('no raw {n} placeholders reach the model', () => {
     assert.doesNotMatch(whole, /\{\d+\}/);
 });
 
+test('a filled-in value is marked ‹…›, which no app text uses, so it never reads like "Saving…"', () => {
+    assert.match(whole, /Row ‹…› hotbar key/);
+    assert.match(whole, /Saving…/);
+    if (!haveClient) return;
+    const dir = path.join(CLIENT, 'RazorReaper', 'Resources', 'i18n');
+    for (const f of fs.readdirSync(dir)) assert.ok(!fs.readFileSync(path.join(dir, f), 'utf8').includes('‹…›'), f);
+});
+
 test('every kb/scripts.md heading is a real script with an id', () => {
     // The *Script.cs glob also matches the ICalibratableScript interface — an empty heading.
     const scripts = fs.readFileSync(path.join(__dirname, '..', 'kb', 'scripts.md'), 'utf8');

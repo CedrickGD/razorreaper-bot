@@ -34,12 +34,14 @@ const CLIENT = path.resolve(
 
 const read = (...p) => fs.readFileSync(path.join(CLIENT, ...p), 'utf8');
 // i18n texts carry string.Format slots ("Row {0} hotbar key"). Quoted raw, the model repeats the
-// `{0}` to members, so every i18n string is read with its slots already turned into `…`.
-const fill = (s) => s.replace(/\{\d+\}/g, '…');
+// `{0}` to members, so every i18n string is read with its slots turned into `‹…›`. Not a bare `…`:
+// dozens of texts already end in a natural one ("Saving…") and ranges read "30…3600".
+const SLOT = '‹…›';
+const fill = (s) => s.replace(/\{\d+\}/g, SLOT);
 const readI18n = (lang) => JSON.parse(read('RazorReaper', 'Resources', 'i18n', `${lang}.json`),
     (_, v) => typeof v === 'string' ? fill(v) : v);
-const FILLED_NOTE = '`…` inside a text is a value the app fills in (a number, key or name). Say e.g. '
-    + "'Row 1 hotbar key', never quote the `…`.";
+const FILLED_NOTE = `\`${SLOT}\` inside a text is a value the app fills in (a number, key or name). Say e.g. `
+    + `'Row 1 hotbar key', never quote the \`${SLOT}\`. A plain \`…\` is just an ellipsis the app shows.`;
 
 // Rough but stable: ~4 characters per token for English/German prose. Only ever used to tell the
 // owner whether the KB still fits one cached system prompt, never to bill anything.

@@ -4,7 +4,7 @@ Every line is a real string from the app, so you can name a control exactly as t
 sees it. `EN` is the English UI text; `[DE: …]` is the German label for the same control —
 use the German one when the member writes German. Lines are `<setting key>: <text>`; a
 `.desc` line explains the setting above it.
-`…` inside a text is a value the app fills in (a number, key or name). Say e.g. 'Row 1 hotbar key', never quote the `…`.
+`‹…›` inside a text is a value the app fills in (a number, key or name). Say e.g. 'Row 1 hotbar key', never quote the `‹…›`. A plain `…` is just an ellipsis the app shows.
 
 ## access
 - heading.ban: Access permanently revoked
@@ -45,7 +45,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - installations.title: Your installations  [DE: Deine Installationen]
 - device.this: This computer
 - device.other: RazorReaper installation
-- device.version: Version …
+- device.version: Version ‹…›
 - device.unknownversion: unknown
 - device.signedin: Signed in
 - device.signedout: Signed out
@@ -67,7 +67,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - dialog.title.connect: Connect your account
 - dialog.title.isthisyou: Is this you?
 - dialog.avatar.alt: Discord profile picture
-- dialog.continueas: Continue as …
+- dialog.continueas: Continue as ‹…›
 - dialog.codematch: Check that this code matches the one in your browser:
 - dialog.waiting: Waiting for Discord authorization
 - dialog.approve: Approve the connection in your browser, then return here to confirm your profile.
@@ -89,9 +89,9 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 
 ## activity
 - justnow: Just now
-- minutes: …m ago
-- hours: …h ago
-- days: …d ago
+- minutes: ‹…›m ago
+- hours: ‹…›h ago
+- days: ‹…›d ago
 
 ## Auto Clicker (autoclicker)
 - title: Auto Clicker  [DE: Autoklicker]
@@ -134,14 +134,14 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - cursor: Cursor
 - hotkey: Hotkey
 - hotkey.recording: Press a key…
-- status.running: … · … · … · …
-- status.progress: …/…
-- status.clicks: … clicks
-- status.idle: Press … to start · …
+- status.running: ‹…› · ‹…› · ‹…› · ‹…›
+- status.progress: ‹…›/‹…›
+- status.clicks: ‹…› clicks
+- status.idle: Press ‹…› to start · ‹…›
 - next.now: Now
-- activity.started: Autoclicker started (… interval)
-- activity.stopped: Autoclicker stopped (… clicks performed)
-- toast.hotkeyinuse: Could not register … for the Auto Clicker — it may be in use by another app.
+- activity.started: Autoclicker started (‹…› interval)
+- activity.stopped: Autoclicker stopped (‹…› clicks performed)
+- toast.hotkeyinuse: Could not register ‹…› for the Auto Clicker — it may be in use by another app.
 
 ## Bosses (bosses)
 - title: Boss tribute guide  [DE: Boss-Tributführer]
@@ -222,8 +222,8 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - spam.cap.cliff: Cliff sizing — drop a gen to estimate your spam radius.
 - spam.alt.toilette: Toilette spam
 - spam.cap.toilette: Toilette can take spam control — same size as foundation.
-- spam.book: Spam structure book (… images)
-- spam.alt.n: Spam …
+- spam.book: Spam structure book (‹…› images)
+- spam.alt.n: Spam ‹…›
 - spam.check.1: Turret in a vault drop counters M.D.S.M.
 - spam.check.2: Pillar in a vault drop = light spam control.
 - spam.check.3: Tek bridge: doesn't take spam control while offline.
@@ -263,7 +263,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - nofolder.text: The ARK install was found, but SavedArksLocal doesn't exist yet. Start the game once, then rescan.
 - rescan: Rescan
 - header.one: 1 preset found
-- header.many: … presets found
+- header.many: ‹…› presets found
 - openfolder: Open folder
 - import: Import…
 - info.text: Presets are the saved templates on ARK's character creation screen — changes here apply the next time you create a character.
@@ -306,7 +306,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - slider.headwidth: Head Width
 - slider.headdepth: Head Depth
 - slider.torsoheight: Torso Height
-- slider.unnamed: Slider …
+- slider.unnamed: Slider ‹…›
 - toast.readfailed: Could not read the character presets folder — see the log for details.
 - toast.arkrunning: ARK is running — reopen the character creation screen to see the change.
 - toast.openfolderfailed: Could not open the presets folder.
@@ -320,39 +320,39 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - toast.savefailed: Saving failed — see the log for details.
 - toast.parsefailed: Could not read this preset.
 - picker.import: Select a .arkcharactersetting preset file
-- activity.renamed: Renamed character preset to '…'
-- activity.duplicated: Duplicated character preset '…'
-- activity.deleted: Deleted character preset '…'
+- activity.renamed: Renamed character preset to '‹…›'
+- activity.duplicated: Duplicated character preset '‹…›'
+- activity.deleted: Deleted character preset '‹…›'
 - activity.imported: Imported a character preset
-- activity.exported: Exported character preset '…'
-- activity.edited: Edited character preset '…'
+- activity.exported: Exported character preset '‹…›'
+- activity.edited: Edited character preset '‹…›'
 - result.badname: The new name is empty or contains characters Windows does not allow in file names.
 - result.samename: The preset already has that name.
-- result.nameexists: A preset named '…' already exists.
-- result.renamed: Renamed to '…'.
-- result.renamefailed: Renaming failed: …
-- result.duplicated: Duplicated as '…'.
-- result.duplicatefailed: Duplicating failed: …
-- result.deleted: Deleted '…' — a backup copy was kept.
-- result.deletefailed: Deleting failed: …
+- result.nameexists: A preset named '‹…›' already exists.
+- result.renamed: Renamed to '‹…›'.
+- result.renamefailed: Renaming failed: ‹…›
+- result.duplicated: Duplicated as '‹…›'.
+- result.duplicatefailed: Duplicating failed: ‹…›
+- result.deleted: Deleted '‹…›' — a backup copy was kept.
+- result.deletefailed: Deleting failed: ‹…›
 - result.noark: ARK installation not found — is the game installed through Steam?
-- result.nofolder: The presets folder is missing: …
+- result.nofolder: The presets folder is missing: ‹…›
 - result.badfilename: Invalid preset file name.
-- result.gone: … no longer exists — rescan the list.
+- result.gone: ‹…› no longer exists — rescan the list.
 - result.sourcemissing: The selected file no longer exists.
-- result.wrongextension: Character presets use the … extension.
+- result.wrongextension: Character presets use the ‹…› extension.
 - result.notapreset: That file is not a valid ARK character preset.
-- result.imported: Imported '…' — it shows up on the character creation screen.
-- result.importfailed: Importing failed: …
+- result.imported: Imported '‹…›' — it shows up on the character creation screen.
+- result.importfailed: Importing failed: ‹…›
 - result.nodestination: The chosen destination folder does not exist.
-- result.exported: Exported to …
-- result.exportfailed: Exporting failed: …
+- result.exported: Exported to ‹…›
+- result.exportfailed: Exporting failed: ‹…›
 - result.nosliders: No editable sliders were found in this preset.
-- result.badformat: This file is not in the expected preset format: …
+- result.badformat: This file is not in the expected preset format: ‹…›
 - result.changedondisk: The preset file changed on disk since it was opened — close and reopen the editor.
 - result.offsetmismatch: Internal offset mismatch — reopen the editor and try again.
-- result.saved: Saved changes to '…'.
-- result.savefailed: Saving failed: …
+- result.saved: Saved changes to '‹…›'.
+- result.savefailed: Saving failed: ‹…›
 
 ## colorfield
 - pick: Pick color
@@ -387,7 +387,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - edit: Edit
 - save: Save
 - clear: Clear
-- error: Error: …
+- error: Error: ‹…›
 
 ## compact
 - subtitle: Shrink your ARK install with transparent Windows NTFS compression.
@@ -398,7 +398,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - stat.ondisk: On disk
 - stat.ondisk.sub: What it actually occupies
 - stat.saved: Saved
-- lastanalyzed: Last analyzed: …
+- lastanalyzed: Last analyzed: ‹…›
 - actions: Actions
 - compress.title: Compress with LZX  [DE: Mit LZX komprimieren]
 - compress.description: Re-packs every game file with NTFS LZX compression — ARK stays fully playable.
@@ -410,13 +410,13 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - cancelling: Cancelling…
 - progress.compressing: Compressing…
 - progress.uncompressing: Uncompressing…
-- progress.files: … / … files
+- progress.files: ‹…› / ‹…› files
 - before.title: Before you compact  [DE: Bevor du komprimierst]
 - before.1: Close ARK (and let Steam finish updating) before compressing or uncompressing.
 - before.2: Game updates write new files uncompressed — run Compress again after big patches.
 - status.analyzing: Analyzing install…
 - status.notfound: ARK install not found
-- status.notntfs: Drive is not NTFS (…)
+- status.notntfs: Drive is not NTFS (‹…›)
 - status.running: ARK is running
 - state.compacted: Compacted
 - state.partial: Partially compacted
@@ -425,17 +425,17 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - description.notntfs: NTFS compression only works on NTFS-formatted drives.
 - description.running: Close ARK before compressing or uncompressing the install.
 - description.idle: Install path will appear here after analysis.
-- scanning: Scanning files… … files, … so far
-- confirm.compress.text: Runs compact.exe over … files (…). You can cancel anytime — processed files stay compressed.
-- confirm.uncompress.text: Restores … files to their full size (…). You can cancel anytime.
+- scanning: Scanning files… ‹…› files, ‹…› so far
+- confirm.compress.text: Runs compact.exe over ‹…› files (‹…›). You can cancel anytime — processed files stay compressed.
+- confirm.uncompress.text: Restores ‹…› files to their full size (‹…›). You can cancel anytime.
 - button.compress: Compress
 - button.uncompress: Uncompress
-- stat.saved.sub: …% of the install
+- stat.saved.sub: ‹…›% of the install
 - stat.saved.sub.none: Run an analysis to find out
 - toast.notfound: ARK installation not found. Compact ARK needs a valid install.
-- toast.notntfs: The ARK drive is … — NTFS compression is unavailable.
+- toast.notntfs: The ARK drive is ‹…› — NTFS compression is unavailable.
 - toast.notntfs.unknown: not NTFS
-- toast.analysisfailed: Analysis failed: …
+- toast.analysisfailed: Analysis failed: ‹…›
 - toast.running: ARK is currently running. Close the game first.
 - toast.cancelled.compress: Compression cancelled. Files already processed stay compressed.
 - toast.cancelled.uncompress: Uncompress cancelled. Files already processed stay uncompressed.
@@ -443,11 +443,11 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - activity.cancelled.uncompress: Compact ARK: uncompress cancelled
 - toast.failed: The compact operation failed.
 - activity.failed: Compact ARK operation failed
-- toast.compressed: ARK compressed — … saved on disk.
-- activity.compressed: Compacted ARK install (saved …)
+- toast.compressed: ARK compressed — ‹…› saved on disk.
+- activity.compressed: Compacted ARK install (saved ‹…›)
 - toast.uncompressed: ARK restored to its full uncompressed size.
 - activity.uncompressed: Uncompressed ARK install
-- toast.operationfailed: Operation failed: …
+- toast.operationfailed: Operation failed: ‹…›
 
 ## Convert (convert)
 - subtitle: Turn a video, image or audio file into another format. Runs locally, and never changes your original.
@@ -460,10 +460,10 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - preview.title: Preview  [DE: Vorschau]
 - preview.rendering: Rendering preview…
 - preview.none: No preview available
-- alt.waveform: Waveform of …
-- alt.preview: Preview of …
+- alt.waveform: Waveform of ‹…›
+- alt.preview: Preview of ‹…›
 - trim.title: Trim  [DE: Zuschneiden]
-- trim.kept: … kept
+- trim.kept: ‹…› kept
 - trim.start: Trim start
 - trim.end: Trim end
 - trim.starthere: Start here
@@ -486,7 +486,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - dest.redirected: Saved to the RazorReaper folder — Windows locks that one.
 - replace.label: Replace in ARK  [DE: In ARK ersetzen]
 - replace.none: Don't replace anything
-- replace.alreadyreplaced: … — already replaced
+- replace.alreadyreplaced: ‹…› — already replaced
 - replace.both: Swap the .mp4 and the .wmv together — ARK plays whichever it finds, so leaving one behind can show the old video.
 - result.title: Converted  [DE: Konvertiert]
 - result.reveal: Show in folder
@@ -497,24 +497,24 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - status.nofile: No file chosen
 - status.busy: Long videos take a while — you can cancel any time.
 - status.pick: Pick a video, image or audio file to get started.
-- status.reencode: Already … — this re-encodes rather than converts.
-- status.ready: … file — pick a format and convert.
-- unsupported: … files aren't supported.
+- status.reencode: Already ‹…› — this re-encodes rather than converts.
+- status.ready: ‹…› file — pick a format and convert.
+- unsupported: ‹…› files aren't supported.
 - error.dialog: Windows would not open the file dialog. If ARK is running fullscreen, alt-tab to RazorReaper and try again.
 - error.folder: Could not choose a folder.
 - info.setup: Setting the converter up — this happens once.
 - error.setup: Could not set the converter up. Check your connection and try again.
 - info.cancelled: Conversion cancelled.
-- error.failed: Conversion failed: …
-- warn.limit: Converted, but the free monthly limit for loading-screen replacements (…) is reached. Resets next month — Premium is unlimited.
-- error.replace: Converted, but could not replace it: …
+- error.failed: Conversion failed: ‹…›
+- warn.limit: Converted, but the free monthly limit for loading-screen replacements (‹…›) is reached. Resets next month — Premium is unlimited.
+- error.replace: Converted, but could not replace it: ‹…›
 - svc.gone: That file no longer exists.
 - svc.noformat: Pick a format to convert to.
-- svc.wrongkind: That kind of file can't be converted to ….
+- svc.wrongkind: That kind of file can't be converted to ‹…›.
 - svc.notready: The converter isn't ready yet — give it a moment to set up.
-- svc.failed: Couldn't convert to …. The file may be damaged or use an unusual codec.
+- svc.failed: Couldn't convert to ‹…›. The file may be damaged or use an unusual codec.
 - svc.empty: The conversion produced an empty file.
-- svc.saved: Saved as ….
+- svc.saved: Saved as ‹…›.
 
 ## Credits (credits)
 - subtitle: Developer, community, and tools behind RazorReaper.
@@ -526,7 +526,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - help.text: Found a bug or need assistance? In-app diagnostics give support the details needed to investigate; use Discord for follow-up conversation.
 - tag.feedback: In-app feedback
 - tag.bugs: Bug reports
-- openfailed: Could not open …. Check your default browser settings.
+- openfailed: Could not open ‹…›. Check your default browser settings.
 
 ## Crosshair (crosshair)
 - subtitle: Always-on-top overlay with editor, presets, animations & image imports — runs from the tray.
@@ -534,10 +534,10 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - overlay.off: Overlay off
 - overlay.stop: Stop overlay
 - overlay.start: Start overlay
-- status.active: … · … · …
+- status.active: ‹…› · ‹…› · ‹…›
 - status.static: static
 - status.animated: animated
-- status.press: Press … to enable.
+- status.press: Press ‹…› to enable.
 - fullscreen.title: ARK is set to Fullscreen  [DE: ARK steht auf Vollbild]
 - fullscreen.desc: The crosshair only shows over Fullscreen while Windows' fullscreen optimizations are on for ShooterGame.exe. Windowed Fullscreen always works.
 - fullscreen.desc.fsooff: Fullscreen optimizations are turned off for ShooterGame.exe, so the crosshair can't show over ARK in Fullscreen. Windowed Fullscreen always works.
@@ -585,8 +585,8 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - line.right: Right
 - position: Position
 - monitor: Monitor
-- monitor.primary: … · primary
-- monitor.plain: …
+- monitor.primary: ‹…› · primary
+- monitor.plain: ‹…›
 - offsetx: X offset
 - offsety: Y offset
 - offset.hint: Hold the up/down chevrons inside the number boxes to step continuously.
@@ -598,7 +598,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - anim.rotate: Rotate
 - rainbow: Rainbow color cycle
 - rainbow.short: Rainbow
-- meta.gap: gap …
+- meta.gap: gap ‹…›
 - preview: Live preview
 - preview.alt: Crosshair preview
 - presets: Presets
@@ -620,36 +620,36 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - code.copy.tooltip: Copy this crosshair as a code anyone can paste into RazorReaper
 - code.copy.image: An image crosshair has no code — the picture stays on this PC
 - code.copied: Crosshair code copied.
-- code.error.copy: Couldn't copy the code: …
+- code.error.copy: Couldn't copy the code: ‹…›
 - code.error.gamecode: That's a CS2/Valorant code — RazorReaper only reads its own crosshair codes.
 - code.error.notacode: That isn't a crosshair code. RazorReaper codes start with RR1-.
 - code.error.newer: That code comes from a newer RazorReaper. Update the app to read it.
 - code.error.damaged: That crosshair code is incomplete or damaged — copy it again in full.
-- code.savedname: Code …
-- code.imported: Crosshair code imported and saved as '…'.
+- code.savedname: Code ‹…›
+- code.imported: Crosshair code imported and saved as '‹…›'.
 - hotkey: Hotkey
 - hotkey.toggle: Toggle overlay
 - hotkey.hint: Works globally — even while a game has focus. Default F8.
 - toast.deleted: Deleted from library.
-- error.openfolder: Error opening folder: …
-- toast.loaded: Loaded '…'.
-- toast.saved: Saved '…'.
+- error.openfolder: Error opening folder: ‹…›
+- toast.loaded: Loaded '‹…›'.
+- toast.saved: Saved '‹…›'.
 - toast.imported: Image imported.
-- error.picker: Image picker failed: …
-- error.saveprofile: Saving profile failed: …
+- error.picker: Image picker failed: ‹…›
+- error.saveprofile: Saving profile failed: ‹…›
 - toast.overlay.enabled: Crosshair overlay enabled.
 - toast.overlay.disabled: Crosshair overlay disabled.
 - import.error.empty: Image file is empty.
 - import.video.extracting: Extracting video frames…
 - import.video.done: Video imported.
-- import.error.frames: Couldn't extract frames from '…'. Try converting it to PNG/GIF first.
-- import.error.decode: Couldn't decode '…' — unrecognised image format.
-- import.error.image: Image import failed: …
-- library.toast.copied: Copied: …
-- library.error.copy: Couldn't copy path: …
-- library.error.delete: Delete failed: …
+- import.error.frames: Couldn't extract frames from '‹…›'. Try converting it to PNG/GIF first.
+- import.error.decode: Couldn't decode '‹…›' — unrecognised image format.
+- import.error.image: Image import failed: ‹…›
+- library.toast.copied: Copied: ‹…›
+- library.error.copy: Couldn't copy path: ‹…›
+- library.error.delete: Delete failed: ‹…›
 - library.error.missing: That image is no longer on disk.
-- error.loadimage: Couldn't load image: …
+- error.loadimage: Couldn't load image: ‹…›
 
 ## Sky Changer (customlab)
 - subtitle: Replace the in-game sky with an image or solid color — patches your local sky files, safe on any server.
@@ -679,13 +679,13 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - activity.failed.notrunning: Desync failed: ARK not running
 - toast.executable: Could not locate ShooterGame.exe — check that ARK is installed where Steam reports it.
 - activity.failed.executable: Desync failed: executable unavailable
-- toast.rulefailed: Could not create the firewall rule: …
+- toast.rulefailed: Could not create the firewall rule: ‹…›
 - toast.rulefailed.elevation: Could not create the firewall rule (needs Administrator).
 - activity.failed.rulecreate: Desync failed: firewall rule creation
-- toast.limit: Free monthly limit reached (… desync activations). Resets next month — Premium is unlimited.
+- toast.limit: Free monthly limit reached (‹…› desync activations). Resets next month — Premium is unlimited.
 - activity.failed.limit: Desync failed: monthly usage limit
-- toast.active: Desync active — auto-reverts in …s.
-- activity.activated: Desync activated (…s)
+- toast.active: Desync active — auto-reverts in ‹…›s.
+- activity.activated: Desync activated (‹…›s)
 - toast.removefailed: Could not remove the Desync firewall rule — traffic may still be blocked. Try again as Administrator.
 - activity.failed.ruleremove: Desync failed: firewall rule removal
 - toast.reverted: Desync reverted — traffic restored.
@@ -765,7 +765,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - sending: Sending…
 - send.feedback: Send Feedback
 - send.support: Send Report
-- reportid: Report ID: …
+- reportid: Report ID: ‹…›
 - side.support.title: Attached automatically  [DE: Automatisch angehängt]
 - side.support.1: Machine name
 - side.support.2: Install and hardware IDs
@@ -787,7 +787,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - result.thanks: Thanks for your feedback!
 - result.failed: Failed to send feedback. Please try again.
 - result.canceled: Feedback submission was canceled.
-- result.networkerror: Network error: …
+- result.networkerror: Network error: ‹…›
 
 ## File Modifier (filemodifier)
 - title: File Modifier  [DE: Dateien ändern]
@@ -797,7 +797,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - rescan: Rescan
 - elevation: Some game folders can only be changed with administrator rights.
 - sfc.label: SeekFree cleanup  [DE: SeekFree aufräumen]
-- sfc.label.size: SeekFreeContent — …
+- sfc.label.size: SeekFreeContent — ‹…›
 - sfc.description: Deletes redundant cooked map data. Frees disk and forces ARK to load loose (modified) files.
 - scan: Scan
 - scanning: Scanning…
@@ -812,14 +812,14 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - sfc.category.map: Map data
 - sfc.category.mod: Official map (mod)
 - sfc.category.core: Core game data (advanced)
-- confirm: Delete … item(s), freeing …? This cannot be undone here.
+- confirm: Delete ‹…› item(s), freeing ‹…›? This cannot be undone here.
 - delete.confirm: Yes, delete
 - deleting: Deleting…
 - delete.selected: Delete selected
-- delete.selected.size: Delete selected (…)
+- delete.selected.size: Delete selected (‹…›)
 - files.none: No files modified
 - files.one: 1 file modified
-- files.many: … files modified
+- files.many: ‹…› files modified
 - files.description: Remove or replace a single file inside the ARK install. Originals are backed up and fully restorable.
 - remove: Remove a file…
 - replace: Replace a file…
@@ -828,15 +828,15 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - badge.removed: Removed
 - badge.replaced: Replaced
 - restore: Restore
-- entry.description: … · … …
+- entry.description: ‹…› · ‹…› ‹…›
 - picker.remove: Select the ARK file to remove
 - picker.replace.target: Select the ARK file to replace
 - picker.replace.source: Select the replacement file
 - toast.pickerfailed: Could not open the file picker.
-- toast.cleanupfailed: Cleanup failed: …
+- toast.cleanupfailed: Cleanup failed: ‹…›
 - toast.arkrunning: ARK is running — close the game so it doesn't lock these files.
-- toast.restoredall: Restored … file(s).
-- toast.restoredpartial: Restored … file(s), … failed.
+- toast.restoredall: Restored ‹…› file(s).
+- toast.restoredpartial: Restored ‹…› file(s), ‹…› failed.
 - toast.nothingtorestore: Nothing to restore.
 - result.nofile: No file selected.
 - result.noark: ARK installation not found.
@@ -845,25 +845,25 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - result.outsideark: For safety, only files inside the ARK install folder can be modified.
 - result.filemissing: That file no longer exists.
 - result.alreadymodified: That file is already modified — restore it first.
-- result.removed: Removed … — backed up and restorable.
-- result.removefailed: Could not remove the file: …
+- result.removed: Removed ‹…› — backed up and restorable.
+- result.removefailed: Could not remove the file: ‹…›
 - result.sourcemissing: The replacement file no longer exists.
 - result.samefile: The replacement is the same file as the target.
 - result.targetmissing: The target game file wasn't found, so there is nothing to replace.
-- result.replaced: Replaced … — original backed up and restorable.
-- result.replacefailed: Could not replace the file: …
+- result.replaced: Replaced ‹…› — original backed up and restorable.
+- result.replacefailed: Could not replace the file: ‹…›
 - result.untracked: That modification is no longer tracked.
-- result.nobackup: No backup found for … — use Steam's Verify Integrity.
-- result.restored: Restored ….
-- result.restorefailed: Could not restore the file: …
+- result.nobackup: No backup found for ‹…› — use Steam's Verify Integrity.
+- result.restored: Restored ‹…›.
+- result.restorefailed: Could not restore the file: ‹…›
 - result.accessdenied: Access denied — try running RazorReaper as Administrator.
 - result.nothingselected: Nothing selected.
-- result.freed: Freed ….
-- result.freedpartial: Freed …, but … item(s) could not be deleted (try running as Administrator).
+- result.freed: Freed ‹…›.
+- result.freedpartial: Freed ‹…›, but ‹…› item(s) could not be deleted (try running as Administrator).
 - result.steamfailed: Could not open Steam — start it manually and verify the ARK files.
-- activity.removed: Removed game file …
-- activity.replaced: Replaced game file …
-- activity.freed: SeekFree cleanup freed …
+- activity.removed: Removed game file ‹…›
+- activity.replaced: Replaced game file ‹…›
+- activity.freed: SeekFree cleanup freed ‹…›
 
 ## Fonts (fonts)
 - title: Game Fonts  [DE: Spiel-Schriftarten]
@@ -896,7 +896,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - asian.title: Asian Font Setup  [DE: Asiatische Schrift einrichten]
 - asian.text: This font uses ARK's Asian localization files to change the in-game font appearance.
 - easyinstall: Easy Installation
-- step.clickbutton: Click the "…" button
+- step.clickbutton: Click the "‹…›" button
 - step.typethis: Type this:
 - asian.how.label: How it works:  [DE: So funktioniert es:]
 - asian.how.text: This copies English localization files to the Asian locale folder, which changes the font while keeping text in English.
@@ -905,7 +905,7 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - manualinstall: Manual Installation
 - global.placefolder: Place the Global folder in:
 - step.steamlaunchoptions: In Steam: Right-click ARK → Properties → Launch Options
-- activity.selected: Font selected: …
+- activity.selected: Font selected: ‹…›
 - error.noark: ARK installation not found.
 - status.extracting: Extracting Global font…
 - error.packagemissing: Global font package missing from the app's resources: wwwroot/assets/fonts/Global.zip is not there.
@@ -913,22 +913,22 @@ use the German one when the member writes German. Lines are `<setting key>: <tex
 - status.installingfiles: Installing font files…
 - success.installed.global: Font files installed. Set the Steam launch option next (see instructions).
 - activity.global.installed: Global font installed
-- error.install: Installation failed: …
+- error.install: Installation failed: ‹…›
 - success.downloaded: Global font downloaded to:
-…
+‹…›
 
 Zip file also saved as:
-…
+‹…›
 - activity.global.downloaded: Global font downloaded
-- error.download: Download failed: …
+- error.download: Download failed: ‹…›
 - status.copying: Copying localization files…
 - error.noenglishfiles: English localization files not found in the ARK installation.
 - success.installed.asian: Font files installed. Set the Steam launch option to -culture=zh-Hans-CN.
 - activity.asian.installed: Asian font installed
-- error.nofolder: Font folder not found: …
+- error.nofolder: Font folder not found: ‹…›
 - success.folderopened: Opened font folder in Explorer.
 - activity.folderopened: Opened font folder
-- error.openfolder: Failed to open folder: …
+- error.openfolder: Failed to open folder: ‹…›
 - success.copied: Copied to clipboard.
 - activity.launchoption.copied: Launch option copied
 - error.copy: Failed to copy.
@@ -938,7 +938,7 @@ Zip file also saved as:
 - error.copypath: Failed to copy path.
 - success.steamopened: ARK opened in Steam — right-click it for Properties.
 - activity.steamopened: Opened ARK in Steam
-- error.opensteam: Failed to open Steam: …
+- error.opensteam: Failed to open Steam: ‹…›
 
 ## Game (game)
 - title: Game management  [DE: Spielverwaltung]
@@ -954,28 +954,28 @@ Zip file also saved as:
 - command.cleanvision: Clean Vision
 - command.debugstructures: Debug Structures
 - consolekey.title: Console hotkey  [DE: Konsolentaste]
-- consolekey.note: Click and press the key that opens the console in ARK. Default is ….
-- consolekey.unknown: Unknown console key '…'. Using ….
+- consolekey.note: Click and press the key that opens the console in ARK. Default is ‹…›.
+- consolekey.unknown: Unknown console key '‹…›'. Using ‹…›.
 - consolekey.saved: New hotkey saved
 - toast.notrunning: ARK: Survival Evolved is not running.
-- toast.commandsent: Command '…' executed successfully
-- activity.commandsent: Game command executed: …
-- toast.commandfailed: Failed to send '…'. Try again.
-- toast.commanderror: Error executing command: …
+- toast.commandsent: Command '‹…›' executed successfully
+- activity.commandsent: Game command executed: ‹…›
+- toast.commandfailed: Failed to send '‹…›'. Try again.
+- toast.commanderror: Error executing command: ‹…›
 - activity.launched: ARK launched via Steam
 - activity.launchfailed: ARK launch failed
-- toast.launcherror: Error launching game: …
+- toast.launcherror: Error launching game: ‹…›
 - toast.closed: ARK: Survival Evolved closed successfully
 - activity.closed: ARK: Survival Evolved closed
-- toast.closeerror: Error closing game: …
+- toast.closeerror: Error closing game: ‹…›
 
 ## Gamma (gamma)
 - title: Gamma
 - subtitle: System-wide screen gamma with hotkey and Logitech G HUB triggers
 - status.listening: Listening
 - status.off: Off
-- status.watching: Watching triggers · …
-- status.idle: Idle · … · press Start listening to enable hotkeys
+- status.watching: Watching triggers · ‹…›
+- status.idle: Idle · ‹…› · press Start listening to enable hotkeys
 - mode.cycle: Cycle mode
 - mode.direct: Direct mode
 - start: Start listening
@@ -1017,7 +1017,7 @@ Zip file also saved as:
 - premium.upgrade: Upgrade to Premium
 
 ## Home (home)
-- welcome: Welcome, …
+- welcome: Welcome, ‹…›
 - subtitle: ARK: Survival Evolved Configuration & Server Management Tool
 - status.title: Status
 - storage.title: Storage  [DE: Speicher]
@@ -1039,11 +1039,11 @@ Zip file also saved as:
 - status.timezone: Timezone
 - status.utcoffset: UTC offset
 - status.week: Week
-- status.week.value: … of …
+- status.week.value: ‹…› of ‹…›
 - storage.drives: Installed drives
 - storage.unavailable: Drive info unavailable
-- storage.used: …% used
-- storage.more: +… more drives
+- storage.used: ‹…›% used
+- storage.more: +‹…› more drives
 - resources.cpu: CPU usage
 - resources.gpu: GPU usage
 - resources.ram: RAM usage
@@ -1052,8 +1052,8 @@ Zip file also saved as:
 - resources.initializing: Initializing system monitoring…
 - activity.empty: No recent activity
 - activity.loaded: Dashboard loaded
-- activity.openedfolder: Opened folder: …
-- activity.pathset: ARK path set to: …
+- activity.openedfolder: Opened folder: ‹…›
+- activity.pathset: ARK path set to: ‹…›
 - activity.pathreset: ARK path reset to auto-detect
 - sound.enable: Enable UI sounds
 - sound.notification: Notification sound
@@ -1066,10 +1066,10 @@ Zip file also saved as:
 - sound.test: Test
 - sound.folder: Custom sounds folder
 - sound.openfolder: Open folder
-- sound.formats: Supports MP3, WAV, OGG, M4A, AAC. Keep files under … MB for fast playback.
+- sound.formats: Supports MP3, WAV, OGG, M4A, AAC. Keep files under ‹…› MB for fast playback.
 - sound.folder.missing: Custom sound folder not found.
 - sound.error.format: Unsupported audio format. Use MP3, WAV, OGG, M4A, or AAC.
-- sound.error.toolarge: Sound file too large. Max size is … MB.
+- sound.error.toolarge: Sound file too large. Max size is ‹…› MB.
 - sound.error.read: Could not read the sound file.
 - sound.updated.notification: Notification sound updated
 - sound.updated.click: Click sound updated
@@ -1083,14 +1083,14 @@ Zip file also saved as:
 - paths.notfound: Not found
 - paths.saved: Custom ARK path saved
 - paths.resetdone: Reset to auto-detect
-- paths.adjusted: Detected a subfolder. Using ARK install root: …
+- paths.adjusted: Detected a subfolder. Using ARK install root: ‹…›
 - paths.error.missing: Path does not exist
-- paths.error.open: Failed to open folder: …
+- paths.error.open: Failed to open folder: ‹…›
 - paths.error.empty: Please enter a valid ARK installation path
 - paths.error.nodir: The specified directory does not exist
 - paths.error.notark: This doesn't appear to be a valid ARK installation. Paste the folder that contains ShooterGame.
-- paths.error.save: Error saving path: …
-- paths.error.reset: Error resetting path: …
+- paths.error.save: Error saving path: ‹…›
+- paths.error.reset: Error resetting path: ‹…›
 - sound.customfile: Custom file
 
 ## hotkey
@@ -1100,7 +1100,7 @@ Zip file also saved as:
 - presskey: Press a key…
 - notactive: not active
 - notactive.hint: Windows would not give this key to RazorReaper — another program is already holding it. Pick a different key here.
-- notactive.conflict: This key is already taken inside RazorReaper by …, so it never got registered here. Pick a different key here.
+- notactive.conflict: This key is already taken inside RazorReaper by ‹…›, so it never got registered here. Pick a different key here.
 
 ## Global Hotkeys (hotkeys)
 - subtitle: Every system-wide hotkey, set in one place. They work even while ARK has focus.
@@ -1120,7 +1120,7 @@ Zip file also saved as:
 - movemode.on: Move mode: on
 - testalert: Test alert
 - status.off: Overlay is off — enable it to draw on screen.
-- status.enabled: … of … modules enabled
+- status.enabled: ‹…› of ‹…› modules enabled
 - status.movemode:  · move mode on
 - modules.title: Modules  [DE: Module]
 - modules.description: Toggle each panel line and reorder it with the arrows.
@@ -1178,21 +1178,21 @@ Zip file also saved as:
 - server.none: No server set
 - server.singleplayer: Single Player
 - tool.idle: Idle
-- desync.frozen: Frozen — …s
+- desync.frozen: Frozen — ‹…›s
 - desync.off: Off
 - scripts.none: None
-- scripts.active.one: … active
-- scripts.active.many: … active
-- compact.scripts: … scripts
-- compact.desync: Desync …s
+- scripts.active.one: ‹…› active
+- scripts.active.many: ‹…› active
+- compact.scripts: ‹…› scripts
+- compact.desync: Desync ‹…›s
 - testalert.info: Test alert — this is where alerts appear
 - testalert.success: Test alert — success
 - testalert.warning: Test alert — warning
 - testalert.error: Test alert — error
 
 ## Support inbox (inbox)
-- unread.one: … unread reply
-- unread.many: … unread replies
+- unread.one: ‹…› unread reply
+- unread.many: ‹…› unread replies
 - title: Inbox  [DE: Posteingang]
 - subtitle: Private answers from support, linked to your reports.
 - loading: Loading your inbox…
@@ -1212,12 +1212,12 @@ Zip file also saved as:
 - status.running: ARK is running
 - status.running.description: Close ARK before applying — it overwrites GameUserSettings.ini on exit.
 - status.ready: Ready to apply
-- status.ready.description: Editing INIs in …
+- status.ready.description: Editing INIs in ‹…›
 - presets.title: One-Click Presets  [DE: Vorlagen auf einen Klick]
 - presets.intro: Each preset edits only its own keys; a backup is created before every apply.
-- preset.keys: … keys
+- preset.keys: ‹…› keys
 - lastapplied: Last applied
-- lastapplied.at: Applied …
+- lastapplied.at: Applied ‹…›
 - apply: Apply
 - preset.maxfps: Max FPS
 - preset.maxfps.description: Everything at minimum and sky effects fully disabled. The most frames possible for low-end rigs and sweats.
@@ -1239,32 +1239,32 @@ Zip file also saved as:
 - placeholder.key: e.g. sg.ShadowQuality
 - row.remove: Remove row
 - addrow: Add Row
-- applyto: Apply to …
+- applyto: Apply to ‹…›
 - draftnote: Rows are saved as a draft automatically.
 - backups.title: Backups
-- backups.intro: The last … backups per file are kept; restoring snapshots the current file first.
+- backups.intro: The last ‹…› backups per file are kept; restoring snapshots the current file first.
 - backups.empty: No backups yet — one is created each time you apply.
 - restore: Restore
 - toast.noark: ARK installation not found — cannot write INI files.
 - toast.arkrunning: ARK is running. Close the game first — it overwrites GameUserSettings.ini on exit.
-- toast.presetapplied: Preset '…' applied (… keys). A backup was saved first.
+- toast.presetapplied: Preset '‹…›' applied (‹…› keys). A backup was saved first.
 - toast.presetfailed: Failed to apply preset.
-- toast.applyfailed: Apply failed: …
+- toast.applyfailed: Apply failed: ‹…›
 - toast.norows: Add at least one row with a section and a key.
-- toast.customapplied: … key(s) written to ….
+- toast.customapplied: ‹…› key(s) written to ‹…›.
 - toast.customfailed: Failed to apply custom keys.
-- confirm.restore: Restore '…' over the live …?
-- toast.restored: Backup restored to …. The previous file was snapshotted first.
+- confirm.restore: Restore '‹…›' over the live ‹…›?
+- toast.restored: Backup restored to ‹…›. The previous file was snapshotted first.
 - toast.restorefailed: Failed to restore backup.
-- toast.restoreerror: Restore failed: …
-- confirm.delete: Delete backup '…'? This cannot be undone.
+- toast.restoreerror: Restore failed: ‹…›
+- confirm.delete: Delete backup '‹…›'? This cannot be undone.
 - toast.backupdeleted: Backup deleted.
 - toast.backupdeletefailed: Backup could not be deleted.
-- toast.deleteerror: Delete failed: …
-- activity.presetapplied: INI Builder preset applied: …
-- activity.customapplied: INI Builder custom keys applied to … (… keys)
-- activity.restored: INI Builder backup restored: …
-- activity.backupdeleted: INI Builder backup deleted: …
+- toast.deleteerror: Delete failed: ‹…›
+- activity.presetapplied: INI Builder preset applied: ‹…›
+- activity.customapplied: INI Builder custom keys applied to ‹…› (‹…› keys)
+- activity.restored: INI Builder backup restored: ‹…›
+- activity.backupdeleted: INI Builder backup deleted: ‹…›
 - result.presetempty: Preset contains no keys.
 - result.nokeys: No keys to apply.
 - result.noark: ARK installation not found.
@@ -1272,10 +1272,10 @@ Zip file also saved as:
 - result.outsidebackups: Backup path is outside the backup folder.
 - result.backupgone: Backup file no longer exists.
 - result.nosnapshot: Could not snapshot the current file — restore cancelled to protect your INI.
-- result.restorefailed: Restore failed: …
+- result.restorefailed: Restore failed: ‹…›
 - result.novalidkeys: No valid keys to apply. Each row needs a section and a key.
 - result.nobackup: Could not create a backup — apply cancelled to protect your INI.
-- result.applyfailed: Apply failed: …
+- result.applyfailed: Apply failed: ‹…›
 
 ## INI Changer (inichanger)
 - title: INI Configuration  [DE: INI-Konfiguration]
@@ -1303,10 +1303,10 @@ Zip file also saved as:
 - tooltip.addpreset: Save current INI as a custom preset
 - tooltip.deletemode: Click a custom preset to remove it
 - deletemode: Delete mode
-- preview.alt: … preview
+- preview.alt: ‹…› preview
 - editor.title: INI Editor  [DE: INI-Editor]
 - editor.empty: Empty buffer
-- editor.stats: … lines · …
+- editor.stats: ‹…› lines · ‹…›
 - editor.placeholder: Load an INI file or apply a preset to start editing…
 - dialog.title: Create Preset  [DE: Vorlage erstellen]
 - dialog.subtitle: Save your tuned INI as a reusable preset
@@ -1339,74 +1339,74 @@ Zip file also saved as:
 - preset.semi-soft.description: Soft visuals, gentle FPS bump.
 - picker.image: Pick preset image
 - picker.ini: Select an INI file
-- toast.imagepickfailed: Image pick failed: …
+- toast.imagepickfailed: Image pick failed: ‹…›
 - toast.emptybuffer: Current INI content is empty.
 - toast.imported: INI file imported.
-- toast.importfailed: Import failed: …
+- toast.importfailed: Import failed: ‹…›
 - toast.namerequired: Preset name is required.
 - toast.contentrequired: Preset content is required.
 - toast.nameexists: A preset with this name already exists.
 - toast.savefailed: Failed to save preset.
 - toast.imagenotattached: Preset saved, but the image could not be attached.
 - toast.presetsaved: Preset saved successfully.
-- toast.saveerror: Save failed: …
+- toast.saveerror: Save failed: ‹…›
 - toast.selectcustom: Select a custom preset to delete.
 - toast.onlycustom: Only custom presets can be deleted.
-- confirm.delete: Delete custom preset '…'?
+- confirm.delete: Delete custom preset '‹…›'?
 - toast.removefailed: Unable to remove this preset.
 - toast.presetremoved: Custom preset removed.
-- toast.removeerror: Remove failed: …
+- toast.removeerror: Remove failed: ‹…›
 - toast.imagesavefailed: Failed to save preset image.
-- toast.imageupdated: Image updated for '…'.
-- toast.imagereplacefailed: Image replace failed: …
+- toast.imageupdated: Image updated for '‹…›'.
+- toast.imagereplacefailed: Image replace failed: ‹…›
 - toast.nocustomimage: No custom image to reset.
-- toast.imagereset: Reset image for '…'.
-- toast.imageresetfailed: Image reset failed: …
+- toast.imagereset: Reset image for '‹…›'.
+- toast.imageresetfailed: Image reset failed: ‹…›
 - toast.nosteam: Steam installation not found in registry.
 - toast.nosteam.long: Steam installation not found in registry. Please ensure Steam is properly installed.
 - toast.noini: INI file does not exist at expected location.
 - toast.iniloaded: INI file loaded successfully.
-- toast.loaderror: Error loading INI file: …
+- toast.loaderror: Error loading INI file: ‹…›
 - toast.inicleared: INI file content cleared successfully.
-- toast.clearerror: Error clearing INI file: …
+- toast.clearerror: Error clearing INI file: ‹…›
 - toast.badpath: Invalid directory path
 - toast.inisaved: INI file saved successfully.
-- toast.saveinierror: Error saving INI file: …
+- toast.saveinierror: Error saving INI file: ‹…›
 - toast.nopresets: No presets available to download.
-- toast.downloaded: Presets downloaded to …
-- toast.downloadfailed: Download failed: …
-- toast.ininotfound: INI file not found at: …
+- toast.downloaded: Presets downloaded to ‹…›
+- toast.downloadfailed: Download failed: ‹…›
+- toast.ininotfound: INI file not found at: ‹…›
 - toast.inifound: INI file found.
-Path: …
-Size: … bytes
-Modified: …
-- toast.checkerror: Error checking INI file: …
+Path: ‹…›
+Size: ‹…› bytes
+Modified: ‹…›
+- toast.checkerror: Error checking INI file: ‹…›
 - toast.noark.long: ARK installation not found. Please ensure ARK is properly installed.
 - toast.noark: ARK installation not found.
-- toast.nowaterdir: Water files directory not found at: …
-- toast.waterallfound: All water surface files found (… files)
-Path: …
-- toast.waterpartial: Partial water files found (…/… files)
-Path: …
-- toast.wateralreadyremoved: Water surface already removed (0/… files found)
-Path: …
-- toast.watercheckerror: Error checking water files: …
-- toast.waterrestored: Water surface restored (… file(s)) — applies on next map load.
-- toast.waterremoved: Water surface removed (… file(s)) — reversible, applies on next map load.
+- toast.nowaterdir: Water files directory not found at: ‹…›
+- toast.waterallfound: All water surface files found (‹…› files)
+Path: ‹…›
+- toast.waterpartial: Partial water files found (‹…›/‹…› files)
+Path: ‹…›
+- toast.wateralreadyremoved: Water surface already removed (0/‹…› files found)
+Path: ‹…›
+- toast.watercheckerror: Error checking water files: ‹…›
+- toast.waterrestored: Water surface restored (‹…› file(s)) — applies on next map load.
+- toast.waterremoved: Water surface removed (‹…› file(s)) — reversible, applies on next map load.
 - toast.waternotfound: Water surface files were not found (already removed, or a different ARK version).
-- toast.watertoggleerror: Error toggling water surface: …
-- activity.presetsaved: Custom preset saved: …
-- activity.presetremoved: Custom preset removed: …
-- activity.imageupdated: Preset image updated: …
-- activity.imagereset: Preset image reset: …
+- toast.watertoggleerror: Error toggling water surface: ‹…›
+- activity.presetsaved: Custom preset saved: ‹…›
+- activity.presetremoved: Custom preset removed: ‹…›
+- activity.imageupdated: Preset image updated: ‹…›
+- activity.imagereset: Preset image reset: ‹…›
 - activity.iniloaded: INI file loaded successfully
 - activity.inicleared: INI file cleared
-- activity.presetselected: Preset selected: …
+- activity.presetselected: Preset selected: ‹…›
 - activity.inisaved: INI file saved
-- activity.inisaved.preset: INI file saved (Preset: …)
+- activity.inisaved.preset: INI file saved (Preset: ‹…›)
 - activity.downloaded: INI presets downloaded
-- activity.waterall: Water files check: All … files found
-- activity.waterpartial: Water files check: …/… files found
+- activity.waterall: Water files check: All ‹…› files found
+- activity.waterpartial: Water files check: ‹…›/‹…› files found
 - activity.wateralreadyremoved: Water files check: Already removed
 - activity.waterrestored: Water surface restored
 - activity.waterremoved: Water surface removed
@@ -1421,7 +1421,7 @@ Path: …
 - before.text: Use only what helps. Test FPS, stability, and visibility after each change.
 - args.title: ARK launch arguments  [DE: ARK-Startparameter]
 - args.text: Click any argument to copy it.
-- copyflag: Copy …
+- copyflag: Copy ‹…›
 - goodfor: Good for
 - watchout: Watch out
 - steps.title: How to add them in Steam  [DE: So trägst du sie in Steam ein]
@@ -1435,13 +1435,13 @@ Path: …
 - note.lead: Many players keep 
 - note.rest: , but test on your own hardware.
 - toast.copied: Copied to clipboard.
-- activity.copied: Copied launch text: …
-- toast.copyfailed: Failed to copy: …
+- activity.copied: Copied launch text: ‹…›
+- toast.copyfailed: Failed to copy: ‹…›
 - toast.opened: Opened ARK Properties (General).
 - activity.opened: Opened ARK Properties General tab
 - toast.opened.fallback: Opened ARK Properties. If General is not selected, click the General tab.
 - activity.opened.fallback: Opened ARK Properties (fallback URI)
-- toast.openfailed: Failed to open Steam: …
+- toast.openfailed: Failed to open Steam: ‹…›
 - opt.lowmemory.description: Low-memory mode for RAM-limited PCs.
 - opt.lowmemory.pro.1: Best for systems with under 8 GB RAM
 - opt.lowmemory.pro.2: Reduces memory usage
@@ -1513,7 +1513,7 @@ Path: …
 - fact.support.value: In-app inbox
 - fact.updates: Updates
 - expired: Your license has expired.
-- expiring: Your license runs out in ….
+- expiring: Your license runs out in ‹…›.
 - renew: Renew
 - activation.label: License key  [DE: Lizenzschlüssel]
 - activation.verifying: Verifying…
@@ -1531,10 +1531,10 @@ Path: …
 - plan.3months: 3 Months
 - plan.6months: 6 Months
 - plan.12months: 12 Months
-- remaining.months: … months
-- remaining.days: … days
-- remaining.hours: … hours
-- remaining.minutes: … minutes
+- remaining.months: ‹…› months
+- remaining.days: ‹…› days
+- remaining.hours: ‹…› hours
+- remaining.minutes: ‹…› minutes
 
 ## licenseactivated
 - kicker: License activated
@@ -1546,7 +1546,7 @@ Path: …
 - subtitle: Track your breeding lines and build WTS/WTB posts.
 - search.placeholder: Search species or line name…
 - filter.forsale: For Sale
-- count: … / … lines
+- count: ‹…› / ‹…› lines
 - post.button: WTS / WTB Post
 - add: Add Line
 - edit: Edit Line
@@ -1580,7 +1580,7 @@ Path: …
 - th.muts: Muts M/P
 - th.gen: Gen
 - unnamed: Unnamed line
-- tooltip.baselevel: Base level …
+- tooltip.baselevel: Base level ‹…›
 - tooltip.muts: Maternal / paternal mutations
 - modal.wts.hint: generated from lines marked for sale
 - modal.wts.empty: No lines are marked for sale yet.
@@ -1591,18 +1591,18 @@ Path: …
 - modal.copy: Copy Post
 - error.species: Species is required.
 - success.added: Line added.
-- activity.added: Added breeding line: …
+- activity.added: Added breeding line: ‹…›
 - success.updated: Line updated.
-- activity.updated: Updated breeding line: …
+- activity.updated: Updated breeding line: ‹…›
 - error.save: Could not save the line. Check the log for details.
 - success.deleted: Line deleted.
-- activity.deleted: Deleted breeding line: …
+- activity.deleted: Deleted breeding line: ‹…›
 - error.delete: Could not delete the line. Check the log for details.
 - error.savewtb: Could not save the WTB text. Check the log for details.
 - warn.nothingtocopy: Nothing to copy yet. Mark lines for sale or write a WTB block.
 - success.copied: Post copied to clipboard.
 - activity.copied: Copied WTS/WTB post to clipboard
-- error.copy: Failed to copy: …
+- error.copy: Failed to copy: ‹…›
 
 ## Loading Screen (loadingscreen)
 - title: Custom Loading Screen  [DE: Eigener Ladebildschirm]
@@ -1612,7 +1612,7 @@ Path: …
 - nomovies.title: Movies folder missing  [DE: Movies-Ordner fehlt]
 - nomovies.text: The Movies folder doesn't exist — verify the game files in Steam, then rescan.
 - rescan: Rescan
-- header.replaced: … of … videos replaced
+- header.replaced: ‹…› of ‹…› videos replaced
 - header.replaced.description: Custom videos play on the next game start.
 - header.intact: All original videos intact
 - header.intact.description: ARK's stock startup and loading videos are untouched.
@@ -1635,63 +1635,63 @@ Path: …
 - progress.downloading: Downloading video converter…
 - progress.preparing: Preparing video converter…
 - progress.converting: Converting…
-- picker.title: Select a video for …  [DE: Video für … auswählen]
+- picker.title: Select a video for ‹…›  [DE: Video für ‹…› auswählen]
 - toast.readfailed: Could not read the ARK Movies folder — see the log for details.
 - toast.arkrunning: ARK is running — it may lock these files. Close the game if the change fails.
 - toast.pickerfailed: Could not open the file picker.
 - toast.converterfailed: Could not download the video converter — check your connection and try again.
-- toast.limit: Free monthly limit reached (… loading-screen replacements). Resets next month — Premium is unlimited.
-- toast.replacefailed: Replacing … failed — see the log for details.
-- toast.restorefailed: Restoring … failed — see the log for details.
-- toast.restoredall: Restored … original video(s).
-- toast.restoredpartial: Restored … video(s), … failed.
-- toast.firsterror: First error: …
+- toast.limit: Free monthly limit reached (‹…› loading-screen replacements). Resets next month — Premium is unlimited.
+- toast.replacefailed: Replacing ‹…› failed — see the log for details.
+- toast.restorefailed: Restoring ‹…› failed — see the log for details.
+- toast.restoredall: Restored ‹…› original video(s).
+- toast.restoredpartial: Restored ‹…› video(s), ‹…› failed.
+- toast.firsterror: First error: ‹…›
 - toast.nothingtorestore: Nothing to restore — no videos are currently replaced.
 - toast.restoreallfailed: Restoring the original videos failed — see the log for details.
-- activity.replaced: Replaced ARK video …
-- activity.restored: Restored ARK video …
-- activity.restoredall: Restored all ARK videos (…)
+- activity.replaced: Replaced ARK video ‹…›
+- activity.restored: Restored ARK video ‹…›
+- activity.restoredall: Restored all ARK videos (‹…›)
 - result.noark: ARK installation not found — is the game installed through Steam?
-- result.nomoviesfolder: ARK's Movies folder is missing: …
+- result.nomoviesfolder: ARK's Movies folder is missing: ‹…›
 - result.badname: Invalid movie file name.
-- result.unsupported: … is not a supported ARK movie file (.mp4 / .wmv).
+- result.unsupported: ‹…› is not a supported ARK movie file (.mp4 / .wmv).
 - result.sourcemissing: The selected video file no longer exists.
-- result.wrongformat: Wrong format: … needs a … file, but you picked a …. RazorReaper does not convert videos — pick a … video.
+- result.wrongformat: Wrong format: ‹…› needs a ‹…› file, but you picked a ‹…›. RazorReaper does not convert videos — pick a ‹…› video.
 - result.noextension: file without an extension
-- result.extensionfile: … file
+- result.extensionfile: ‹…› file
 - result.sourceunreadable: The selected video file could not be read.
 - result.sourceempty: The selected video file is empty (0 bytes).
 - result.samefile: That is the game's own video file — pick your replacement video instead.
 - result.converternotready: The video converter isn't ready yet — let ffmpeg finish downloading.
-- result.formats: … formats of …
-- result.converted: … converted and replaced — plays on the next game start.
-- result.notinfolder: … was not found in the Movies folder, so there is no original to replace.
-- result.replaced: … replaced — your video plays on the next game start.
-- result.replacefailed: Replacing … failed: …
-- result.convertfailed: Converting … failed: …
-- result.backupunreadable: Could not read the backup folder: …
-- result.nobackup: No backup found for … — it has not been replaced.
-- result.restored: … restored to the original.
-- result.restorefailed: Restoring … failed: …
+- result.formats: ‹…› formats of ‹…›
+- result.converted: ‹…› converted and replaced — plays on the next game start.
+- result.notinfolder: ‹…› was not found in the Movies folder, so there is no original to replace.
+- result.replaced: ‹…› replaced — your video plays on the next game start.
+- result.replacefailed: Replacing ‹…› failed: ‹…›
+- result.convertfailed: Converting ‹…› failed: ‹…›
+- result.backupunreadable: Could not read the backup folder: ‹…›
+- result.nobackup: No backup found for ‹…› — it has not been replaced.
+- result.restored: ‹…› restored to the original.
+- result.restorefailed: Restoring ‹…› failed: ‹…›
 - convert.sourcemissing: The source video no longer exists.
 - convert.noffmpeg: ffmpeg is not available. Try again so it can download.
-- convert.unsupported: Unsupported target format '…'.
+- convert.unsupported: Unsupported target format '‹…›'.
 - convert.failed: Conversion failed — the source video could not be converted. See the log for details.
 - convert.nooutput: Conversion produced no output.
-- convert.crashed: Conversion failed: …
+- convert.crashed: Conversion failed: ‹…›
 - convert.done: Conversion complete.
 
 ## macro
 - activity.stopall: All macro runners stopped
-- activity.started: Macro '…' started
-- activity.completed: Macro '…' completed (… loop(s))
-- activity.stopped: Macro '…' stopped
-- activity.aborted: Macro '…' aborted — …
-- activity.failed: Macro '…' failed
+- activity.started: Macro '‹…›' started
+- activity.completed: Macro '‹…›' completed (‹…› loop(s))
+- activity.stopped: Macro '‹…›' stopped
+- activity.aborted: Macro '‹…›' aborted — ‹…›
+- activity.failed: Macro '‹…›' failed
 
 ## Map Mods (mapmods)
 - subtitle: Modded map spots — caves, landmarks, obelisks and POIs — with coordinates and notes.
-- spots: … spots
+- spots: ‹…› spots
 - nospots: No spots here yet.
 - selectspot: Select a spot to see its details.
 - preview.loading: Loading preview…
@@ -1703,7 +1703,7 @@ Path: …
 - label.loadout: Loadout
 - label.loot: Loot
 - label.note: Note
-- coords: Lat … / Lon …
+- coords: Lat ‹…› / Lon ‹…›
 - nocoords: Not documented
 - copytp: Copy teleport
 - noartifact: No artifact
@@ -1714,7 +1714,7 @@ Path: …
 - server.add: Add server
 - server.edit: Edit server
 - server.delete: Delete server
-- server.stats: … maps · … spots
+- server.stats: ‹…› maps · ‹…› spots
 - map.add: Add map
 - map.edit: Edit map
 - map.delete: Delete map
@@ -1747,32 +1747,32 @@ Path: …
 - form.lon.hint: e.g. 72
 - form.note: Note (optional)
 - form.note.hint: Optional notes
-- confirm.spot: Delete spot "…"?
-- confirm.server: Delete server "…" and all its maps and spots?
-- confirm.map: Delete map "…" and all its spots?
+- confirm.spot: Delete spot "‹…›"?
+- confirm.server: Delete server "‹…›" and all its maps and spots?
+- confirm.map: Delete map "‹…›" and all its spots?
 - toast.copied: Teleport command copied.
-- activity.copied: Copied teleport: …
+- activity.copied: Copied teleport: ‹…›
 - toast.copyfailed: Failed to copy the command.
-- toast.imagetoolarge: Image must be under … MB.
+- toast.imagetoolarge: Image must be under ‹…› MB.
 - toast.imageadded: Preview image added.
 - toast.imagefailed: Failed to add the image.
 - toast.imageremoved: Preview image removed.
 - toast.spotsaved: Spot updated.
 - toast.serversaved: Server updated.
 - toast.mapsaved: Map updated.
-- toast.spotaddedto: Spot "…" added to ….
-- toast.spotadded: Spot "…" added.
-- toast.spotdeleted: Spot "…" deleted.
-- toast.serveradded: Server "…" added.
-- toast.serverdeleted: Server "…" deleted.
-- toast.mapadded: Map "…" added.
-- toast.mapdeleted: Map "…" deleted.
+- toast.spotaddedto: Spot "‹…›" added to ‹…›.
+- toast.spotadded: Spot "‹…›" added.
+- toast.spotdeleted: Spot "‹…›" deleted.
+- toast.serveradded: Server "‹…›" added.
+- toast.serverdeleted: Server "‹…›" deleted.
+- toast.mapadded: Map "‹…›" added.
+- toast.mapdeleted: Map "‹…›" deleted.
 
 ## media
 - image.failed: Image unavailable
 - video.failed: Video unavailable
 - video.loading: Loading video…
-- video.loading.percent: Loading video… …%
+- video.loading.percent: Loading video… ‹…›%
 
 ## nav
 - search.label: Search  [DE: Suchen]
@@ -1902,13 +1902,13 @@ Path: …
 - type.tribe-log.label: Tribe log  [DE: Tribe-Log]
 - type.tribe-log.description: Tribe-log events matching your trigger phrases below.
 - species.title: Rare dino species  [DE: Seltene Dino-Arten]
-- species.description: Only applies while … is enabled.
-- species.count: … / … on
+- species.description: Only applies while ‹…› is enabled.
+- species.count: ‹…› / ‹…› on
 - species.none: None
 - clusters.title: Clusters  [DE: Cluster]
 - clusters.description: Enable the clusters you play on. Real cluster names roll out later — rename these to match.
 - tribelog.title: Tribe log triggers  [DE: Tribe-Log-Auslöser]
-- tribelog.description: Only applies while … is enabled. One phrase per line; a tribe-log alert shows if it contains any of them (case-insensitive). Leave empty to show every tribe-log message.
+- tribelog.description: Only applies while ‹…› is enabled. One phrase per line; a tribe-log alert shows if it contains any of them (case-insensitive). Leave empty to show every tribe-log message.
 - tribelog.placeholder: One phrase per line — e.g. was killed, destroyed, starved to death, an enemy tribe name…
 - channels.title: Watched channels  [DE: Beobachtete Kanäle]
 - channels.description: Discord channels the backend relays from. Add or remove them here — it applies live, no restart. The bot must be a member of the channel's server.
@@ -1932,43 +1932,43 @@ Path: …
 - chip.element: Element
 - chip.osd: OSD
 - state.disconnected: Disconnected.
-- state.connecting: Connecting to ……
-- state.streaming: Streaming from …
-- state.retrying: … — retrying…
-- reason.status: Server returned …
+- state.connecting: Connecting to ‹…›…
+- state.streaming: Streaming from ‹…›
+- state.retrying: ‹…› — retrying…
+- reason.status: Server returned ‹…›
 - reason.unreachable: Could not reach the backend
 - reason.timeout: Connection timed out
 - reason.failed: Connection failed
 - alert.raredino: Rare dino spotted
-- alert.raredino.named: Rare dino: …
+- alert.raredino.named: Rare dino: ‹…›
 - alert.resource: Resource available
-- alert.resource.named: Resource: …
+- alert.resource.named: Resource: ‹…›
 - alert.element: Element node active
-- alert.element.named: Element node: …
+- alert.element.named: Element node: ‹…›
 - alert.osd: OSD event
 - alert.tribelog: Tribe log
 - alert.generic: Alert
-- alert.withcluster: … · …
+- alert.withcluster: ‹…› · ‹…›
 - test.cluster: Test
-- test.marker: … (test)
+- test.marker: ‹…› (test)
 - channels.error.unauthorized: Unauthorized — the token in your endpoint URL is wrong.
 - channels.error.badid: That doesn't look like a valid Discord channel ID (digits only).
-- channels.error.status: The backend returned ….
+- channels.error.status: The backend returned ‹…›.
 - channels.error.badresponse: Couldn't read the backend's response.
-- channels.error.transport: … — check the endpoint and your connection.
+- channels.error.transport: ‹…› — check the endpoint and your connection.
 
 ## notify
 - update.ready: update ready — restart to install
-- update.ready.version: update … ready — restart to install
-- newversion: new version …
-- whatsnew: what's new in …
+- update.ready.version: update ‹…› ready — restart to install
+- newversion: new version ‹…›
+- whatsnew: what's new in ‹…›
 - tooltip.idle: What's new & inbox
 
 ## OC BPs (ocbps)
 - subtitle: Genesis 2 mission rewards for overcapped blueprints.
 - how.title: How to get them  [DE: So bekommst du sie]
 - how.text: Run the listed Gen2 missions on the shown difficulty to roll overcapped blueprints.
-- count: … items
+- count: ‹…› items
 - column.item: Item
 - column.mission: Mission
 - column.difficulty: Difficulty
@@ -2015,11 +2015,11 @@ Path: …
 - toast.exists: MyPaintings folder already exists.
 - toast.created: MyPaintings folder created.
 - activity.created: MyPaintings folder created
-- toast.createfailed: Error creating folder: …
+- toast.createfailed: Error creating folder: ‹…›
 - toast.opencanvas: Opening Canvas download page…
-- toast.websitefailed: Error opening website: …
+- toast.websitefailed: Error opening website: ‹…›
 - toast.openmaker: Opening ARK Canvas Maker download page…
-- toast.makerfailed: Error opening ARK Canvas Maker: …
+- toast.makerfailed: Error opening ARK Canvas Maker: ‹…›
 
 ## palette
 - placeholder: Search pages, locations and commands...
@@ -2034,26 +2034,26 @@ Path: …
 - hint.close: close
 - empty.lead: No results for "
 - empty.rest: "
-- count.one: … result
-- count.many: … results
-- count.capped: … of …
-- deeplink.parent: … · …
-- deeplink.tp.count: … locations
-- deeplink.uw.count: … crates
-- deeplink.cave.count: … spots
-- deeplink.boss.count: … entries
+- count.one: ‹…› result
+- count.many: ‹…› results
+- count.capped: ‹…› of ‹…›
+- deeplink.parent: ‹…› · ‹…›
+- deeplink.tp.count: ‹…› locations
+- deeplink.uw.count: ‹…› crates
+- deeplink.cave.count: ‹…› spots
+- deeplink.boss.count: ‹…› entries
 - category.script: Script
 - category.command: Command
 - status.running: Running
 - status.on: On
 - cmd.script.subtitle: Automation script — Enter to toggle
-- cmd.script.started: … started.
-- cmd.script.stopped: … stopped.
+- cmd.script.started: ‹…› started.
+- cmd.script.stopped: ‹…› stopped.
 - cmd.stopall.title: Stop all scripts  [DE: Alle Skripte stoppen]
 - cmd.stopall.subtitle: Halts every running automation script
-- cmd.stopall.status: … running
-- cmd.stopall.done.one: Stopped … script.
-- cmd.stopall.done.many: Stopped … scripts.
+- cmd.stopall.status: ‹…› running
+- cmd.stopall.done.one: Stopped ‹…› script.
+- cmd.stopall.done.many: Stopped ‹…› scripts.
 - cmd.stopall.none: No scripts were running.
 - cmd.crosshair.title: Toggle crosshair overlay  [DE: Fadenkreuz-Overlay umschalten]
 - cmd.crosshair.subtitle: Shows or hides the always-on-top crosshair
@@ -2072,15 +2072,15 @@ Path: …
 - cmd.antidote.watching: Auto Antidote watching.
 - cmd.fedsuit.title: Toggle Fed Suit run  [DE: Fed-Suit-Lauf umschalten]
 - cmd.fedsuit.subtitle: Starts or stops the transmitter transfer loop
-- cmd.fedsuit.status: Cycle …
+- cmd.fedsuit.status: Cycle ‹…›
 - cmd.fedsuit.started: Fed Suit started.
 - cmd.fedsuit.stopped: Fed Suit stopped.
 - cmd.fedsuit.failed: Fed Suit couldn't start — check calibration on its page.
-- cmd.gamma.title: Gamma: …
-- cmd.gamma.subtitle: Apply gamma …
-- cmd.gamma.applied: Gamma set to ….
-- cmd.gamma.clamped: Windows clamped the … curve — the change may be partial.
-- cmd.gamma.rejected: The display driver rejected the … gamma curve.
+- cmd.gamma.title: Gamma: ‹…›
+- cmd.gamma.subtitle: Apply gamma ‹…›
+- cmd.gamma.applied: Gamma set to ‹…›.
+- cmd.gamma.clamped: Windows clamped the ‹…› curve — the change may be partial.
+- cmd.gamma.rejected: The display driver rejected the ‹…› gamma curve.
 - cmd.gamma.reset.title: Reset gamma to default  [DE: Gamma zurücksetzen]
 - cmd.gamma.reset.subtitle: Restores the system gamma ramp
 - cmd.gamma.reset.done: Gamma reset to default.
@@ -2094,8 +2094,8 @@ Path: …
 - delete.subtitle: Remove default texture files
 - selectcategories: Select categories
 - preview: Preview
-- deletebutton.one: Delete … category
-- deletebutton.many: Delete … categories
+- deletebutton.one: Delete ‹…› category
+- deletebutton.many: Delete ‹…› categories
 - restore.title: Restore files  [DE: Dateien wiederherstellen]
 - restore.subtitle: Revert textures to default
 - restore.step.1: Click verify integrity button
@@ -2106,9 +2106,9 @@ Path: …
 - nofiles: No files
 - toast.selectone: Select at least one category
 - toast.noark: ARK installation not found
-- toast.deleted: Deleted … files from … categories
-- toast.skipped: Skipped … (no files found): …
-- toast.restored: Restored … files from … categories
+- toast.deleted: Deleted ‹…› files from ‹…› categories
+- toast.skipped: Skipped ‹…› (no files found): ‹…›
+- toast.restored: Restored ‹…› files from ‹…› categories
 - toast.verifying: Starting Steam verification…
 - toast.openingsteam: Opening ARK in Steam…
 - category.weapons-harpoon: Weapons — Harpoon
@@ -2134,7 +2134,7 @@ Path: …
 ## Scripts (scripts)
 - subtitle: Premade automation that runs natively — no AutoHotkey or other external tools. External input only.
 - list.all: All scripts
-- list.running: … running
+- list.running: ‹…› running
 - start: Start
 - stop: Stop
 - settings: Settings
@@ -2145,16 +2145,16 @@ Path: …
 - region.button: Button region
 - region.durability: Durability numbers
 - region.notset: Not set for this resolution.
-- region.summary: …x… px at …, …
+- region.summary: ‹…›x‹…› px at ‹…›, ‹…›
 - reference.title: Reference snapshot  [DE: Referenzbild]
 - reference.captured: Captured.
 - reference.capture.icon: Capture with the icon visible on screen.
 - reference.capture.target: Capture with the target visible on screen.
 - mask.hint: Turn the camera so the background changes, keep the target on screen, then press.
-- mask.summary: … of … px compared
+- mask.summary: ‹…› of ‹…› px compared
 - cal.hovercorners: Hover one corner of the icon, then the opposite corner.
-- cal.progress: Hover corner … — capturing in …s…
-- cal.progress.button: Hover corner … of the button — capturing in …s…
+- cal.progress: Hover corner ‹…› — capturing in ‹…›s…
+- cal.progress.button: Hover corner ‹…› of the button — capturing in ‹…›s…
 - cal.captured: Region captured.
 - cal.cancelled: Region capture cancelled.
 - cal.ref.captured: Reference captured.
@@ -2162,8 +2162,8 @@ Path: …
 - cal.livematch: Live match
 - cal.livematch.desc: How similar the region looks to its reference right now. Watch it with the target on screen and off it, then set the threshold between the two.
 - cal.monitor.title: Display  [DE: Bildschirm]
-- cal.monitor.match: Captured on Monitor … · ….
-- cal.monitor.mismatch: Captured on Monitor … · … — ARK is on Monitor … · … now. Matching is paused until you recapture.
+- cal.monitor.match: Captured on Monitor ‹…› · ‹…›.
+- cal.monitor.mismatch: Captured on Monitor ‹…› · ‹…› — ARK is on Monitor ‹…› · ‹…› now. Matching is paused until you recapture.
 - cal.monitor.unknown: Recapture the reference to record which display it belongs to.
 - field.interval: Interval
 - field.matchthreshold: Match threshold
@@ -2227,19 +2227,19 @@ Path: …
 - turret.calc.bullets: Bullets on hand
 - turret.calc.shards: Shards on hand
 - turret.calc.stacksize: Stack size
-- turret.calc.even: Even split: … per turret (stacks: …), left over: …
-- turret.calc.cover: Stacks per turret: … — covers … of …, … short
-- turret.calc.cover.all: Stacks per turret: … — enough for all …
+- turret.calc.even: Even split: ‹…› per turret (stacks: ‹…›), left over: ‹…›
+- turret.calc.cover: Stacks per turret: ‹…› — covers ‹…› of ‹…›, ‹…› short
+- turret.calc.cover.all: Stacks per turret: ‹…› — enough for all ‹…›
 - turret.calc.noturrets: Enter how many turrets.
 - turret.calc.use: Use per-turret stacks
 - turret.toast.noammo: Turret Manager: no Advanced Rifle Bullets or Element Shards in view in your inventory.
 - turret.toast.tooknothing: Turret Manager: the turret took nothing — it is full, or your ammo does not fit this turret.
 - turret.toast.transferall: Turret Manager: Transfer All changed nothing twice — the turret is full, or ARK is asking to confirm (switch Inventory item tooltips off in ARK's options).
-- turret.activity.filled: Turret Manager: … transfer(s) went into the turret
+- turret.activity.filled: Turret Manager: ‹…› transfer(s) went into the turret
 - flak.swapbelow: Swap below
 - flak.swapbelow.desc: Durability points left on a piece before it is replaced. An absolute number, so it means the same on any server multiplier.
-- flak.rowkey: Row … hotbar key
-- flak.rowkey.badkey: '…' is not a key that can be sent — use a single character like 8, or a name like F5.
+- flak.rowkey: Row ‹…› hotbar key
+- flak.rowkey.badkey: '‹…›' is not a key that can be sent — use a single character like 8, or a name like F5.
 - flak.rowkey.top: Hotbar slot holding the spare for the top armor row. Leave a row empty to ignore it.
 - flak.rowkey.other: Leave empty if you carry no spare for this row.
 - flak.scan.desc: Milliseconds between reads.
@@ -2247,9 +2247,9 @@ Path: …
 - flak.hint.notrunning: Start the script to see what it reads.
 - flak.hint.waiting: Waiting for ARK to be in the foreground…
 - flak.hint.nonumber: No number recognised — check the calibrated region.
-- flak.hint.swapping: Lowest … — at or below …, swapping…
-- flak.hint.nothing: Lowest … — above …, nothing to do…
-- flak.hint.lastswap: · last swap …
+- flak.hint.swapping: Lowest ‹…› — at or below ‹…›, swapping‹…›
+- flak.hint.nothing: Lowest ‹…› — above ‹…›, nothing to do‹…›
+- flak.hint.lastswap: · last swap ‹…›
 - dino.presses: Presses
 - dino.presses.desc: How many times to click the calibrated + button.
 - dino.clickdelay.desc: Milliseconds between clicks.
@@ -2285,7 +2285,7 @@ Path: …
 - antidote.cooldown.desc: Seconds before it may fire again.
 - antidote.livematch: Live match
 - antidote.livematch.desc: Similarity of the last scan, and how often it has fired.
-- antidote.fired: · … fired
+- antidote.fired: · ‹…› fired
 - antidote.region: Icon region
 - fed.openkey: Open key
 - fed.openkey.desc: Opens the transmitter — prefilled from your ARK 'Access inventory' binding.
@@ -2326,7 +2326,7 @@ Path: …
 - ark.background: ARK running, not in foreground
 - ark.foreground: ARK in foreground
 - ark.tooltip: Scripts only act while ARK is the window in front.
-- keys.custom: Keys read from your ARK Input.ini — your own bindings: …
+- keys.custom: Keys read from your ARK Input.ini — your own bindings: ‹…›
 - keys.stock: Keys read from your ARK Input.ini — you are on ARK's default keys
 - keys.missing: ARK Input.ini not found — using ARK's default keys
 - keys.rescan: Rescan
@@ -2334,22 +2334,22 @@ Path: …
 - experimental: Experimental
 - experimental.note: Runs on fixed timings and cannot verify the result — if the game or the server is slow, it sends the same keys and nothing happens.
 - turret.experimental.note: Not confirmed in game yet — if a turret is not filled, send a support report from Feedback & Support.
-- effect.ago.seconds: Last action … s ago.
-- effect.ago.minutes: Last action … min ago.
+- effect.ago.seconds: Last action ‹…› s ago.
+- effect.ago.minutes: Last action ‹…› min ago.
 - effect.none: No action yet.
 - effect.none.background: No action yet — ARK is not in the foreground.
 - effect.none.match: No action yet — waiting for a match.
-- effect.short.seconds: … s
-- effect.short.minutes: … min
-- toast.started: … started.
-- toast.stopped: … stopped.
-- toast.waitingforark: … is waiting for ARK to be in the foreground.
-- activity.started: … started
-- activity.stopped: … stopped
-- toast.quota: Free monthly limit reached (… input-script starts across all scripts). Resets next month — Premium is unlimited.
-- toast.hotkey.invalid: '…' can't be used as a hotkey.
-- toast.hotkey.inuse: Could not register … — it may be in use by another app.
-- toast.hotkey.conflict: Could not register … — … already uses that key.
+- effect.short.seconds: ‹…› s
+- effect.short.minutes: ‹…› min
+- toast.started: ‹…› started.
+- toast.stopped: ‹…› stopped.
+- toast.waitingforark: ‹…› is waiting for ARK to be in the foreground.
+- activity.started: ‹…› started
+- activity.stopped: ‹…› stopped
+- toast.quota: Free monthly limit reached (‹…› input-script starts across all scripts). Resets next month — Premium is unlimited.
+- toast.hotkey.invalid: '‹…›' can't be used as a hotkey.
+- toast.hotkey.inuse: Could not register ‹…› — it may be in use by another app.
+- toast.hotkey.conflict: Could not register ‹…› — ‹…› already uses that key.
 - toast.regionset: Region set — now capture a reference with the target visible.
 - toast.regionfailed: Failed to capture the region.
 - toast.needregion: Calibrate the region first.
@@ -2357,10 +2357,10 @@ Path: …
 - toast.referencecaptured: Reference snapshot captured.
 - toast.needreference: Capture a reference first.
 - toast.masknothing: Nothing stayed still — is the element still on screen?
-- toast.maskdone: Background ignored — … px left to match on.
+- toast.maskdone: Background ignored — ‹…› px left to match on.
 - cannotstart.region: Calibrate the detection region first.
 - cannotstart.reference: Capture a reference snapshot with the target visible.
-- cannotstart.monitor: The reference was captured on Monitor … · …, and ARK is on Monitor … · … now. Recapture it there first.
+- cannotstart.monitor: The reference was captured on Monitor ‹…› · ‹…›, and ARK is on Monitor ‹…› · ‹…› now. Recapture it there first.
 - cannotstart.astro: Focus ARK first — Astro fires its sequence immediately on start.
 - cannotstart.iconregion: Calibrate the icon region first.
 - cannotstart.iconreference: Capture a reference with the icon visible first.
@@ -2370,7 +2370,7 @@ Path: …
 - cannotstart.tpmenu: Open the teleporter/bed menu in ARK first, then start.
 - cannotstart.durability: Calibrate the durability numbers first.
 - cannotstart.armorrow: Set the hotbar key for at least one armor row.
-- flak.activity.swapped: Armor swapped — row … was at …
+- flak.activity.swapped: Armor swapped — row ‹…› was at ‹…›
 - noglin.activity.throttled: Noglin: FPS throttled (mind-control detected)
 - noglin.activity.restored: Noglin: FPS restored
 - antidote.toast.needregion: Capture the HUD icon region first (calibration step 1).
@@ -2385,37 +2385,37 @@ Path: …
 - antidote.toast.referencecleared: Reference snapshot cleared.
 - antidote.toast.badburstkey: That key can't be used for the burst — reset to 5.
 - antidote.toast.badhotkey: That combination can't be used as a toggle hotkey — keeping the previous one.
-- antidote.toast.hotkeyinuse: Could not register … — the combination may be in use by another app.
+- antidote.toast.hotkeyinuse: Could not register ‹…› — the combination may be in use by another app.
 - antidote.toast.noregion: Auto Antidote stopped — no calibrated region for the current resolution.
 - antidote.activity.started: Auto Antidote started
 - antidote.activity.stopped: Auto Antidote stopped
 - antidote.activity.referencecaptured: Auto Antidote reference snapshot captured
 - antidote.activity.noregion: Auto Antidote stopped (region missing)
-- antidote.activity.triggered: Auto Antidote triggered (#…)
+- antidote.activity.triggered: Auto Antidote triggered (#‹…›)
 - antidote.activity.burstfailed: Auto Antidote burst did not complete (game window unavailable?)
 - cal.toast.busy: Another calibration capture is already running.
 - cal.toast.nocursor: Could not read the cursor position.
-- cal.toast.pointcaptured: Point '…' captured at …, ….
+- cal.toast.pointcaptured: Point '‹…›' captured at ‹…›, ‹…›.
 - cal.toast.pointfailed: Failed to capture calibration point.
-- cal.toast.regiontoosmall: Region too small (…x…). Hover two opposite corners of the target, not the same spot — the previous calibration was kept.
-- cal.toast.regioncaptured: Region '…' captured (…x…).
+- cal.toast.regiontoosmall: Region too small (‹…›x‹…›). Hover two opposite corners of the target, not the same spot — the previous calibration was kept.
+- cal.toast.regioncaptured: Region '‹…›' captured (‹…›x‹…›).
 - cal.toast.regionfailed: Failed to capture calibration region.
-- cal.activity.pointcaptured: Calibration point '…' captured
-- cal.activity.regioncaptured: Calibration region '…' captured
-- fed.toast.started: Fed-Suit macro started — press … to stop.
+- cal.activity.pointcaptured: Calibration point '‹…›' captured
+- cal.activity.regioncaptured: Calibration region '‹…›' captured
+- fed.toast.started: Fed-Suit macro started — press ‹…› to stop.
 - fed.toast.started.nokey: Fed-Suit macro started — stop it on the Scripts page, or bind a hotkey there first.
-- fed.toast.quota: Free monthly limit reached (… Fed-Suit starts). Resets next month — Premium is unlimited.
-- fed.toast.stopped: Fed-Suit macro stopped — cycles: …, pieces moved: ….
+- fed.toast.quota: Free monthly limit reached (‹…› Fed-Suit starts). Resets next month — Premium is unlimited.
+- fed.toast.stopped: Fed-Suit macro stopped — cycles: ‹…›, pieces moved: ‹…›.
 - fed.toast.noark: Fed-Suit macro could not run — the ARK window was not available.
-- fed.toast.stuck: Fed-Suit stopped itself — the same piece failed three cycles in a row: it either never showed up or would not go into the transmitter (cycles: …, pieces moved: …). Look at the transmitter and that slot before you start again.
-- fed.toast.full: Fed-Suit stopped itself — the transmitter seems full: two cycles in a row nothing went in although the pieces were there (cycles: …, pieces moved: …). Make room in the transmitter before you start again.
-- fed.toast.notclosed: Fed-Suit stopped itself — the transmitter did not close (cycles: …, pieces moved: …). Close it by hand before you start again.
+- fed.toast.stuck: Fed-Suit stopped itself — the same piece failed three cycles in a row: it either never showed up or would not go into the transmitter (cycles: ‹…›, pieces moved: ‹…›). Look at the transmitter and that slot before you start again.
+- fed.toast.full: Fed-Suit stopped itself — the transmitter seems full: two cycles in a row nothing went in although the pieces were there (cycles: ‹…›, pieces moved: ‹…›). Make room in the transmitter before you start again.
+- fed.toast.notclosed: Fed-Suit stopped itself — the transmitter did not close (cycles: ‹…›, pieces moved: ‹…›). Close it by hand before you start again.
 - fed.toast.nopieces: Tick at least one piece for Fed-Suit to move.
 - fed.toast.notopen: Fed-Suit stopped itself — the transmitter inventory did not open. Stand right at the Tek Transmitter and look at it, make sure it is switched on (the "[E] switch on" prompt), and close any inventory that is already open before you start.
-- fed.toast.badkey.open: Open Transmitter key "…" is not a supported key.
-- fed.toast.badkey.exit: Exit Transmitter key "…" is not a supported key.
-- fed.toast.badkey.transfer: Transfer key "…" is not a supported key.
-- fed.activity.run: Fed-Suit run: cycles …, pieces … (…)
+- fed.toast.badkey.open: Open Transmitter key "‹…›" is not a supported key.
+- fed.toast.badkey.exit: Exit Transmitter key "‹…›" is not a supported key.
+- fed.toast.badkey.transfer: Transfer key "‹…›" is not a supported key.
+- fed.activity.run: Fed-Suit run: cycles ‹…›, pieces ‹…› (‹…›)
 
 ## Server (server)
 - title: Server Management  [DE: Serververwaltung]
@@ -2436,8 +2436,8 @@ Path: …
 - detail.queryport: Query Port:
 - detail.query: Query:
 - saved.title: Saved Servers  [DE: Gespeicherte Server]
-- saved.count: … servers
-- players: …/… players
+- saved.count: ‹…› servers
+- players: ‹…›/‹…› players
 - info: Info
 - empty.title: No servers saved yet  [DE: Noch keine Server gespeichert]
 - empty.text: Query and save servers to see them here
@@ -2451,10 +2451,10 @@ Path: …
 144.76.28.10 27017
 steam://connect/145.239.87.28:27015
 # comment lines are skipped
-- bulk.valid: … valid
-- bulk.invalid: … invalid
-- bulk.line: Line …
-- bulk.more: + … more invalid lines
+- bulk.valid: ‹…› valid
+- bulk.invalid: ‹…› invalid
+- bulk.line: Line ‹…›
+- bulk.more: + ‹…› more invalid lines
 - bulk.note.ports: Ports are treated as query ports; the game port is derived automatically.
 - bulk.note.steam: Steam must be running — added servers appear under View → Game Servers → Favorites.
 - bulk.status.added: Added
@@ -2462,21 +2462,21 @@ steam://connect/145.239.87.28:27015
 - bulk.status.failed: Failed
 - bulk.detail.already: Already in Steam favorites
 - bulk.detail.sent: Sent to Steam favorites
-- bulk.desc.applying: Adding to Steam favorites (…/…)
-- bulk.desc.lastrun: Last run: … added, … skipped, … failed
-- bulk.desc.ready.one: … server ready to add
-- bulk.desc.ready.many: … servers ready to add
+- bulk.desc.applying: Adding to Steam favorites (‹…›/‹…›)
+- bulk.desc.lastrun: Last run: ‹…› added, ‹…› skipped, ‹…› failed
+- bulk.desc.ready.one: ‹…› server ready to add
+- bulk.desc.ready.many: ‹…› servers ready to add
 - bulk.desc.novalid: No valid servers found
 - bulk.desc.idle: Paste a server list to add all entries to Steam favorites
-- bulk.complete: Bulk add complete: … added, … skipped, … failed
-- bulk.activity.one: Bulk added … server to Steam favorites
-- bulk.activity.many: Bulk added … servers to Steam favorites
-- bulk.error: Bulk add failed: …
+- bulk.complete: Bulk add complete: ‹…› added, ‹…› skipped, ‹…› failed
+- bulk.activity.one: Bulk added ‹…› server to Steam favorites
+- bulk.activity.many: Bulk added ‹…› servers to Steam favorites
+- bulk.error: Bulk add failed: ‹…›
 - bulk.reason.empty: Nothing left after trimming
-- bulk.reason.ip: Invalid IPv4 address '…'
+- bulk.reason.ip: Invalid IPv4 address '‹…›'
 - bulk.reason.noport: Missing port
-- bulk.reason.port: Invalid port '…' (must be 1-65535)
-- bulk.reason.duplicate: Duplicate of an earlier line (…)
+- bulk.reason.port: Invalid port '‹…›' (must be 1-65535)
+- bulk.reason.duplicate: Duplicate of an earlier line (‹…›)
 - troubleshooting.title: Troubleshooting  [DE: Fehlersuche]
 - troubleshooting.show: Show
 - troubleshooting.hide: Hide
@@ -2506,26 +2506,26 @@ steam://connect/145.239.87.28:27015
 - error.empty: Enter a server endpoint in the format IP:QUERYPORT.
 - error.ip: Invalid IP address. Use a valid IPv4 address like 141.98.157.224.
 - error.port: Invalid query port. Use a value between 1 and 65535.
-- success.online: Server online — Players: …/… | Map: …
-- warn.reachable: Server reachable — Ping: … ms (query failed)
+- success.online: Server online — Players: ‹…›/‹…› | Map: ‹…›
+- warn.reachable: Server reachable — Ping: ‹…› ms (query failed)
 - error.offline: Server is offline or unreachable
-- error.query: Query failed: …
+- error.query: Query failed: ‹…›
 - error.nosave: No server to save — query a server first
-- success.updated: Server '…' updated in the local list.
-- activity.updated: Server updated: …
-- success.saved: Server '…' saved to the local list. Total servers: …
-- activity.saved: Server saved: …
-- error.save: Failed to save the server: …
-- activity.removed: Server removed: …
+- success.updated: Server '‹…›' updated in the local list.
+- activity.updated: Server updated: ‹…›
+- success.saved: Server '‹…›' saved to the local list. Total servers: ‹…›
+- activity.saved: Server saved: ‹…›
+- error.save: Failed to save the server: ‹…›
+- activity.removed: Server removed: ‹…›
 - success.launching: Launching ARK via Steam…
-- activity.connecting: Connecting to server: … (…)
-- error.connect: Connection failed: …
+- activity.connecting: Connecting to server: ‹…› (‹…›)
+- error.connect: Connection failed: ‹…›
 - error.nofavorite: No server to add to favorites — query a server first
-- success.favorited: Server '…' added to Steam favorites.
+- success.favorited: Server '‹…›' added to Steam favorites.
 Check Steam under View → Servers → Favorites.
-- error.favorite: Failed to add to favorites: …
+- error.favorite: Failed to add to favorites: ‹…›
 - success.browser: Opening the Steam server browser…
-- error.browser: Failed to open the Steam browser: …
+- error.browser: Failed to open the Steam browser: ‹…›
 
 ## Settings (settings)
 - title: Settings  [DE: Einstellungen]
@@ -2572,7 +2572,7 @@ Check Steam under View → Servers → Favorites.
 - accent.shade.soft.description: Subtle tinted text
 - accent.shade.auto: Auto
 - accent.shade.custom: Custom
-- accent.shade.hex.aria: … hex
+- accent.shade.hex.aria: ‹…› hex
 - accent.shade.reset: Reset to auto
 - accent.advanced.note.lead: Each shade left on 
 - accent.advanced.note.rest:  is derived from the accent color. Pin a shade to lock it; "Reset to auto" hands it back to the accent.
@@ -2587,7 +2587,7 @@ Check Steam under View → Servers → Favorites.
 - font.status.system: System
 - font.status.installing: Installing
 - font.status.installed: Installed
-- font.activity.set: UI font set: …
+- font.activity.set: UI font set: ‹…›
 - font.status.autoinstall: Auto-install
 - font.preview: The quick brown fox jumps over the lazy dog 0123456789.
 - font.manual.title: Manual install (if auto-install fails)  [DE: Manuelle Installation (falls die Auto-Installation scheitert)]
@@ -2598,15 +2598,15 @@ Check Steam under View → Servers → Favorites.
 - font.manual.install.rest:  (or double-click and install).
 - font.manual.return: Return here and select the preset again. Switching updates the UI instantly.
 - font.note: Fonts install per-user in the background. Switching updates the UI instantly.
-- font.limit: Free monthly limit reached (… font switches). The default font is always free — Premium is unlimited.
-- font.toast.installing: Installing …...
-- font.toast.installed: … installed.
-- font.toast.pending: … installation pending. Try the preset again in a few seconds.
-- font.toast.linkcopied: Copied download link for …
+- font.limit: Free monthly limit reached (‹…› font switches). The default font is always free — Premium is unlimited.
+- font.toast.installing: Installing ‹…›...
+- font.toast.installed: ‹…› installed.
+- font.toast.pending: ‹…› installation pending. Try the preset again in a few seconds.
+- font.toast.linkcopied: Copied download link for ‹…›
 - font.error.package: Font package is invalid or blocked. Use the manual install links below.
 - font.error.inuse: Font files are in use. Close other apps using the font and try again.
 - font.error.download: Font download failed. Check your network or add the font zip to wwwroot/assets/fonts.
-- font.error.install: Font installation failed: …
+- font.error.install: Font installation failed: ‹…›
 - font.error.linkcopy: Failed to copy download link.
 
 ## sky
@@ -2643,35 +2643,35 @@ Check Steam under View → Servers → Favorites.
 - coverage.title: Maps covered  [DE: Abgedeckte Karten]
 - coverage.caveat.1: Shows after the next map load — rejoin or relaunch to see it. Won't show at night — that's normal.
 - coverage.caveat.2: Safe on any server: it only edits your own local sky files, so there's nothing for anti-cheat to flag. Instant in-game swapping isn't offered — it would mean fighting BattlEye, which risks your account.
-- limit: Free monthly limit reached (… sky injects). Resets next month — Premium is unlimited.
+- limit: Free monthly limit reached (‹…› sky injects). Resets next month — Premium is unlimited.
 - toast.pickerfailed: Could not open the file picker.
-- toast.urlfailed: Couldn't open … — copy and paste it into your browser.
-- toast.applied: Sky applied to … file(s) — rejoin or relaunch to see it.
-- toast.injecterrors: Sky inject completed with … error(s) — see log.
+- toast.urlfailed: Couldn't open ‹…› — copy and paste it into your browser.
+- toast.applied: Sky applied to ‹…› file(s) — rejoin or relaunch to see it.
+- toast.injecterrors: Sky inject completed with ‹…› error(s) — see log.
 - toast.swapfailed: Sky swap failed — see log.
-- toast.restored: Restored … sky texture(s). Restart ARK to see the original.
+- toast.restored: Restored ‹…› sky texture(s). Restart ARK to see the original.
 - toast.restorefailed: Sky restore failed — see log.
-- activity.injected: Sky injected → … texture(s)
-- activity.injected.errors: Sky inject → … ok, … errors
-- activity.restored: Sky restored → … file(s)
-- activity.restored.errors: Sky restore → … ok, … errors
-- log.imageselected: Image selected: …
-- log.undecodable: … files aren't decoded by the built-in image pipeline. Convert it to PNG/JPG/BMP/TGA/WEBP first.
+- activity.injected: Sky injected → ‹…› texture(s)
+- activity.injected.errors: Sky inject → ‹…› ok, ‹…› errors
+- activity.restored: Sky restored → ‹…› file(s)
+- activity.restored.errors: Sky restore → ‹…› ok, ‹…› errors
+- log.imageselected: Image selected: ‹…›
+- log.undecodable: ‹…› files aren't decoded by the built-in image pipeline. Convert it to PNG/JPG/BMP/TGA/WEBP first.
 - log.convertx:   Need a quick converter? Try Convert-X (also by CedrickGD):
 - log.convertx.action: Open Convert-X on GitHub
-- log.swapping.image: Swapping sky → … (tile …x, flip …)…
-- log.swapping.color: Swapping sky → solid color ……
+- log.swapping.image: Swapping sky → ‹…› (tile ‹…›x, flip ‹…›)…
+- log.swapping.color: Swapping sky → solid color ‹…›…
 - log.patched: Patched
 - log.restored: Restored
 - log.injecterrors: errors during inject
 - log.restoreerrors: errors during restore
-- log.result: …: … | Skipped: …
-- log.errorcount: … ….
+- log.result: ‹…›: ‹…› | Skipped: ‹…›
+- log.errorcount: ‹…› ‹…›.
 - log.rejoin: Rejoin the server or relaunch ARK to see it (or wait for the next in-game day). Won't show at night — that's normal.
 - log.arkrunning: ARK is running — file writes may fail or be ignored until you restart.
 - log.restoring: Restoring original sky textures from backup…
-- log.swapfailed: Swap failed: …
-- log.restorefailed: Restore failed: …
+- log.swapfailed: Swap failed: ‹…›
+- log.restorefailed: Restore failed: ‹…›
 - log.formatfailed: That image format wasn't decoded.
 
 ## Steam Mods (steammods)
@@ -2699,10 +2699,10 @@ Check Steam under View → Servers → Favorites.
 - nomods.rest: .
 - nomatch.title: No matches for current filters  [DE: Keine Treffer für die aktuellen Filter]
 - nomatch.text: Try widening the recency filter or clearing the search box.
-- tag.drive: Drive: …
-- tag.size: Size: …
-- tag.installed: Installed: …
-- tag.updated: Updated: …
+- tag.drive: Drive: ‹…›
+- tag.size: Size: ‹…›
+- tag.installed: Installed: ‹…›
+- tag.updated: Updated: ‹…›
 - time.installed: Installed (local)
 - time.updated: Updated (best source)
 - copyid: Copy ID
@@ -2724,11 +2724,11 @@ Check Steam under View → Servers → Favorites.
 - size.unknown: Unknown size
 - toast.nosteam: Steam was not detected on this machine.
 - toast.nomods: No installed ARK workshop mods found.
-- toast.loaded: Loaded … installed ARK mods.
-- activity.scanned: Steam Workshop scan complete: … ARK mods
-- toast.scanfailed: Failed to scan Steam mods: …
-- toast.copied: Copied ID …
-- toast.copyfailed: Failed to copy ID: …
+- toast.loaded: Loaded ‹…› installed ARK mods.
+- activity.scanned: Steam Workshop scan complete: ‹…› ARK mods
+- toast.scanfailed: Failed to scan Steam mods: ‹…›
+- toast.copied: Copied ID ‹…›
+- toast.copyfailed: Failed to copy ID: ‹…›
 - toast.openweb.failed: Could not open workshop page in browser.
 - toast.opensteam.failed: Could not open workshop page in Steam client.
 - toast.nofolder: No mod folder path available.
@@ -2742,13 +2742,13 @@ Check Steam under View → Servers → Favorites.
 - title: Stretched Res  [DE: Gestreckte Auflösung]
 - subtitle: Switch a monitor to a stretched resolution — safely, with a 15-second auto-revert.
 - monitor.label: Monitor
-- monitor.option: Monitor … — …×…
-- monitor.option.primary: Monitor … — …×… (primary)
+- monitor.option: Monitor ‹…› — ‹…›×‹…›
+- monitor.option.primary: Monitor ‹…› — ‹…›×‹…› (primary)
 - monitor.unknown: the selected display
-- monitor.fallback: The monitor you last used is not connected — … is selected instead.
+- monitor.fallback: The monitor you last used is not connected — ‹…› is selected instead.
 - monitor.none: No monitor could be detected — changes go to the primary display.
 - confirm.title: Keep this resolution?  [DE: Diese Auflösung behalten?]
-- confirm.sub: Now showing … on …. Reverts to … automatically if you do not confirm.
+- confirm.sub: Now showing ‹…› on ‹…›. Reverts to ‹…› automatically if you do not confirm.
 - confirm.newmode: the new mode
 - confirm.previousmode: the previous mode
 - confirm.unit: s
@@ -2759,11 +2759,11 @@ Check Steam under View → Servers → Favorites.
 - status.native: Native resolution
 - status.restore: Restore native
 - status.desc.pending: Confirm below to keep the new resolution, or it reverts automatically.
-- status.desc.current: … is at … (…).
+- status.desc.current: ‹…› is at ‹…› (‹…›).
 - status.desc.unknown: Could not read the current desktop resolution.
 - fact.current: Current
-- fact.current.stretched: … · stretched
-- fact.current.native: … · native
+- fact.current.stretched: ‹…› · stretched
+- fact.current.native: ‹…› · native
 - fact.current.none: Not detected
 - fact.native: Native
 - fact.native.sub: The panel's full resolution
@@ -2787,10 +2787,10 @@ Check Steam under View → Servers → Favorites.
 - custom.width: Width
 - custom.height: Height
 - custom.apply: Apply custom
-- custom.error.min: Resolution must be at least …×….
-- custom.error.max: Resolution must not exceed …×….
+- custom.error.min: Resolution must be at least ‹…›×‹…›.
+- custom.error.max: Resolution must not exceed ‹…›×‹…›.
 - scaling.title: Make the GPU stretch the image  [DE: Die GPU das Bild strecken lassen]
-- scaling.lead: A stretched resolution only fills the screen when your GPU scales it to the whole panel. …
+- scaling.lead: A stretched resolution only fills the screen when your GPU scales it to the whole panel. ‹…›
 - scaling.vendor.nvidia: Your NVIDIA GPU handles this in the NVIDIA Control Panel.
 - scaling.vendor.amd: On your AMD GPU, enable GPU scaling in AMD Software.
 - scaling.vendor.intel: On Intel graphics, set the scale in the Intel Graphics Command Center.
@@ -2815,33 +2815,33 @@ Check Steam under View → Servers → Favorites.
 - ark.note: Close ARK before writing — the game rewrites GameUserSettings.ini when it exits.
 - ark.button.closefirst: Close ARK first
 - ark.button.choose: Choose a resolution first
-- ark.button.write: Write … × …
+- ark.button.write: Write ‹…› × ‹…›
 - ark.toast.closefirst: Close ARK first — it rewrites GameUserSettings.ini when it exits.
-- ark.toast.written: Wrote … × … to GameUserSettings.ini.
+- ark.toast.written: Wrote ‹…› × ‹…› to GameUserSettings.ini.
 - ark.toast.error: Could not write ARK's resolution.
-- ark.toast.failed: ARK write failed: …
+- ark.toast.failed: ARK write failed: ‹…›
 - error.apply: Could not apply that resolution.
-- limit: Free monthly limit reached (… resolution applies). Resets next month — Premium is unlimited.
+- limit: Free monthly limit reached (‹…› resolution applies). Resets next month — Premium is unlimited.
 - monitor.primary: the primary display
 - service.pending: Confirm or revert the current change first.
 - service.readfailed: Could not read the current display mode.
-- service.applyfailed: Apply failed: …
-- service.restorefailed: Restore failed: …
+- service.applyfailed: Apply failed: ‹…›
+- service.restorefailed: Restore failed: ‹…›
 - service.noprevious: No previous resolution to revert to.
-- service.autorevertfailed: Auto-revert failed: …
+- service.autorevertfailed: Auto-revert failed: ‹…›
 - service.arkmissing: ARK installation not found.
 - service.arkwritefailed: Failed to write GameUserSettings.ini.
-- toast.kept: Kept ….
+- toast.kept: Kept ‹…›.
 - toast.reverted: Reverted to the previous resolution.
-- toast.restored: Restored ….
+- toast.restored: Restored ‹…›.
 - toast.autoreverted: Resolution reverted automatically — no confirmation received.
-- activity.applied: Applied …×… on … — confirm to keep
-- activity.kept: Kept resolution …
+- activity.applied: Applied ‹…›×‹…› on ‹…› — confirm to keep
+- activity.kept: Kept resolution ‹…›
 - activity.reverted: Reverted resolution
-- activity.restored: Restored desktop resolution …
+- activity.restored: Restored desktop resolution ‹…›
 - activity.autoreverted: Auto-reverted resolution (no confirmation)
-- activity.arkwritten: Wrote …×… to ARK's GameUserSettings.ini
-- driver.rejected: Your display driver rejected …×…. Create it first in …, then try again.
+- activity.arkwritten: Wrote ‹…›×‹…› to ARK's GameUserSettings.ini
+- driver.rejected: Your display driver rejected ‹…›×‹…›. Create it first in ‹…›, then try again.
 - driver.path.nvidia: NVIDIA Control Panel → Change resolution → Customize
 - driver.path.amd: AMD Software: Adrenalin Edition → Display → Custom Resolutions
 - driver.path.intel: Intel Graphics Command Center → Display → Custom Resolutions
@@ -2854,13 +2854,13 @@ Check Steam under View → Servers → Favorites.
 - result.badparam: Invalid display-change parameters.
 - result.notupdated: Unable to write the new settings to the registry.
 - result.baddualview: The change is not supported in a multi-view configuration.
-- result.unknown: Display change failed (code …).
+- result.unknown: Display change failed (code ‹…›).
 
 ## tp
 - subtitle: Teleport-worthy spots across every map, with copyable setplayerpos commands where documented.
 - search.placeholder: Search locations…
-- count: of … locations
-- copy.tooltip: Copy: cheat setplayerpos …
+- count: of ‹…› locations
+- copy.tooltip: Copy: cheat setplayerpos ‹…›
 - empty.title: No locations found  [DE: Keine Orte gefunden]
 - empty.text: Try a different search, map, or category filter.
 - category.obelisk: Obelisk
@@ -2869,8 +2869,8 @@ Check Steam under View → Servers → Favorites.
 - category.resource: Resource
 - category.landmark: Landmark
 - category.terminal: Terminal
-- copied: … teleport command copied.
-- activity.copied: Copied TP command: …
+- copied: ‹…› teleport command copied.
+- activity.copied: Copied TP command: ‹…›
 - copy.failed: Failed to copy the teleport command.
 
 ## tray
@@ -2878,7 +2878,7 @@ Check Steam under View → Servers → Favorites.
 - open: Open Razor Reaper
 - overlay.show: Show overlay
 - overlay.hide: Hide overlay
-- update: Restart & update (v…)
+- update: Restart & update (v‹…›)
 - quit: Quit
 
 ## Troubleshoot (troubleshoot)
@@ -2928,24 +2928,24 @@ Check Steam under View → Servers → Favorites.
 - gated: Close ARK (or stop the running macro) first, then restart to update.
 - status.checking: Checking for updates...
 - status.latest: You're on the latest version.
-- status.ready: Update v… is ready — restart to install.
-- status.ready.closeark: Update v… is ready — close ARK, then restart to install.
-- status.installing: Installing v… — restarting...
-- status.deferred: Update v… couldn't start — it will be applied at the next start.
+- status.ready: Update v‹…› is ready — restart to install.
+- status.ready.closeark: Update v‹…› is ready — close ARK, then restart to install.
+- status.installing: Installing v‹…› — restarting...
+- status.deferred: Update v‹…› couldn't start — it will be applied at the next start.
 - status.nourl: Update available but download URL is missing.
-- status.manual: Update v… could not be installed — install it manually.
+- status.manual: Update v‹…› could not be installed — install it manually.
 - status.downloading: Downloading update...
-- status.downloading.percent: Downloading update... …%
+- status.downloading.percent: Downloading update... ‹…›%
 - status.incomplete: Update download was incomplete — it will be retried.
 - status.cancelled: Download cancelled.
 - status.downloadfailed: Failed to download update.
-- install.failed.retry: Update to v… could not be installed (installer exit code …). Restart & update to try again.
-- install.failed.givingup: Update to v… could not be installed (installer exit code …). It has been discarded — install the latest version manually.
-- toast.installing: Installing update v… — Razor Reaper will restart.
-- toast.updated: Successfully updated to v….
+- install.failed.retry: Update to v‹…› could not be installed (installer exit code ‹…›). Restart & update to try again.
+- install.failed.givingup: Update to v‹…› could not be installed (installer exit code ‹…›). It has been discarded — install the latest version manually.
+- toast.installing: Installing update v‹…› — Razor Reaper will restart.
+- toast.updated: Successfully updated to v‹…›.
 
 ## usage
-- remaining: …/… left this month
+- remaining: ‹…›/‹…› left this month
 - quota.tooltip: Free monthly quota — resets each month. Premium is unlimited.
 
 ## uw
@@ -2957,8 +2957,8 @@ Check Steam under View → Servers → Favorites.
 - tier.cave: Cave crate
 - tier.shipwreck: Shipwreck
 - note: Deep-sea crates need character level 80 to open and respawn on a timer after being looted.
-- count.one: … location
-- count.many: … locations
+- count.one: ‹…› location
+- count.many: ‹…› locations
 - column.type: Type
 - column.area: Area
 - column.access: Access
@@ -3000,50 +3000,50 @@ Check Steam under View → Servers → Favorites.
 - scope.restore: Restore scope files
 - scope.root: Scope root
 - scope.toast.norootpath: Scope root path not found.
-- scope.toast.renamed: Renamed … scope file(s).
-- scope.activity.disabled: Scope files disabled: …
+- scope.toast.renamed: Renamed ‹…› scope file(s).
+- scope.activity.disabled: Scope files disabled: ‹…›
 - scope.toast.noactive: No active scope files found.
-- scope.toast.norename: No files renamed. Skipped: …, failed: ….
-- scope.toast.disablefailed: Scope disable failed: …
-- scope.toast.restored: Restored … scope file(s).
-- scope.activity.restored: Scope files restored: …
+- scope.toast.norename: No files renamed. Skipped: ‹…›, failed: ‹…›.
+- scope.toast.disablefailed: Scope disable failed: ‹…›
+- scope.toast.restored: Restored ‹…› scope file(s).
+- scope.activity.restored: Scope files restored: ‹…›
 - scope.toast.nodisabled: No disabled scope files found.
-- scope.toast.norestore: No files restored. Skipped: …, failed: ….
-- scope.toast.restorefailed: Scope restore failed: …
+- scope.toast.norestore: No files restored. Skipped: ‹…›, failed: ‹…›.
+- scope.toast.restorefailed: Scope restore failed: ‹…›
 - fov.subtitle: The in-game slider caps at 1.35. Push higher for ultrawide or triple-monitor setups.
 - fov.image.alt: Custom FOV view example
-- fov.apply: Apply …
+- fov.apply: Apply ‹…›
 - fov.reset: Reset to 1.00
-- fov.toast.set: FOV set to ….
-- fov.activity.applied: FOV applied: …
-- fov.toast.failed: FOV write failed: …
+- fov.toast.set: FOV set to ‹…›.
+- fov.activity.applied: FOV applied: ‹…›
+- fov.toast.failed: FOV write failed: ‹…›
 
 ## whatsnew
 - eyebrow: Release notes
-- title: What's new in v…  [DE: Neu in v…]
+- title: What's new in v‹…›  [DE: Neu in v‹…›]
 - failed: Update failed
-- available: Version … is available.
-- youreon: You're on ….
+- available: Version ‹…› is available.
+- youreon: You're on ‹…›.
 - restarting: Restarting…
-- restartupdate: Restart & update to v…
+- restartupdate: Restart & update to v‹…›
 - downloading: Downloading…
-- downloading.percent: Downloading… …%
+- downloading.percent: Downloading… ‹…›%
 - checking: Checking…
 - checkagain: Check again
 - changelog: Full changelog
 - notes.pending: Release notes appear once the update check has run.
 - notes.nextcheck: The notes will appear at the next check.
-- uptodate: You're up to date — v….
+- uptodate: You're up to date — v‹…›.
 - nonotes: No notes were published for this release.
 - inbox.title: Inbox  [DE: Posteingang]
 - inbox.open: Open inbox
 - inbox.loading: Loading your inbox…
 - inbox.empty: No replies yet. Answers to your reports land here.
 - unread.one: 1 unread
-- unread.many: … unread
-- reply.subject: Support replied · …
+- unread.many: ‹…› unread
+- reply.subject: Support replied · ‹…›
 - reply.new: New
 - when.now: just now
-- when.minutes: … min ago
-- when.hours: … h ago
-- when.days: … d ago
+- when.minutes: ‹…› min ago
+- when.hours: ‹…› h ago
+- when.days: ‹…› d ago
