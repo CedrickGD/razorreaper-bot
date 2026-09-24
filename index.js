@@ -3047,40 +3047,58 @@ const mentionList = ids => ids.map(id => `<@${id}>`).join(', ');
 const winnersLine = ids => `${ids.length === 1 ? 'Winner' : 'Winners'}: ${mentionList(ids)}`;
 const postLink = (guild, item) => `https://discord.com/channels/${guild.id}/${item.channelId}/${item.messageId}`;
 const fetchPost = async item => (await client.channels.fetch(item.channelId)).messages.fetch(item.messageId);
+const MEDALS = ['🥇', '🥈', '🥉'];
 const standingsText = (rows, n) =>
-    rows.slice(0, n).map(r => `**${r.rank}.** <@${r.inviterId}> · ${many(r.count, 'invite')}`).join('\n') || 'No invites counted yet.';
+    rows.slice(0, n).map(r => `${MEDALS[r.rank - 1] || `\`#${r.rank}\``} <@${r.inviterId}> — **${many(r.count, 'invite')}**`).join('\n')
+    || '*No invites counted yet — be the first.*';
+// The bot's own banner (the purple network) as the big picture on giveaway and contest posts. The raw GitHub URL
+// is stable, unlike Discord attachment links, which expire — and these posts are re-rendered for days.
+const HERO_IMAGE = 'https://raw.githubusercontent.com/CedrickGD/razorreaper-bot/main/banner.png';
+const hero = (embed) => embed.setImage(HERO_IMAGE);
 
 function giveawayEmbed(g, guild) {
     const active = g.state === 'active';
-    return rrEmbed({
+    return hero(rrEmbed({
         title: active ? '🎉 Giveaway' : g.state === 'ended' ? '🎉 Giveaway ended' : '🎉 Giveaway cancelled',
         blocks: [
-            `**${g.prize}**`,
-            active ? 'React with 🎉 to join.' : g.state === 'ended' && (g.winnerIds.length ? winnersLine(g.winnerIds) : 'No valid entries.'),
-            active ? `Ends ${stamp(g.endsAt, 'R')} (${stamp(g.endsAt, 'f')})` : `Ended ${stamp(g.endsAt, 'f')}`,
-            `${many(g.winners, 'winner')} • hosted by <@${g.hostId}>`,
+            `🎁 **${g.prize}**`,
+            active ? 'React with 🎉 below to enter.\nWinners are drawn at random when the time is up.'
+                : g.state === 'ended' ? (g.winnerIds.length ? `👑 ${winnersLine(g.winnerIds)}` : 'No valid entries.') : 'This giveaway was cancelled.',
+            active ? `⏳ Ends ${stamp(g.endsAt, 'R')} · ${stamp(g.endsAt, 'f')}` : `Ended ${stamp(g.endsAt, 'f')}`,
+        ],
+        fields: [
+            { name: '👑 Winners', value: String(g.winners), inline: true },
+            { name: '🎤 Hosted by', value: `<@${g.hostId}>`, inline: true },
+            ...(active ? [{ name: '📜 Rules', value: 'You must still be on the server at the draw.\nOne entry per member.', inline: false }] : []),
         ],
         colour: active ? BRAND : g.state === 'ended' ? BRAND_GOOD : BRAND_BAD,
         thumb: brandThumb(guild, client.user),
-    });
+        timestamp: true,
+    }));
 }
 
 function contestEmbed(c, rows, guild) {
     const active = c.state === 'active';
-    return rrEmbed({
-        title: active ? '🏆 Invite contest' : '🏆 Invite contest ended',
+    return hero(rrEmbed({
+        title: active ? '🏆 Invite Contest' : '🏆 Invite Contest ended',
         blocks: [
-            `**${c.prize}**`,
-            active ? 'Invite people — every member you bring in while the contest runs counts.'
-                : c.winnerIds.length ? winnersLine(c.winnerIds) : 'Nobody brought anyone in.',
-            active ? `Ends ${stamp(c.endsAt, 'R')} (${stamp(c.endsAt, 'f')})` : `Ended ${stamp(c.endsAt, 'f')}`,
-            `${many(c.winners, 'winner')} • hosted by <@${c.hostId}>`,
-            active && `Only members who are still here at the end count; accounts younger than ${INVITE_FAKE_DAYS} days don't.`,
+            `🎁 **${c.prize}**`,
+            active ? 'Bring your friends to RazorReaper.\nEvery member you invite while the contest runs counts for you.'
+                : c.winnerIds.length ? `👑 ${winnersLine(c.winnerIds)}` : 'Nobody brought anyone in.',
+            active ? `⏳ Ends ${stamp(c.endsAt, 'R')} · ${stamp(c.endsAt, 'f')}` : `Ended ${stamp(c.endsAt, 'f')}`,
         ],
-        fields: [{ name: active ? 'Top 5' : 'Final ranking', value: standingsText(rows, active ? 5 : 10) }],
+        fields: [
+            { name: active ? '📈 Live leaderboard' : '🏁 Final ranking', value: standingsText(rows, active ? 5 : 10), inline: false },
+            ...(active ? [
+                { name: '📜 Rules', value: `• Invite with your own invite link\n• Only members who stay until the end count\n• Accounts younger than ${INVITE_FAKE_DAYS} days don't count`, inline: true },
+                { name: '🔎 Your rank', value: '`/invitecontest status`\n`/invites` — your totals', inline: true },
+            ] : []),
+            { name: '👑 Winners', value: `${c.winners} · hosted by <@${c.hostId}>`, inline: false },
+        ],
         colour: active ? BRAND : BRAND_GOOD,
         thumb: brandThumb(guild, client.user),
-    });
+        timestamp: true,
+    }));
 }
 
 // ONE reply under the post, pinging the winners and nobody else.
