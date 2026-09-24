@@ -86,6 +86,11 @@ licence (the **RR-Customer** or the **Lifetime** role), **exclusive-chat** for L
 only (the **Lifetime** role). These are Discord perks only; releases and the changelog stay public
 for everyone.
 
+**What else does a licence get me on Discord?** Every active licence also opens the **presets**
+forum, where customers share their settings, crosshairs and script setups. And it gets priority
+support: a ticket from a customer is flagged ⭐ and a human from the team is pinged at once — the
+automatic answers still come as usual.
+
 **How do I get my roles here?** Run `/verify key:XXXX-XXXX-XXXX-XXXX` in the **verify** channel —
 the reply is private, nobody else sees the key. Chat messages in that channel are deleted
 automatically, and a pasted key is removed at once. That grants **RR-Customer** while the licence

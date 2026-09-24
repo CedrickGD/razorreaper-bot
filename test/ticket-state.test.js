@@ -17,14 +17,24 @@ const ch = (name, opener, hoursAgo = 1, cat = 'bug') => ({
 // ── topic round-trip ──────────────────────────────────────────────────────────
 
 test('a topic survives the round trip', () => {
-    const state = { opener: '947783551938592828', cat: 'scripts', ai: false, replies: 5, from: 1_700_000_100, closed: 1_700_000_900 };
+    const state = { opener: '947783551938592828', cat: 'scripts', ai: false, replies: 5, prio: true, from: 1_700_000_100, closed: 1_700_000_900 };
     assert.deepStrictEqual(parseTopic(buildTopic(state)), state);
 });
 
-test('defaults: a fresh ticket is AI-on, unstamped and never closed', () => {
+test('defaults: a fresh ticket is AI-on, not priority, unstamped and never closed', () => {
     assert.deepStrictEqual(parseTopic(buildTopic({ opener: '1', cat: 'install' })), {
-        opener: '1', cat: 'install', ai: true, replies: 0, from: 0, closed: 0,
+        opener: '1', cat: 'install', ai: true, replies: 0, prio: false, from: 0, closed: 0,
     });
+});
+
+test('priority is written once at create, survives the close rewrite, and old topics read as not-priority', () => {
+    const open = buildTopic({ opener: '1', cat: 'bug', prio: true });
+    assert.strictEqual(open, 'rr-ticket opener=1 cat=bug ai=on replies=0 prio=on');
+    // What fireCloseRename writes: the parsed state spread back in, plus the close stamp.
+    const closed = parseTopic(buildTopic({ ...parseTopic(open), ai: false, replies: 3, closed: 42 }));
+    assert.strictEqual(closed.prio, true);
+    assert.strictEqual(parseTopic('rr-ticket opener=1 cat=bug ai=on replies=0').prio, false);
+    assert.strictEqual(parseTopic('rr-ticket opener=1 cat=bug ai=on replies=0 prio=yes').prio, false);
 });
 
 test('from and closed stay out of the topic until they exist', () => {
@@ -46,7 +56,7 @@ test('a hand-mangled replies counter falls back to 0 instead of NaN', () => {
 
 test('an unknown key in the topic is ignored, the rest still reads', () => {
     const state = parseTopic('rr-ticket opener=7 cat=bug ai=off replies=2 claimed=9');
-    assert.deepStrictEqual(state, { opener: '7', cat: 'bug', ai: false, replies: 2, from: 0, closed: 0 });
+    assert.deepStrictEqual(state, { opener: '7', cat: 'bug', ai: false, replies: 2, prio: false, from: 0, closed: 0 });
 });
 
 // ── what a restart lost ───────────────────────────────────────────────────────

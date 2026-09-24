@@ -4,7 +4,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-    rrEmbed, brandTitle, brandBody, brandThumb, shortLine, humanDuration, ticketLogEntry,
+    rrEmbed, brandTitle, brandBody, brandThumb, shortLine, humanDuration, ticketLogEntry, PRIORITY_LINE,
     BRAND, BRAND_FOOTER, MAX_TITLE_WORDS, MAX_BLOCK_LINES,
 } = require('../brand');
 
@@ -140,6 +140,18 @@ test('one AI reply is not "1 AI replies", and a missing provider adds nothing', 
     assert.match(body, /• 1 message$/m);
 });
 
+test('a priority ticket leads with the marker, open and closed, under the same title', () => {
+    const base = { ticketName: 'ticket-0042', opener: '<@1>', category: 'Bug / Crash', priority: true };
+    const open = ticketLogEntry(base);
+    const closed = ticketLogEntry({ ...base, status: 'closed', closedBy: 'x' });
+    assert.strictEqual(PRIORITY_LINE, '⭐ Priority — customer');
+    assert.strictEqual(open.title, ticketLogEntry({ ...base, priority: false }).title);
+    assert.strictEqual(closed.title, open.title);
+    assert.ok(brandBody(open.blocks).startsWith(`${PRIORITY_LINE}\n\n<@1> • Bug / Crash`));
+    assert.ok(brandBody(closed.blocks).startsWith(`${PRIORITY_LINE}\n\n<@1> • Bug / Crash • closed`));
+    assert.ok(!brandBody(ticketLogEntry({ ...base, priority: false }).blocks).includes('⭐'));
+});
+
 test('a rejected form gets its own title, so it can never be mistaken for a ticket row', () => {
     const entry = ticketLogEntry({
         status: 'false_topic', opener: '<@1>', category: 'Something else', problem: 'Asked for a free key.',
@@ -152,6 +164,8 @@ test('every log entry obeys the block rules it will be rendered with', () => {
     const entries = [
         ticketLogEntry({ ticketName: 'ticket-1', opener: '<@1>', category: 'Bug', problem: 'a\nb\nc\nd' }),
         ticketLogEntry({ ticketName: 'ticket-1', opener: '<@1>', category: 'Bug', status: 'closed', closedBy: 'x' }),
+        ticketLogEntry({ ticketName: 'ticket-1', opener: '<@1>', category: 'Bug', problem: 'a\nb\nc', priority: true }),
+        ticketLogEntry({ ticketName: 'ticket-1', opener: '<@1>', category: 'Bug', status: 'closed', closedBy: 'x', priority: true }),
         ticketLogEntry({ status: 'false_topic', opener: '<@1>', category: 'Bug', problem: 'x'.repeat(500) }),
     ];
     for (const { title, blocks } of entries) {

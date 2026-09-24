@@ -25,11 +25,13 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * ticket's topic is exactly what it always was. `from` is no longer written by anything — it is
  * still parsed so topics from before the in-memory rebuild keep reading; `closed` is stamped by
  * the close path in the same channel edit as the rename, and is what lets the auto-delete sweep
- * survive a restart.
- * @param {{opener: string, cat: string, ai?: boolean, replies?: number, from?: number, closed?: number}} state
+ * survive a restart. `prio` (the opener held a licence role at open) is decided once by the
+ * create and written only when true, so every older topic reads as not-priority.
+ * @param {{opener: string, cat: string, ai?: boolean, replies?: number, prio?: boolean, from?: number, closed?: number}} state
  */
-function buildTopic({ opener, cat, ai = true, replies = 0, from = 0, closed = 0 }) {
+function buildTopic({ opener, cat, ai = true, replies = 0, prio = false, from = 0, closed = 0 }) {
     return `${TOPIC_TAG} opener=${opener} cat=${cat} ai=${ai ? 'on' : 'off'} replies=${replies}`
+        + (prio ? ' prio=on' : '')
         + (from ? ` from=${from}` : '')
         + (closed ? ` closed=${closed}` : '');
 }
@@ -38,7 +40,7 @@ function buildTopic({ opener, cat, ai = true, replies = 0, from = 0, closed = 0 
  * Parse a channel topic back into ticket state. Anything that is not one of our topics (a
  * hand-made ticket channel, a Ticket Tool leftover, an empty topic) returns null — the caller
  * then treats the channel as "not AI-managed", which is the safe direction.
- * @returns {{opener: string, cat: string, ai: boolean, replies: number, from: number, closed: number}|null}
+ * @returns {{opener: string, cat: string, ai: boolean, replies: number, prio: boolean, from: number, closed: number}|null}
  */
 function parseTopic(topic) {
     // The tag must be a whole word: "rr-ticketish opener=1" is somebody else's topic, not ours.
@@ -52,6 +54,7 @@ function parseTopic(topic) {
         cat: get('cat') || 'other',
         ai: get('ai') !== 'off',
         replies: num('replies'),
+        prio: get('prio') === 'on',
         from: num('from'),
         closed: num('closed'),
     };

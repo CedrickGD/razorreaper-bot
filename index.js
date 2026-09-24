@@ -20,7 +20,7 @@ const {
 } = require('./ticket-state');
 const ai = require('./ai-support');
 const {
-    rrEmbed, brandThumb, shortLine, ticketLogEntry,
+    rrEmbed, brandThumb, shortLine, ticketLogEntry, PRIORITY_LINE,
     BRAND, BRAND_BAD, BRAND_GOOD,
 } = require('./brand');
 const embedBuilder = require('./embed-builder');
@@ -457,7 +457,18 @@ function buildVerifyPanelEmbed(guild) {
             verifyRoleLine(guild),
         ],
         fields: [
-            { name: '🎁 Discord perks', value: `**Every active licence**\n${chanRef(CUSTOMER_CHAT_ID || storedIds.customerChat, 'The customer chat')}\n**Lifetime adds**\n${chanRef(lifetimeChatId, 'The lifetime chat')}`, inline: true },
+            {
+                name: '🎁 Discord perks',
+                value: [
+                    '**Every active licence**',
+                    // The presets forum only once it exists: the bot never creates it.
+                    `${chanRef(CUSTOMER_CHAT_ID || storedIds.customerChat, 'The customer chat')} ${chanRef(presetsChannelId, '')}`.trim(),
+                    '⭐ Priority support in tickets',
+                    '**Lifetime adds**',
+                    chanRef(lifetimeChatId, 'The lifetime chat'),
+                ].join('\n'),
+                inline: true,
+            },
             { name: "Where's my key?", value: 'In your purchase confirmation from [razorreaper.app](https://razorreaper.app).', inline: true },
         ],
         thumb: brandThumb(guild, client.user),
@@ -578,10 +589,13 @@ async function cleanVerifyChannel(m) {
 // The owner builds and styles those rooms himself; the bot only has to find the two gated ones
 // to link them. The customer chat keeps its find-or-create (CUSTOMER_CHAT_ID is set live); the
 // lifetime chat is found only (LIFETIME_CHAT_ID, resolved on ready) and never created. The
-// everyone chat needs nothing from the bot.
+// everyone chat needs nothing from the bot. The presets forum (every active licence) is found
+// only as well (PRESETS_CHANNEL_ID), the same way as the lifetime chat.
 const CUSTOMER_CHAT_ID = process.env.CUSTOMER_CHAT_ID || '';
 const LIFETIME_CHAT_ID = process.env.LIFETIME_CHAT_ID || '';
+const PRESETS_CHANNEL_ID = process.env.PRESETS_CHANNEL_ID || '';
 let lifetimeChatId = null;
+let presetsChannelId = null;
 
 // Find-or-create, idempotent: an explicit id wins, then the id pinned under storeKey, then
 // anything whose loose name (looseName) looks like it, and only then is one created. Shared by
@@ -928,10 +942,12 @@ const aiBackRow = () => new ActionRowBuilder().addComponents(
  * the life of the process. allowedMentions is explicit so nothing ELSE in the message can ping.
  *
  * Every ping in this file goes through here, and here ALONE is `humanPinged` written: it means
- * exactly "a real ping went out for this ticket", never "a human is around somewhere". Staff
- * typing in the ticket or switching the AI off does not write it — a staff member who then walks
- * away must not leave the member with no way left to call anyone.
- * @param {string|null} channelId  the ticket this ping is for, when it is for one
+ * exactly "a real hand-off ping went out for this ticket", never "a human is around somewhere".
+ * Staff typing in the ticket or switching the AI off does not write it — a staff member who then
+ * walks away must not leave the member with no way left to call anyone. Neither does a priority
+ * ticket's heads-up at open (openTicket passes no channel id): the AI is still answering then, and
+ * the member's own "I need a human" later must still get its one ping out.
+ * @param {string|null} channelId  the ticket this ping hands off, when it is one
  * @returns {Promise<{content: string, allowedMentions: object}>} spread into the message payload
  */
 async function humanPing(guild, channelId = null) {
@@ -1038,6 +1054,8 @@ async function openTicket(interaction, categoryKey, fields) {
     const P = PermissionsBitField.Flags;
     // Auto-delete frees the numbers of channels it removes; #ticket-log remembers them.
     const numberFloor = await highestLoggedTicket(guild);
+    // A customer's ticket (the owner's "Priority Support" perk): either licence role, at open time.
+    const prio = [VERIFIED_ROLE_ID, lifetimeRoleId].some(id => id && interaction.member?.roles?.cache?.has(id));
     let channel;
     try {
         const link = ticketCreateChain.then(() => {
@@ -1051,8 +1069,8 @@ async function openTicket(interaction, categoryKey, fields) {
                 parent: (ticketsCategoryId && guild.channels.cache.get(ticketsCategoryId)?.id) || null,
                 // The ONLY topic write before the close: the facts that cannot change. Billing is
                 // decided here too, because it is decided here — nothing flips it later, and this
-                // way it survives a restart without a second channel edit.
-                topic: buildTopic({ opener: user.id, cat: categoryKey, ai: !ai.HUMAN_ONLY.has(categoryKey), replies: 0 }),
+                // way it survives a restart without a second channel edit. So is priority.
+                topic: buildTopic({ opener: user.id, cat: categoryKey, ai: !ai.HUMAN_ONLY.has(categoryKey), replies: 0, prio }),
                 // The cooldown the owner asked for: Discord enforces it, staff bypass it natively,
                 // and it is set once here so there is no second channel edit to spend.
                 rateLimitPerUser: TICKET_SLOWMODE,
@@ -1092,7 +1110,7 @@ async function openTicket(interaction, categoryKey, fields) {
     const opening = rrEmbed({
         title: `${ai.CATEGORIES.find(c => c.key === categoryKey)?.emoji || '🎟️'} ${ai.categoryLabel(categoryKey)}`,
         blocks: [
-            `Ticket by ${user} • ${channel.name}`,
+            `Ticket by ${user} • ${channel.name}` + (prio ? `\n${PRIORITY_LINE}` : ''),
             TICKET_SLOWMODE ? `One message every ${TICKET_SLOWMODE}s — it is worth writing the whole problem at once.` : null,
         ],
         fields: Object.entries(fields)
@@ -1118,11 +1136,25 @@ async function openTicket(interaction, categoryKey, fields) {
         category: ai.categoryLabel(categoryKey),
         status: 'open',
         problem: fields[FIELD_LABELS.problem],
+        priority: prio,
     }).catch(() => {});
     // Swallowed like every other post in this file: the member has already been told the ticket is
     // open, so a failed opening message must not take the ping or the first answer down with it.
     await channel.send({ content: `${user}`, embeds: [opening], components: [buttons] })
         .catch(e => console.error('[support] Opening message failed:', e.message || e));
+
+    // A customer's ticket calls the team at once, and the AI still answers below. Billing pings
+    // anyway, so it is skipped there — one ping per ticket at open, never two. An embed, never
+    // plain text: the bot's plain messages are its AI answers (isAutoAnswer). No channel id: this
+    // is a heads-up, not a hand-off, so "I need a human" works exactly as in any other ticket —
+    // pressed while the AI answers it hands off and pings; pressed after staff switched the AI off
+    // it still gets its one ping out (see humanPing).
+    if (prio && !ai.HUMAN_ONLY.has(categoryKey)) {
+        await channel.send({
+            ...(await humanPing(guild)),
+            embeds: [rrEmbed({ title: '⭐ Priority ticket', blocks: ['From a customer — the team has been notified.'] })],
+        }).catch(e => console.error('[support] Priority ping failed:', e.message || e));
+    }
 
     // 5. Answer — unless this category is the owner's alone, or there is no AI configured.
     if (ai.HUMAN_ONLY.has(categoryKey)) {
@@ -1707,6 +1739,7 @@ async function runClose(channel, closedBy = null) {
             messages: snaps.length,
             aiReplies: replies,
             provider,
+            priority: state?.prio,
         }, {
             edit: true,
             colour: BRAND_BAD,
@@ -2843,13 +2876,17 @@ client.once('ready', async () => {
         console.error('[support] Setup error:', e.message || e);
     }
 
-    // The welcome embed's two channels and the lifetime chat — never created, only found (and then pinned).
+    // The welcome embed's two channels, the lifetime chat and the presets forum — never created,
+    // only found (and then pinned).
     if (homeGuild) {
         const text = c => c.type === ChannelType.GuildText || c.type === ChannelType.GuildAnnouncement;
         welcomeChannelId = findPinned(homeGuild.channels.cache, 'welcomeChannel', WELCOME_CHANNEL_ID, (n, c) => text(c) && n.includes('welcome'))?.id || null;
         rulesChannelId = findPinned(homeGuild.channels.cache, 'rulesChannel', RULES_CHANNEL_ID, (n, c) => text(c) && n.includes('rules'))?.id || null;
         // Only "exclusive": "premium" is the customer chat and "chat" matches every tier.
-        lifetimeChatId = findPinned(homeGuild.channels.cache, 'lifetimeChat', LIFETIME_CHAT_ID, (n, c) => text(c) && n.includes('exclusive'))?.id || null;    }
+        lifetimeChatId = findPinned(homeGuild.channels.cache, 'lifetimeChat', LIFETIME_CHAT_ID, (n, c) => text(c) && n.includes('exclusive'))?.id || null;
+        // A forum, which text() leaves out.
+        presetsChannelId = findPinned(homeGuild.channels.cache, 'presetsChannel', PRESETS_CHANNEL_ID, (n, c) => (text(c) || c.type === ChannelType.GuildForum) && n.includes('preset'))?.id || null;
+    }
     // One line with every id and where it came from (env|stored|name|created) for the deploy check.
     console.log(`[ids] resolved: ${Object.values(idLog).join(' ') || 'none'}`);
 
@@ -3218,7 +3255,7 @@ client.on('interactionCreate', async (interaction) => {
             { name: '📊 Total', value: `${openTickets.size + closedChannels.size}`, inline: true },
         );
         if (isStaff(member) && openTickets.size > 0) {
-            e.addFields({ name: '📋 Open Channels', value: openTickets.map(c => `• ${c}`).join('\n').substring(0, 1024) });
+            e.addFields({ name: '📋 Open Channels', value: openTickets.map(c => `• ${parseTopic(c.topic)?.prio ? '⭐ ' : ''}${c}`).join('\n').substring(0, 1024) });
         }
         return interaction.reply({ embeds: [e] });
     }

@@ -96,17 +96,22 @@ function humanDuration(ms) {
     return `${Math.floor(m / 60)}h ${m % 60}m`;
 }
 
+/** A customer's ticket (the owner's "Priority Support" perk): the opening embed and the log row. */
+const PRIORITY_LINE = '⭐ Priority — customer';
+
 /**
  * The #ticket-log row. Open and close produce the SAME title on purpose: the close looks the
  * entry up by title and edits it, so one ticket is one row in the log rather than two posts.
  * A rejected form has no channel and no follow-up, so it gets its own title and never collides.
+ * A priority ticket leads with PRIORITY_LINE, open and closed alike — the title stays the same.
  * @param {object} e
  * @param {'open'|'closed'|'false_topic'} [e.status]
+ * @param {boolean} [e.priority]  the opener held a licence role when the ticket opened
  * @returns {{title: string, blocks: (string|false|null)[]}}
  */
 function ticketLogEntry({
     ticketName, opener, category, status = 'open', problem,
-    closedBy, openMs = 0, messages = 0, aiReplies = 0, provider,
+    closedBy, openMs = 0, messages = 0, aiReplies = 0, provider, priority = false,
 }) {
     if (status === 'false_topic') {
         return {
@@ -116,11 +121,12 @@ function ticketLogEntry({
     }
     const title = `Ticket ${String(ticketName ?? '').replace(/[^0-9]/g, '') || ticketName}`;
     if (status === 'open') {
-        return { title, blocks: [`${opener} • ${category}`, problem && `Problem: ${shortLine(problem, 220)}`] };
+        return { title, blocks: [priority && PRIORITY_LINE, `${opener} • ${category}`, problem && `Problem: ${shortLine(problem, 220)}`] };
     }
     return {
         title,
         blocks: [
+            priority && PRIORITY_LINE,
             `${opener} • ${category} • ${status}`
                 + `\nOpen for ${humanDuration(openMs)} • ${messages} message${messages === 1 ? '' : 's'}`,
             `Closed by ${closedBy || 'unknown'} • ${aiReplies} AI repl${aiReplies === 1 ? 'y' : 'ies'}`
@@ -131,7 +137,7 @@ function ticketLogEntry({
 
 module.exports = {
     rrEmbed, brandTitle, brandBody, brandThumb,
-    shortLine, humanDuration, ticketLogEntry,
+    shortLine, humanDuration, ticketLogEntry, PRIORITY_LINE,
     BRAND, BRAND_BAD, BRAND_GOOD, BRAND_FOOTER,
     MAX_TITLE_WORDS, MAX_BLOCK_LINES,
 };
