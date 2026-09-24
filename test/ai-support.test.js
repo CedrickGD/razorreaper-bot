@@ -293,6 +293,29 @@ test('an empty balance or a bad key parks the provider; a rate limit or a 500 do
     }
 });
 
+// The owner learned about a dead Gemini key from a customer's unanswered ticket, not from the bot.
+test('staff hear about a park exactly once, and the line carries a status code, never the error text', async () => {
+    const { DeadProvider, parkNotice } = require('../ai-support');
+    let now = 0;
+    const parks = [];
+    const s = createSupport({
+        providers: [stub('gemini', async () => { throw new DeadProvider('gemini: HTTP 401'); }), stub('openai', ok('fallback'))],
+        kb: 'KB', budget: makeBudget(100_000, () => 0), log: quiet, now: () => now,
+        onPark: (name, reason) => parks.push([name, reason]),
+    });
+    await s.answer({ category: 'bug', ticket: 't' });
+    await s.answer({ category: 'bug', ticket: 't' });
+    assert.deepStrictEqual(parks, [['gemini', 'gemini: HTTP 401']], 'once per park, not per ticket');
+    now = PARK_MS + 1;
+    await s.answer({ category: 'bug', ticket: 't' });
+    assert.strictEqual(parks.length, 2, 'a new park after the hour is a new notice');
+
+    assert.match(parkNotice('gemini', 'gemini: HTTP 401'), /gemini parked .*HTTP 401 \(key invalid\?\)/);
+    assert.match(parkNotice('claude', 'claude: 400 credit balance is too low'), /HTTP 400 \(billing or quota\?\)/);
+    const leaky = parkNotice('openai', 'openai: HTTP 401 Incorrect API key provided: sk-proj-abc123');
+    assert.ok(!leaky.includes('sk-proj') && !leaky.includes('Incorrect'), leaky);
+});
+
 // ── Triage behaviour the owner's rules depend on ──────────────────────────────
 
 test('triage returns the parsed verdict', async () => {

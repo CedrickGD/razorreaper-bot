@@ -608,6 +608,9 @@ const support = ai.createSupport({
     providers: aiProviders,
     kb: aiKb,
     budget: ai.makeBudget(Number(process.env.AI_DAILY_TOKEN_BUDGET || 400_000)),
+    // Staff-only channel: the owner once learned about a dead Gemini key from a customer's
+    // unanswered ticket. Best-effort — no log channel, no line.
+    onPark: (name, reason) => ticketLogChannel(verifyGuild())?.send(ai.parkNotice(name, reason)).catch(() => {}),
 });
 const aiInFlight = new Set();        // channelIds with a call in the air — one per ticket
 // Everything below changes while a ticket is open, and a channel topic is the one place it must

@@ -555,14 +555,27 @@ class BudgetExhausted extends Error {}
 const PARK_MS = 60 * 60 * 1000;
 
 /**
+ * The staff line for a park (#ticket-log). Only the status code of `reason` gets through, never
+ * the provider's raw error text — that is the provider's wording and could in principle echo a key.
+ */
+function parkNotice(name, reason) {
+    const status = /\b([45]\d\d)\b/.exec(String(reason))?.[1];
+    const hint = status === '401' || status === '403' ? ' (key invalid?)' : status ? ' (billing or quota?)' : '';
+    return `⚠️ AI: ${name} parked for ${PARK_MS / 60000} min — ${status ? `HTTP ${status}` : 'account error'}${hint}. `
+        + 'Tickets use the next provider, or fall back to humans.';
+}
+
+/**
  * @param {object} opts
  * @param {ReturnType<typeof buildProviders>} opts.providers
  * @param {ReturnType<typeof loadKb>|string} opts.kb  loadKb()'s result; a string is sent as is
  * @param {ReturnType<typeof makeBudget>} opts.budget
  * @param {(line: string) => void} [opts.log]
  * @param {() => number} [opts.now]  injectable clock, for the provider park
+ * @param {(name: string, reason: string) => void} [opts.onPark]  called once per park, so staff
+ *        hear about a dead key before a customer's unanswered ticket tells them
  */
-function createSupport({ providers, kb, budget, log = console.log, now = () => Date.now() }) {
+function createSupport({ providers, kb, budget, log = console.log, now = () => Date.now(), onPark = () => {} }) {
     // provider name -> when it may be tried again. An empty balance or a swapped key is fixed by
     // a human in minutes, not never, so the provider comes back by itself after the hour instead
     // of staying dead until the next deploy.
@@ -598,6 +611,8 @@ function createSupport({ providers, kb, budget, log = console.log, now = () => D
                     parked.set(provider.name, now() + PARK_MS);
                     // Once per park: a parked provider is not called again, so this cannot repeat.
                     console.error(`[ai] ${provider.name} parked for ${PARK_MS / 60000} minutes — ${err.message}`);
+                    // A broken notifier must not turn a park into a failed answer.
+                    try { onPark(provider.name, err.message); } catch { /* best-effort */ }
                 } else {
                     console.error(`[ai] ${kind} ${provider.name} failed (${err.message || err}) — trying the next provider.`);
                 }
@@ -684,6 +699,6 @@ module.exports = {
     parseJsonish, normaliseTriage, formatForm,
     splitSentinel, formatClientContext, accountError,
     buildProviders, claudeProvider, geminiProvider, openaiProvider,
-    createSupport, BudgetExhausted, DeadProvider,
+    createSupport, parkNotice, BudgetExhausted, DeadProvider,
     ANSWER_RULES, TRIAGE_RULES, TRIAGE_SCHEMA, NEED_REPORT, SHOW_PURCHASE, PARK_MS,
 };
