@@ -13,7 +13,7 @@ const os = require('os');
 const { execFile } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
 const { initNotifier, stopNotifier } = require('./notifier');
-const { planRoleChanges } = require('./role-plan');
+const { planRoleChanges, classifyVerifyMessage } = require('./role-plan');
 const {
     buildTopic, parseTopic, rebuildTicketState, countAutoAnswers, nextTicketNumber, ticketChannelName, checkLimits,
     slowmodeSeconds, deletableTickets, makeWaiting, parseBotCommand, TICKET_BUTTONS, TICKET_COMMANDS,
@@ -166,7 +166,7 @@ const verifyBad = (title, ...blocks) => rrEmbed({ title, blocks, colour: BRAND_B
 // ── License-verified community gate ─────────────────────────────────────────────
 // The server is open to everyone; a licence unlocks the customer tiers. Members whose Discord is
 // linked to an active RazorReaper licence (checked against the admin panel) get the customer role
-// (RR-Customer), Lifetime licences the Lifetime role on top — see "Community chats" below.
+// (RR-Customer), Lifetime licences the Lifetime role instead — see "Community chats" below.
 // Everything here is inert unless VERIFY_API_BASE + VERIFY_SHARED_SECRET + VERIFIED_ROLE_ID are
 // all configured, so the bot keeps running normally on a server that hasn't opted in.
 // Non-secret IDs carry hardcoded RazorReaper-server defaults so the bot survives a host whose
@@ -180,10 +180,10 @@ const VERIFY_GUILD_ID = process.env.VERIFY_GUILD_ID || process.env.GUILD_ID || '
 const VERIFY_CHANNEL_ID = process.env.VERIFY_CHANNEL_ID || '1529936856307863653'; // #verify
 const MEMBER_ROLE_ID = process.env.MEMBER_ROLE_ID || '1487508255050567690'; // Member — every human gets this on join
 const RECONCILE_MINUTES = Number(process.env.VERIFY_RECONCILE_MINUTES || 30);
-// Extra badge on top of the customer role for lifetime licences. No hardcoded default: when the
-// env var is empty the bot finds a role named "Lifetime" in the home guild, or creates one.
+// The role lifetime licences get INSTEAD of the customer role (never both, see role-plan.js). No
+// hardcoded default: when the env var is empty the bot finds a role named "Lifetime" in the home
+// guild, or creates one.
 const LIFETIME_ROLE_ID_ENV = process.env.LIFETIME_ROLE_ID || '';
-const verifiedRoleMention = () => `<@&${VERIFIED_ROLE_ID}>`;
 
 function verifyConfigured() {
     return Boolean(VERIFY_API_BASE && VERIFY_SECRET && VERIFIED_ROLE_ID);
@@ -211,7 +211,12 @@ async function verifyApi(pathname, body) {
     return { status: res.status, data };
 }
 
-// Grant the customer role, plus the Lifetime badge when the panel says the licence is one.
+// Grant the ONE tier role the licence earns: Lifetime for a lifetime licence (dropping the customer
+// role if held), the customer role otherwise (a stale Lifetime is left to the sweep). Returns the
+// granted role's id, or false. A lifetime buyer whose Lifetime role cannot be resolved or assigned
+// gets the customer role instead — paying must never leave anyone without access; the sweep swaps
+// it once Lifetime works.
+let warnedLifetimeFallback = false;
 async function grantVerifiedRole(guild, userId, lifetime = false) {
     try {
         if (!guild) return false;
@@ -219,14 +224,22 @@ async function grantVerifiedRole(guild, userId, lifetime = false) {
         if (!member) return false;
         if (lifetime) {
             const role = await ensureLifetimeRole(guild);
-            if (role && !member.roles.cache.has(role.id)) {
-                await member.roles.add(role.id, 'RazorReaper lifetime license')
-                    .catch(e => console.error('[verify] Failed to grant Lifetime role:', e.message || e));
+            const held = role?.editable && (member.roles.cache.has(role.id)
+                || await member.roles.add(role.id, 'RazorReaper lifetime license').then(() => true, () => false));
+            if (held) {
+                if (member.roles.cache.has(VERIFIED_ROLE_ID)) {
+                    await member.roles.remove(VERIFIED_ROLE_ID, 'RazorReaper lifetime license — Lifetime replaces the customer role')
+                        .catch(e => console.error('[verify] Failed to drop the customer role:', e.message || e));
+                }
+                return role.id;
+            }
+            if (!warnedLifetimeFallback) {
+                warnedLifetimeFallback = true;
+                console.error('[verify] Cannot resolve or assign the Lifetime role — lifetime buyers get the customer role instead until it is fixed.');
             }
         }
-        if (member.roles.cache.has(VERIFIED_ROLE_ID)) return true;
-        await member.roles.add(VERIFIED_ROLE_ID, 'RazorReaper license verified');
-        return true;
+        if (!member.roles.cache.has(VERIFIED_ROLE_ID)) await member.roles.add(VERIFIED_ROLE_ID, 'RazorReaper license verified');
+        return VERIFIED_ROLE_ID;
     } catch (e) {
         console.error('[verify] Failed to grant role:', e.message || e);
         return false;
@@ -305,9 +318,9 @@ function fetchGuildMembers(guild) {
 }
 
 // Periodic sweep: ONE bulk call to the panel, then make Discord match it — customer role ⇔ an
-// active link, Lifetime role ⇔ an active lifetime link. It grants as well as strips, so a link
-// the owner creates in the admin panel lands without the member running /verify. Every decision
-// that could mass-strip lives in planRoleChanges (role-plan.js) and is unit-tested.
+// active non-lifetime link, Lifetime role ⇔ an active lifetime link. It grants as well as strips,
+// so a link the owner creates in the admin panel lands without the member running /verify. Every
+// decision that could mass-strip lives in planRoleChanges (role-plan.js) and is unit-tested.
 async function reconcileVerifiedRoles() {
     if (!verifyConfigured()) return;
     const guild = verifyGuild();
@@ -334,7 +347,9 @@ async function reconcileVerifiedRoles() {
     const snapshot = members.map(m => ({ id: m.id, bot: m.user.bot, roles: [...m.roles.cache.keys()] }));
     const plan = planRoleChanges(data, snapshot, {
         verified: VERIFIED_ROLE_ID,
-        lifetime: lifetimeRole?.id || null,
+        // A Lifetime role the bot cannot assign counts as missing: otherwise the plan would take
+        // the customer role from lifetime buyers and the Lifetime grant would then be skipped.
+        lifetime: lifetimeRole?.editable ? lifetimeRole.id : null,
     });
     if (!plan.ok) {
         console.error(`[verify] Reconcile aborted — ${plan.reason}. No roles changed.`);
@@ -424,8 +439,8 @@ async function findOwnPanel(channel, title, pages = 1) {
 function verifyRoleLine(guild) {
     const roleName = guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'RR-Customer';
     const lifetimeName = lifetimeRoleId ? guild.roles.cache.get(lifetimeRoleId)?.name : null;
-    return `You instantly get the **${roleName}** role.`
-        + (lifetimeName ? ` Lifetime licences also get **${lifetimeName}**.` : '');
+    return `An active licence instantly gets **${roleName}**.`
+        + (lifetimeName ? `\nLifetime licences get **${lifetimeName}** instead — both chats.` : '');
 }
 
 function buildVerifyPanelEmbed(guild) {
@@ -434,8 +449,8 @@ function buildVerifyPanelEmbed(guild) {
     const e = rrEmbed({
         title: VERIFY_PANEL_TITLE,
         blocks: [
-            '🔓 Everyone can chat here — a licence unlocks the customer chats.',
-            'Run `/verify key:XXXX-XXXX-XXXX-XXXX` right here.\nYour reply is private — nobody else sees your key.',
+            '🔓 The server is open to everyone — a licence unlocks the customer chats.',
+            'Run `/verify key:XXXX-XXXX-XXXX-XXXX` right here — only you see the reply.\nChat messages in this channel are removed automatically.',
             verifyRoleLine(guild),
         ],
         fields: [
@@ -498,15 +513,65 @@ async function syncVerifyPanel() {
             }
         }
         await panel.edit(edit);
-        console.log(`[verify] Panel updated — role line now reads "${verifyRoleLine(guild)}".`);
+        console.log(`[verify] Panel updated — role line now reads "${verifyRoleLine(guild).replace('\n', ' ')}".`);
     } catch (e) {
         console.error('[verify] Panel sync failed:', e.message || e);
     }
 }
 
+// ── #verify keeps itself clean ────────────────────────────────────────────────
+// #verify is for `/verify`, not for chat (owner, 2026-09-24): what members type there is deleted.
+// A pasted key goes at once — it is a secret — a question about verifying gets a short hint first,
+// anything else just goes (classifyVerifyMessage in role-plan.js decides). Staff may talk there;
+// bots never reach this, so the bot's own panel is never touched.
+const VERIFY_HINT_COOLDOWN_MS = 60_000;
+const verifyHintAt = new Map(); // member id -> when they last got a hint
+const warnedVerifyDelete = new Set();
+function dropVerifyMessage(msg, kind, afterMs = 0) {
+    const drop = () => msg.delete().catch(e => {
+        if (e.code === 10008 || warnedVerifyDelete.has(kind)) return; // 10008: already deleted
+        warnedVerifyDelete.add(kind);
+        console.error(`[verify] Could not delete a ${kind} message in #verify (Manage Messages?):`, e.message || e);
+    });
+    if (afterMs) setTimeout(drop, afterMs);
+    else return drop();
+}
+// One hint per member a minute, so a member who keeps typing does not get a reply per line.
+function mayHintVerify(userId, now = Date.now()) {
+    if (now - (verifyHintAt.get(userId) || 0) < VERIFY_HINT_COOLDOWN_MS) return false;
+    // ponytail: bounded by clearing when full — 500 askers inside a minute get a second hint early.
+    if (verifyHintAt.size >= 500) verifyHintAt.clear();
+    verifyHintAt.set(userId, now);
+    return true;
+}
+async function cleanVerifyChannel(m) {
+    if (m.webhookId || (m.member && isStaff(m.member))) return;
+    const kind = classifyVerifyMessage(m.content);
+    if (kind === 'other') return dropVerifyMessage(m, kind);
+    if (kind === 'key') {
+        // Delete first: the key must not stay readable while the warning is being sent.
+        await dropVerifyMessage(m, kind);
+        if (!mayHintVerify(m.author.id)) return;
+        const warn = await m.channel.send({
+            content: `${m.author}`,
+            embeds: [verifyBad('🔒 Key removed', 'Never post your key in chat.\nUse `/verify key:…` — only you see the reply.')],
+            allowedMentions: { users: [m.author.id] },
+        }).catch(() => null);
+        if (warn) dropVerifyMessage(warn, 'hint', 20_000);
+        return;
+    }
+    dropVerifyMessage(m, kind, 30_000);
+    if (!mayHintVerify(m.author.id)) return;
+    const hint = await m.reply({
+        embeds: [verifyOk('How to verify', 'Type `/verify` and paste your key into `key`.\nOnly you see the reply — nobody else sees your key.', `Stuck? Open a ticket in ${supportChannelRef(m.guild)}.`)],
+    }).catch(() => null);
+    if (hint) dropVerifyMessage(hint, 'hint', 30_000);
+}
+
 // ── Community chats ───────────────────────────────────────────────────────────
 // Three tiers (owner, 2026-09-24): rr-chat is for everyone, the customer chat for every active
-// licence (the customer role), the lifetime chat for Lifetime licences only (the Lifetime role).
+// licence (the customer role OR Lifetime — the two are exclusive), the lifetime chat for Lifetime
+// licences only (the Lifetime role).
 // The owner builds and styles those rooms himself; the bot only has to find the two gated ones
 // to link them. The customer chat keeps its find-or-create (CUSTOMER_CHAT_ID is set live); the
 // lifetime chat is found only (LIFETIME_CHAT_ID, resolved on ready) and never created. The
@@ -558,6 +623,8 @@ async function ensureCommunityChannels(guild) {
         permissionOverwrites: [
             { id: guild.id, type: OverwriteType.Role, deny: [P.ViewChannel] },
             { id: VERIFIED_ROLE_ID, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
+            // Lifetime buyers do not hold the customer role, so the room has to let them in too.
+            ...(guild.roles.cache.has(lifetimeRoleId) ? [{ id: lifetimeRoleId, type: OverwriteType.Role, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
             ...(me ? [{ id: me.id, type: OverwriteType.Member, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] }] : []),
         ],
         reason: 'RazorReaper: customers-only lounge',
@@ -1356,6 +1423,7 @@ client.on('messageCreate', async (m) => {
     try {
         if (!m.guild || m.author.bot) return;
         if (VERIFY_GUILD_ID && m.guild.id !== VERIFY_GUILD_ID) return;
+        if (m.channelId === VERIFY_CHANNEL_ID) return await cleanVerifyChannel(m);
         if (!ANY_TICKET_NAME_RE.test(m.channel?.name || '')) return;
 
         // ── "@bot close" ──────────────────────────────────────────────────────
@@ -2572,7 +2640,7 @@ client.once('ready', async () => {
         console.error('[RazorReaper] Failed to set banner/bio:', err.message || err);
     }
 
-    // License-verification reconcile: periodically strip the customer role (and Lifetime) from
+    // License-verification reconcile: periodically strip the customer role (or Lifetime) from
     // members whose license has since lapsed (revoked/expired/suspended in the admin panel).
     if (verifyConfigured() && RECONCILE_MINUTES > 0) {
         const runReconcile = () => reconcileVerifiedRoles().catch(e => console.error('[verify] Reconcile error:', e.message || e));
@@ -2738,7 +2806,7 @@ client.on('interactionCreate', async (interaction) => {
                 console.log(`[verify] Manual grant: ${interaction.user.tag} -> ${targetUser.tag} (${targetUser.id}), role=${granted}`);
                 return interaction.editReply({
                     embeds: [granted
-                        ? verifyOk('✅ Granted', `**${targetUser.tag}** now holds ${verifiedRoleMention()} permanently.\nThe licence sweep will not revoke it.`)
+                        ? verifyOk('✅ Granted', `**${targetUser.tag}** now holds <@&${granted}> permanently.\nThe licence sweep will not revoke it.`)
                         : verifyOk('✅ Grant recorded', `I could not assign the role to **${targetUser.tag}** — check my role position.\nIt applies on the next sweep.`)],
                 });
             } catch (e) {

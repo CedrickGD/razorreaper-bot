@@ -26,7 +26,8 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
    | `NOTIFIER_MESSAGE_CONTENT` | `true` | Requires the privileged intent portal toggle FIRST (see §3) — without it, alert embeds arrive empty. |
    | `VERIFY_API_BASE` | `https://rr-admin-panel.pages.dev` | License‑community gate. Base URL of the admin panel. |
    | `VERIFY_SHARED_SECRET` | *(long random string)* | Must MATCH the same var on Cloudflare Pages. |
-   | `VERIFIED_ROLE_ID` | *(role id)* | The customer role (`RR-Customer`) granted while a license is active (hardcoded RazorReaper default). |
+   | `VERIFIED_ROLE_ID` | *(role id)* | The customer role (`RR-Customer`) granted while a license is active (hardcoded RazorReaper default). Lifetime licenses get the `Lifetime` role (`LIFETIME_ROLE_ID`, else found/created by name) instead — never both. |
+   | `VERIFY_CHANNEL_ID` | *(channel id)* | Optional — #verify: the panel lives there, `/verify key:` works only there, and member chat there is deleted (a pasted key at once). While the id does not exist, `/verify` works anywhere. |
    | `CUSTOMER_CHAT_ID` / `LIFETIME_CHAT_ID` | *(channel id)* | Optional — the customer chat (active licences) and the lifetime chat (Lifetime only) the verify panel links. Found by name once otherwise (`lounge` / `exclusive`) and remembered in `ids.json`; the lifetime chat is never created. |
    | `MEMBER_ROLE_ID` | *(role id)* | Optional — base `Member` role every human gets on join (hardcoded RazorReaper default). |
    | `VERIFY_GUILD_ID` | *(guild id)* | Optional — hardcoded RazorReaper-server default in `index.js`. |

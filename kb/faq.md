@@ -12,7 +12,8 @@ shown in the app under **My account → View license**.
 **Lifetime vs monthly.** Both unlock the same Premium features with two differences: a monthly
 plan expires and has to be renewed before the countdown ends, a Lifetime plan never does; and a
 few pages are marked *Lifetime only* — those do not come with the monthly plans at all. In the
-Discord, Lifetime holders also get the **Lifetime** role on top of **RR-Customer**.
+Discord, Lifetime holders get the **Lifetime** role instead of **RR-Customer**; it opens every
+chat RR-Customer does plus exclusive-chat.
 
 **Activation fails / "key already used".**
 Keys bind to one PC at activation. In order:
@@ -81,14 +82,15 @@ other map.
 ## Discord
 
 **Which chats can I use?** **rr-chat** is for everyone. **premium-chat** is for every active
-licence (the **RR-Customer** role), **exclusive-chat** for Lifetime licences only (the
-**Lifetime** role).
+licence (the **RR-Customer** or the **Lifetime** role), **exclusive-chat** for Lifetime licences
+only (the **Lifetime** role).
 
-**How do I get my roles here?** Run `/verify key:XXXX-XXXX-XXXX-XXXX` in the server — the reply
-is private, nobody else sees the key. That grants **RR-Customer** while the licence is active
-(plus **Lifetime** for a lifetime licence). Roles are re-checked periodically against the
-licence — a lapsed licence loses the role automatically and gets it back on renewal. If the role
-does not arrive, open a ticket.
+**How do I get my roles here?** Run `/verify key:XXXX-XXXX-XXXX-XXXX` in the **verify** channel —
+the reply is private, nobody else sees the key. Chat messages in that channel are deleted
+automatically, and a pasted key is removed at once. That grants **RR-Customer** while the licence
+is active; a lifetime licence gets **Lifetime** instead. Roles are re-checked periodically
+against the licence — a lapsed licence loses the role automatically and gets it back on renewal.
+If the role does not arrive, open a ticket.
 
 **I verified but have no role.** Usually the bot's role sits below the role it is trying to grant,
 or the licence is not active. Escalate rather than guessing.
