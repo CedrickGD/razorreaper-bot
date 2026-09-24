@@ -26,6 +26,7 @@ const {
 const embedBuilder = require('./embed-builder');
 const panelApi = require('./panel-client');
 const { loadIds, saveIds, looseName } = require('./id-store');
+const { diffInvites, newStore, parseStore, isFake, recordJoin, recordLeave, countsFor, leaderboard } = require('./invite-tracker');
 
 // GuildMessages (non-privileged) lets the notifier receive message events in
 // watched channels. NOTE: Discord withholds .content AND .embeds/.attachments of
@@ -2716,6 +2717,9 @@ const slashCommands = [
         .addUserOption(o => o.setName('user').setDescription('The user to look up (leave empty for yourself)').setRequired(false)),
     new SlashCommandBuilder().setName('status').setDescription('View bot & server status — uptime, ping, tickets'),
     new SlashCommandBuilder().setName('rules').setDescription('Display the server rules'),
+    new SlashCommandBuilder().setName('invites').setDescription('How many members someone brought in')
+        .addUserOption(o => o.setName('user').setDescription('Whose invites (leave empty for yourself)').setRequired(false)),
+    new SlashCommandBuilder().setName('inviteleaderboard').setDescription('The top 10 inviters of the server'),
     new SlashCommandBuilder().setName('ticket').setDescription('View your open tickets'),
     new SlashCommandBuilder().setName('queue').setDescription('See how many tickets are open'),
     new SlashCommandBuilder().setName('ticketinfo').setDescription('View info about the current ticket (use inside a ticket channel)'),
@@ -2795,6 +2799,10 @@ client.once('ready', async () => {
           activities: [{ name: 'razorreaper.app | /help', type: ActivityType.Watching }],
           status: 'online',
     });
+
+    // Before the first await: a join that arrives while ready runs queues behind this snapshot.
+    inviteChain = inviteChain.then(() => initInvites(verifyGuild()))
+        .catch(e => console.error('[invites] Setup error:', e.message || e));
 
     // Leave anything that isn't the home guild.
     for (const [, g] of client.guilds.cache) {
@@ -2904,6 +2912,88 @@ client.once('ready', async () => {
     setInterval(runSweeps, 6 * 60 * 60_000);
 });
 
+// ── Invite tracker ────────────────────────────────────────────────────────────
+// "Invited by …" like the invite-tracker bots (owner, 2026-09-24). The rules live in
+// invite-tracker.js; this part feeds it one invite snapshot, re-read on every join, through a
+// single promise chain — two joins in the same second must be diffed one after the other.
+// Registered before the welcome listener, which awaits this member's answer.
+const INVITES_FILE = path.join(process.env.NOTIFIER_DATA_DIR || '/data', 'invites.json');
+const INVITE_FAKE_DAYS = Number(process.env.INVITE_FAKE_DAYS || 7);
+let inviteStore = null;                 // set by initInvites on ready
+let inviteSnap = null;                  // { codes: {code: {uses, inviterId}}, vanity } — null: nothing to diff against
+let inviteChain = Promise.resolve();
+const inviteLookups = new WeakMap();    // member -> Promise<join record|null>
+let inviteFetchWarned = false;
+let inviteSaveTimer = null;
+
+function saveInvites() {
+    clearTimeout(inviteSaveTimer);
+    inviteSaveTimer = null;
+    if (inviteStore) saveIds(INVITES_FILE, inviteStore);
+}
+const saveInvitesSoon = () => { inviteSaveTimer ??= setTimeout(saveInvites, 2000); };
+
+async function snapshotInvites(guild) {
+    try {
+        const codes = Object.fromEntries((await guild.invites.fetch()).map(i => [i.code, { uses: i.uses ?? 0, inviterId: i.inviterId ?? null }]));
+        const vanity = guild.vanityURLCode ? (await guild.fetchVanityData().catch(() => null))?.uses ?? null : null;
+        return { codes, vanity };
+    } catch (e) {
+        if (!inviteFetchWarned) console.warn(`[invites] Cannot read the server's invites (needs Manage Server): ${e.message || e} — joins show no inviter.`);
+        inviteFetchWarned = true;
+        return null;
+    }
+}
+
+async function initInvites(guild) {
+    if (!guild) return;
+    let raw = null;
+    try { raw = fs.readFileSync(INVITES_FILE, 'utf8'); } catch { /* first run */ }
+    inviteStore = raw == null ? null : parseStore(raw);
+    if (raw != null && !inviteStore) console.warn(`[invites] ${INVITES_FILE} is unreadable — starting fresh.`);
+    inviteSnap = await snapshotInvites(guild);
+    if (!inviteStore) {
+        // ponytail: a refused first fetch leaves `earlier` empty for good; delete invites.json to re-snapshot.
+        inviteStore = newStore(inviteSnap?.codes);
+        saveInvites();
+    }
+    console.log(`[invites] ${Object.keys(inviteStore.joins).length} joins tracked since ${inviteStore.startedAt}, fake below ${INVITE_FAKE_DAYS} days.`);
+}
+
+async function trackJoin(member) {
+    const snap = await snapshotInvites(member.guild);
+    const hit = diffInvites(inviteSnap?.codes, snap?.codes, inviteSnap?.vanity, snap?.vanity);
+    inviteSnap = snap;                  // a failed fetch drops the baseline: the next join is unknown, not a guess
+    if (!inviteStore) return null;
+    const rec = recordJoin(inviteStore, member.id, hit, isFake(member.user.createdTimestamp, member.joinedTimestamp ?? Date.now(), INVITE_FAKE_DAYS));
+    saveInvitesSoon();
+    return rec;
+}
+
+// The welcome's line for this member, or null — waits for the diff, at most 3 s.
+async function inviteLine(member) {
+    const lookup = inviteLookups.get(member);
+    const rec = lookup && await Promise.race([lookup, new Promise(r => setTimeout(r, 3000, null))]);
+    if (rec?.via === 'vanity') return "📨 Joined via the server's vanity link";
+    if (!rec?.inviter) return null;
+    const n = countsFor(inviteStore, rec.inviter).total;
+    return `📨 Invited by <@${rec.inviter}> (${n} invite${n === 1 ? '' : 's'})`;
+}
+
+// OAuth-added bots use no invite: skipped.
+client.on('guildMemberAdd', (member) => {
+    if (member.user.bot || (VERIFY_GUILD_ID && member.guild.id !== VERIFY_GUILD_ID)) return;
+    const lookup = inviteChain.then(() => trackJoin(member))
+        .catch(e => { console.error('[invites] Join tracking failed:', e.message || e); return null; });
+    inviteLookups.set(member, lookup);
+    inviteChain = lookup;
+});
+
+client.on('guildMemberRemove', (member) => {
+    if (VERIFY_GUILD_ID && member.guild.id !== VERIFY_GUILD_ID) return;
+    inviteChain = inviteChain.then(() => { if (inviteStore && recordLeave(inviteStore, member.id)) saveInvitesSoon(); });
+});
+
 // ── Member auto-role on join ──────────────────────────────────────────────────
 // Every human joiner is a Member from the moment they arrive — verification only adds on top.
 client.on('guildMemberAdd', async (member) => {
@@ -2922,12 +3012,13 @@ client.on('guildMemberAdd', async (member) => {
     if (VERIFY_GUILD_ID && member.guild.id !== VERIFY_GUILD_ID) return;
     const ch = welcomeChannelId && member.guild.channels.cache.get(welcomeChannelId);
     if (!ch) return;
+    const invited = await inviteLine(member);
     const rules = rulesChannelId && member.guild.channels.cache.has(rulesChannelId) ? `<#${rulesChannelId}>` : '#rules';
     const e = new EmbedBuilder()
       .setColor(ACCENT)
       .setTitle('⚡ Welcome to RazorReaper!')
       .setDescription(
-              `Hey ${member}, welcome to the community!\n\n` +
+              `Hey ${member}, welcome to the community!\n` + (invited ? `${invited}\n` : '') + '\n' +
               `📋 Read the rules in ${rules}\n` +
               `🎟️ Need help? Open a ticket in ${supportChannelRef(member.guild)}\n` +
               `🌐 Visit us at **razorreaper.app**`
@@ -2935,7 +3026,7 @@ client.on('guildMemberAdd', async (member) => {
       .setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }))
       .setFooter({ text: `Member #${member.guild.memberCount}`, iconURL: client.user.displayAvatarURL() })
       .setTimestamp();
-    ch.send({ embeds: [e] }).catch(() => {});
+    ch.send({ embeds: [e], allowedMentions: { parse: [] } }).catch(() => {});
 });
 
 // ── Gate new members behind license verification ────────────────────────────────
@@ -3107,6 +3198,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/userinfo` `[user]`', value: 'Detailed user profile — roles, join date, account age' },
                     { name: '`/status`', value: 'Bot & server status — uptime, ping, open tickets' },
                     { name: '`/rules`', value: 'Display the server rules' },
+                    { name: '`/invites` `[user]` · `/inviteleaderboard`', value: 'Who brought how many members in, and the top 10 inviters' },
                     { name: '`/verify` `key`', value: 'Verify your RazorReaper license to unlock the community' },
                     { name: '`/ping`', value: 'Check bot latency and WebSocket ping' },
                 ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
@@ -3202,6 +3294,40 @@ client.on('interactionCreate', async (interaction) => {
                 { name: `📋 Roles (${roles.size})`, value: topRoles },
             ).setTimestamp();
         return interaction.reply({ embeds: [e] });
+    }
+
+    // ── /invites · /inviteleaderboard ─────────────────────────────────────────
+    if (commandName === 'invites' || commandName === 'inviteleaderboard') {
+        if (!inviteStore) {
+            return interaction.reply({ embeds: [rrEmbed({ title: 'Invites not ready yet', blocks: ['The tracker is still starting.\nTry again in a moment.'], colour: BRAND_BAD })], ephemeral: true });
+        }
+        const plural = n => `${n} invite${n === 1 ? '' : 's'}`;
+        if (commandName === 'invites') {
+            const user = interaction.options.getUser('user') || interaction.user;
+            const c = countsFor(inviteStore, user.id);
+            const own = inviteStore.joins[user.id];
+            return interaction.reply({
+                embeds: [rrEmbed({
+                    title: '📨 Invites',
+                    blocks: [
+                        `${user} has **${plural(c.total)}**\n${c.regular} regular · ${c.earlier} earlier · ${c.left} left · ${c.fake} fake`,
+                        own?.inviter ? `Invited by <@${own.inviter}>` : own?.via === 'vanity' && "Joined via the server's vanity link",
+                    ],
+                    thumb: user.displayAvatarURL({ size: 256 }),
+                })],
+                allowedMentions: { parse: [] },
+            });
+        }
+        const { top, caller } = leaderboard(inviteStore, 10, interaction.user.id);
+        return interaction.reply({
+            embeds: [rrEmbed({
+                title: '🏆 Invite leaderboard',
+                blocks: [!top.length && 'No invites tracked yet.', caller?.rank > 10 && `You: #${caller.rank} with ${plural(caller.total)}`],
+                fields: top.length ? [{ name: 'Top 10', value: top.map(r => `**${r.rank}.** <@${r.inviterId}> · ${plural(r.total)}`).join('\n') }] : [],
+                thumb: brandThumb(guild, client.user),
+            })],
+            allowedMentions: { parse: [] },
+        });
     }
 
     // ── /status ───────────────────────────────────────────────────────────────
@@ -3747,6 +3873,7 @@ function shutdown(signal) {
     shuttingDown = true;
     console.log(`[RazorReaper] ${signal} received — closing notifier and Discord connection.`);
     try { stopNotifier(); } catch { /* best effort */ }
+    if (inviteSaveTimer) saveInvites();
     setTimeout(() => process.exit(0), 5000).unref(); // hard exit fallback
     Promise.resolve(client.destroy()).catch(() => {}).then(() => process.exit(0));
 }

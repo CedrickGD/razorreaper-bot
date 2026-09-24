@@ -10,6 +10,8 @@
 | `/userinfo [user]` | View detailed user profile | `user` (optional) | Everyone |
 | `/status` | View bot & server status — uptime, ping, tickets | — | Everyone |
 | `/rules` | Display the server rules | — | Everyone |
+| `/invites [user]` | How many members someone brought in: total (regular + earlier) and the regular · earlier · left · fake breakdown, plus who invited them | `user` (optional, default: self) | Everyone |
+| `/inviteleaderboard` | The top 10 inviters by total, and your own rank if you are not in it | — | Everyone |
 | `/ticket` | View your open tickets | — | Everyone |
 | `/queue` | See how many tickets are open | — | Everyone |
 | `/ticketinfo` | View info about the current ticket | — | Everyone |

@@ -35,6 +35,7 @@ and `railway.json` (health check on `/health`, auto-restart on failure).
    | `STAFF_ROLE_IDS` | *(role ids, comma-separated)* | Optional — staff roles (see tickets, run mod commands). Without it the bot matches Owner/Admin/Moderator/Support Staff by name once and remembers the ids in `ids.json`. |
    | `WELCOME_CHANNEL_ID` / `RULES_CHANNEL_ID` | *(channel id)* | Optional — where the welcome embed posts / which rules channel it links. Found by name once otherwise and remembered in `ids.json`. |
    | `VERIFY_RECONCILE_MINUTES` | `30` | Optional — how often lapsed licenses lose the role. |
+   | `INVITE_FAKE_DAYS` | `7` | Optional — the invite tracker (`/invites`, the welcome's "Invited by") counts a joiner whose account is younger than this many days as fake. Its counts live in `invites.json` next to `ids.json`. |
    | `TICKET_TRANSCRIPT_DM` | `true` | Optional — set `false` to stop DM'ing HTML transcripts to ticket openers on close. |
    `PORT` is injected by Railway automatically — do **not** set it. The four `VERIFY_*` role vars
    are optional: without all of `VERIFY_API_BASE` + `VERIFY_SHARED_SECRET` + `VERIFIED_ROLE_ID`
