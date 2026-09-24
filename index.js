@@ -457,7 +457,7 @@ function buildVerifyPanelEmbed(guild) {
             verifyRoleLine(guild),
         ],
         fields: [
-            { name: '🎁 Discord perks', value: `**Every active licence**\n${chanRef(CUSTOMER_CHAT_ID || storedIds.customerChat, 'The customer chat')} ${chanRef(earlyChannelId, 'Early commits')}\n**Lifetime adds**\n${chanRef(lifetimeChatId, 'The lifetime chat')}`, inline: true },
+            { name: '🎁 Discord perks', value: `**Every active licence**\n${chanRef(CUSTOMER_CHAT_ID || storedIds.customerChat, 'The customer chat')}\n**Lifetime adds**\n${chanRef(lifetimeChatId, 'The lifetime chat')}`, inline: true },
             { name: "Where's my key?", value: 'In your purchase confirmation from [razorreaper.app](https://razorreaper.app).', inline: true },
         ],
         thumb: brandThumb(guild, client.user),
@@ -578,13 +578,10 @@ async function cleanVerifyChannel(m) {
 // The owner builds and styles those rooms himself; the bot only has to find the two gated ones
 // to link them. The customer chat keeps its find-or-create (CUSTOMER_CHAT_ID is set live); the
 // lifetime chat is found only (LIFETIME_CHAT_ID, resolved on ready) and never created. The
-// everyone chat needs nothing from the bot. Early commits (every active licence) is a read-only
-// feed the GitHub push webhook posts into; the bot only links it, the same found-only way.
+// everyone chat needs nothing from the bot.
 const CUSTOMER_CHAT_ID = process.env.CUSTOMER_CHAT_ID || '';
 const LIFETIME_CHAT_ID = process.env.LIFETIME_CHAT_ID || '';
-const EARLY_CHANNEL_ID = process.env.EARLY_CHANNEL_ID || '';
 let lifetimeChatId = null;
-let earlyChannelId = null;
 
 // Find-or-create, idempotent: an explicit id wins, then the id pinned under storeKey, then
 // anything whose loose name (looseName) looks like it, and only then is one created. Shared by
@@ -2852,9 +2849,7 @@ client.once('ready', async () => {
         welcomeChannelId = findPinned(homeGuild.channels.cache, 'welcomeChannel', WELCOME_CHANNEL_ID, (n, c) => text(c) && n.includes('welcome'))?.id || null;
         rulesChannelId = findPinned(homeGuild.channels.cache, 'rulesChannel', RULES_CHANNEL_ID, (n, c) => text(c) && n.includes('rules'))?.id || null;
         // Only "exclusive": "premium" is the customer chat and "chat" matches every tier.
-        lifetimeChatId = findPinned(homeGuild.channels.cache, 'lifetimeChat', LIFETIME_CHAT_ID, (n, c) => text(c) && n.includes('exclusive'))?.id || null;
-        earlyChannelId = findPinned(homeGuild.channels.cache, 'earlyChannel', EARLY_CHANNEL_ID, (n, c) => text(c) && n.includes('early'))?.id || null;
-    }
+        lifetimeChatId = findPinned(homeGuild.channels.cache, 'lifetimeChat', LIFETIME_CHAT_ID, (n, c) => text(c) && n.includes('exclusive'))?.id || null;    }
     // One line with every id and where it came from (env|stored|name|created) for the deploy check.
     console.log(`[ids] resolved: ${Object.values(idLog).join(' ') || 'none'}`);
 

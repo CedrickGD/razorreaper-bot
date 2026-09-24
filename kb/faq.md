@@ -81,11 +81,10 @@ other map.
 
 ## Discord
 
-**Which chats can I use?** **rr-chat** is for everyone. **premium-chat** and **early-commits**
-(every change to the app as it lands, before the release) are for every active licence (the
-**RR-Customer** or the **Lifetime** role), **exclusive-chat** for Lifetime licences only (the
-**Lifetime** role). These are Discord perks only; releases and the changelog stay public for
-everyone.
+**Which chats can I use?** **rr-chat** is for everyone. **premium-chat** is for every active
+licence (the **RR-Customer** or the **Lifetime** role), **exclusive-chat** for Lifetime licences
+only (the **Lifetime** role). These are Discord perks only; releases and the changelog stay public
+for everyone.
 
 **How do I get my roles here?** Run `/verify key:XXXX-XXXX-XXXX-XXXX` in the **verify** channel —
 the reply is private, nobody else sees the key. Chat messages in that channel are deleted
