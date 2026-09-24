@@ -439,8 +439,8 @@ async function findOwnPanel(channel, title, pages = 1) {
 function verifyRoleLine(guild) {
     const roleName = guild.roles.cache.get(VERIFIED_ROLE_ID)?.name || 'RR-Customer';
     const lifetimeName = lifetimeRoleId ? guild.roles.cache.get(lifetimeRoleId)?.name : null;
-    return `An active licence instantly gets **${roleName}**.`
-        + (lifetimeName ? `\nLifetime licences get **${lifetimeName}** instead — both chats.` : '');
+    return `Active licence: **${roleName}** role.`
+        + (lifetimeName ? `\nLifetime licence: **${lifetimeName}** role instead.` : '');
 }
 
 function buildVerifyPanelEmbed(guild) {
@@ -449,8 +449,10 @@ function buildVerifyPanelEmbed(guild) {
     const e = rrEmbed({
         title: VERIFY_PANEL_TITLE,
         blocks: [
-            '🔓 The server is open to everyone — a licence unlocks the customer chats.',
-            'Run `/verify key:XXXX-XXXX-XXXX-XXXX` right here — only you see the reply.\nChat messages in this channel are removed automatically.',
+            // Word for word the panel the owner saw posted by hand on 2026-09-24 — syncVerifyPanel edits
+            // the live panel whenever this text differs, so a change here is a change he will see.
+            '🔓 Got a RazorReaper licence? Link it here.\nIt unlocks the customer chats.',
+            'Run `/verify key:XXXX-XXXX-XXXX-XXXX` right here.\nYour reply is private — nobody else sees your key.',
             verifyRoleLine(guild),
         ],
         fields: [
@@ -2787,7 +2789,7 @@ client.on('interactionCreate', async (interaction) => {
         const targetUser = interaction.options.getUser('user');
         if (targetUser) {
             if (!member || !isStaff(member)) {
-                return interaction.reply({ embeds: [verifyBad('Staff only', 'Only staff can grant the customer role to another member.')], ephemeral: true });
+                return interaction.reply({ embeds: [verifyBad('Staff only', 'Only staff can grant a licence role to another member.')], ephemeral: true });
             }
             if (targetUser.bot) {
                 return interaction.reply({ embeds: [verifyBad('Not a member', 'A bot cannot hold a licence.')], ephemeral: true });
