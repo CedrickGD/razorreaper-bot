@@ -3051,10 +3051,8 @@ const MEDALS = ['🥇', '🥈', '🥉'];
 const standingsText = (rows, n) =>
     rows.slice(0, n).map(r => `${MEDALS[r.rank - 1] || `\`#${r.rank}\``} <@${r.inviterId}> — **${many(r.count, 'invite')}**`).join('\n')
     || '*No invites counted yet — be the first.*';
-// The bot's own banner (the purple network) as the big picture on giveaway and contest posts. The raw GitHub URL
-// is stable, unlike Discord attachment links, which expire — and these posts are re-rendered for days.
-const HERO_IMAGE = 'https://raw.githubusercontent.com/CedrickGD/razorreaper-bot/main/banner.png';
-const hero = (embed) => embed.setImage(HERO_IMAGE);
+// No big picture on these posts: the owner found the dark banner made them worse (2026-09-24).
+const hero = (embed) => embed;
 
 function giveawayEmbed(g, guild) {
     const active = g.state === 'active';
