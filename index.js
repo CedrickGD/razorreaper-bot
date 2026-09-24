@@ -450,14 +450,14 @@ function buildVerifyPanelEmbed(guild) {
     const e = rrEmbed({
         title: VERIFY_PANEL_TITLE,
         blocks: [
-            // Word for word the panel the owner saw posted by hand on 2026-09-24 — syncVerifyPanel edits
-            // the live panel whenever this text differs, so a change here is a change he will see.
-            '🔓 Got a RazorReaper licence? Link it here.\nIt unlocks the customer chats.',
+            // syncVerifyPanel edits the live panel whenever this text differs, so a change here is a
+            // change the owner will see. "Discord perks" is his wording: server extras, not app features.
+            '🔓 Got a RazorReaper licence? Link it here.\nIt unlocks the Discord perks below — extras on this server, not in the app.',
             'Run `/verify key:XXXX-XXXX-XXXX-XXXX` right here.\nYour reply is private — nobody else sees your key.',
             verifyRoleLine(guild),
         ],
         fields: [
-            { name: 'What you unlock', value: `${chanRef(CUSTOMER_CHAT_ID || storedIds.customerChat, 'The customer chat')} — any active licence\n${chanRef(lifetimeChatId, 'The lifetime chat')} — Lifetime licences only`, inline: true },
+            { name: '🎁 Discord perks', value: `**Every active licence**\n${chanRef(CUSTOMER_CHAT_ID || storedIds.customerChat, 'The customer chat')} ${chanRef(earlyChannelId, 'Early commits')}\n**Lifetime adds**\n${chanRef(lifetimeChatId, 'The lifetime chat')}`, inline: true },
             { name: "Where's my key?", value: 'In your purchase confirmation from [razorreaper.app](https://razorreaper.app).', inline: true },
         ],
         thumb: brandThumb(guild, client.user),
@@ -578,10 +578,13 @@ async function cleanVerifyChannel(m) {
 // The owner builds and styles those rooms himself; the bot only has to find the two gated ones
 // to link them. The customer chat keeps its find-or-create (CUSTOMER_CHAT_ID is set live); the
 // lifetime chat is found only (LIFETIME_CHAT_ID, resolved on ready) and never created. The
-// everyone chat needs nothing from the bot.
+// everyone chat needs nothing from the bot. Early commits (every active licence) is a read-only
+// feed the GitHub push webhook posts into; the bot only links it, the same found-only way.
 const CUSTOMER_CHAT_ID = process.env.CUSTOMER_CHAT_ID || '';
 const LIFETIME_CHAT_ID = process.env.LIFETIME_CHAT_ID || '';
+const EARLY_CHANNEL_ID = process.env.EARLY_CHANNEL_ID || '';
 let lifetimeChatId = null;
+let earlyChannelId = null;
 
 // Find-or-create, idempotent: an explicit id wins, then the id pinned under storeKey, then
 // anything whose loose name (looseName) looks like it, and only then is one created. Shared by
@@ -2014,7 +2017,7 @@ async function startEmbedBuilder(interaction) {
     if (hidden(target)) return interaction.reply({ embeds: [errEmbed('❌ You don\'t have access to that channel.')], ephemeral: true });
     let state = embedBuilder.newState();
     let editMessageId = null;
-    const link = interaction.options.getString('edit');
+    const link = interaction.commandName === 'editembed' ? interaction.options.getString('message') : null;
     if (link) {
         const [, guildId, channelId, messageId] = /channels\/(\d+)\/(\d+)\/(\d+)/.exec(link) || [];
         const msg = guildId === guild.id
@@ -2699,9 +2702,11 @@ const slashCommands = [
     new SlashCommandBuilder().setName('say').setDescription('Send a message as the bot')
         .addStringOption(o => o.setName('message').setDescription('The message to send').setRequired(true))
         .addChannelOption(o => o.setName('channel').setDescription('Channel to send in (default: current)').addChannelTypes(ChannelType.GuildText).setRequired(false)),
-    new SlashCommandBuilder().setName('buildembed').setDescription('Staff — build an embed (colour, icons, fields, link buttons) and send it')
-        .addChannelOption(o => o.setName('channel').setDescription('Channel to send to (default: current)').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setRequired(false))
-        .addStringOption(o => o.setName('edit').setDescription('Link to a message I sent — edit that one instead').setRequired(false)),
+    new SlashCommandBuilder().setName('buildembed').setDescription('Staff — build a new embed (colour, icons, fields, link buttons) and send it')
+        .addChannelOption(o => o.setName('channel').setDescription('Channel to send to (default: current)').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setRequired(false)),
+    // Its own command (owner): /buildembed only ever builds a new message.
+    new SlashCommandBuilder().setName('editembed').setDescription('Staff — edit an embed message I sent, in the same builder')
+        .addStringOption(o => o.setName('message').setDescription('Link to the message (right-click → Copy Message Link)').setRequired(true)),
     new SlashCommandBuilder().setName('clear').setDescription('Delete messages in this channel')
         .addIntegerOption(o => o.setName('amount').setDescription('Number of messages to delete').setRequired(true)
             .addChoices({ name: '10 messages', value: 10 }, { name: '25 messages', value: 25 }, { name: '50 messages', value: 50 }, { name: '100 messages', value: 100 }))
@@ -2848,6 +2853,7 @@ client.once('ready', async () => {
         rulesChannelId = findPinned(homeGuild.channels.cache, 'rulesChannel', RULES_CHANNEL_ID, (n, c) => text(c) && n.includes('rules'))?.id || null;
         // Only "exclusive": "premium" is the customer chat and "chat" matches every tier.
         lifetimeChatId = findPinned(homeGuild.channels.cache, 'lifetimeChat', LIFETIME_CHAT_ID, (n, c) => text(c) && n.includes('exclusive'))?.id || null;
+        earlyChannelId = findPinned(homeGuild.channels.cache, 'earlyChannel', EARLY_CHANNEL_ID, (n, c) => text(c) && n.includes('early'))?.id || null;
     }
     // One line with every id and where it came from (env|stored|name|created) for the deploy check.
     console.log(`[ids] resolved: ${Object.values(idLog).join(' ') || 'none'}`);
@@ -3086,7 +3092,8 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/clear` `amount` `filter` `[user]`', value: 'Delete messages — pick amount, filter type, and optionally a specific user' },
                     { name: '`/purge` `amount`', value: 'Quick bulk-delete messages' },
                     { name: '`/say` `message` `[channel]`', value: 'Send an announcement as the bot' },
-                    { name: '`/buildembed` `[channel]` `[edit]`', value: 'Build an embed like Discohook — colour, icons, fields, link buttons — or edit one I sent' },
+                    { name: '`/buildembed` `[channel]`', value: 'Build a new embed like Discohook — colour, icons, fields, link buttons' },
+                    { name: '`/editembed` `message`', value: 'Edit an embed message I sent, in the same builder' },
                     { name: '`/close` `[reason]`', value: 'Close a ticket channel *(use inside a ticket channel)*' },
                 ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
             staff: () => new EmbedBuilder()
@@ -3318,7 +3325,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     // ── /buildembed ───────────────────────────────────────────────────────────
-    if (commandName === 'buildembed') return startEmbedBuilder(interaction);
+    if (commandName === 'buildembed' || commandName === 'editembed') return startEmbedBuilder(interaction);
 
     // ── /clear ────────────────────────────────────────────────────────────────
     if (commandName === 'clear') {
