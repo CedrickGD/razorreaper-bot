@@ -21,6 +21,7 @@
 | `/disableai` | Stop the AI answering in this ticket | — | Staff / Ticket Owner |
 | `/ticketping <user>` | Toggle the support-ping role — who "I need a human" pings | `user` (required) | **Bot owner only** |
 | `/say <message> [channel]` | Send a message as the bot | `message` (required), `channel` (optional) | Staff |
+| `/buildembed [channel] [edit]` | Discohook-style embed builder in an ephemeral message — title, text, author, footer, images, fields, colour presets or hex, RR logo/avatars as icons, timestamp, up to 5 link buttons, JSON import/export — then send it | `channel` (optional, default: current), `edit` (optional: link to a message the bot sent, to edit it in place) | Staff |
 | `/clear <amount> <filter> [user]` | Delete messages in a channel | `amount` (required), `filter` (required: All/User/Bots), `user` (optional) | Staff |
 | `/purge <amount>` | Quick bulk-delete messages (1–100) | `amount` (required) | Staff |
 | `/kick <user> [reason]` | Kick a member from the server | `user` (required), `reason` (optional) | Staff |

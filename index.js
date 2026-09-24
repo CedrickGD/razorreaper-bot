@@ -23,6 +23,7 @@ const {
     rrEmbed, brandThumb, shortLine, ticketLogEntry,
     BRAND, BRAND_BAD, BRAND_GOOD,
 } = require('./brand');
+const embedBuilder = require('./embed-builder');
 const panelApi = require('./panel-client');
 const { loadIds, saveIds, looseName } = require('./id-store');
 
@@ -1985,6 +1986,156 @@ async function runTicketAction(action, channel, member, respond, { reason = '', 
     return refuse(`I only know ${TICKET_COMMANDS.map(c => `\`/${c}\``).join(', ')}.`);
 }
 
+// ── /buildembed ───────────────────────────────────────────────────────────────
+// The draft and every edit to it live in embed-builder.js; this is the session and Discord.
+// Sessions are in memory: a restart costs a half-built embed and one re-run, and a draft never
+// touches disk. One expires 30 minutes after its last click, and the sweep runs whenever a new
+// one starts, so the Map never holds more than half an hour of builders.
+const EB_TTL = 30 * 60_000;
+const ebSessions = new Map();   // sid (= the /buildembed interaction id) → session
+
+function ebView(sid, s) {
+    return embedBuilder.builderView(s.state, sid, {
+        targetName: client.channels.cache.get(s.targetChannelId)?.name || 'channel',
+        editing: Boolean(s.editMessageId), picking: s.picking,
+    });
+}
+
+async function startEmbedBuilder(interaction) {
+    const { guild, member } = interaction;
+    if (!isStaff(member)) return interaction.reply({ embeds: [errEmbed('❌ No permission.')], ephemeral: true });
+    const now = Date.now();
+    for (const [sid, s] of ebSessions) if (now - s.touchedAt > EB_TTL) ebSessions.delete(sid);
+
+    let target = interaction.options.getChannel('channel') || interaction.channel;
+    let state = embedBuilder.newState();
+    let editMessageId = null;
+    const link = interaction.options.getString('edit');
+    if (link) {
+        const [, guildId, channelId, messageId] = /channels\/(\d+)\/(\d+)\/(\d+)/.exec(link) || [];
+        const msg = guildId === guild.id
+            ? await client.channels.fetch(channelId).then(c => c?.messages?.fetch(messageId)).catch(() => null)
+            : null;
+        if (!msg) return interaction.reply({ embeds: [errEmbed('❌ No message found — paste its link (right-click → Copy Message Link).')], ephemeral: true });
+        const data = {
+            authorId: msg.author.id, content: msg.content,
+            embeds: msg.embeds.map(e => e.toJSON()), components: msg.components.map(c => c.toJSON()),
+        };
+        const refusal = embedBuilder.editRefusal(data, client.user.id);
+        if (refusal) return interaction.reply({ embeds: [errEmbed(`❌ ${refusal}`)], ephemeral: true });
+        [target, state, editMessageId] = [msg.channel, embedBuilder.fromMessage(data), msg.id];
+    }
+    const session = {
+        userId: interaction.user.id, guildId: guild.id, targetChannelId: target.id, editMessageId, state,
+        touchedAt: now, picking: false, draft: null,
+        cmd: interaction,   // its editReply resets the builder's menus after a modal (see openModal)
+    };
+    ebSessions.set(interaction.id, session);
+    return interaction.reply({ ...ebView(interaction.id, session), ephemeral: true });
+}
+
+// Every button, menu and modal of a builder: customId `eb:<sid>:<action>[:<kind>[:<index>]]`.
+async function handleEmbedBuilder(interaction) {
+    const [, sid, action, kind, index] = interaction.customId.split(':');
+    const s = ebSessions.get(sid);
+    if (!s || Date.now() - s.touchedAt > EB_TTL) {
+        ebSessions.delete(sid);
+        return interaction.reply({ content: 'This builder expired — run /buildembed again.', ephemeral: true });
+    }
+    if (interaction.user.id !== s.userId) return interaction.reply({ content: 'This builder is someone else\'s.', ephemeral: true });
+    s.touchedAt = Date.now();
+    if (action !== 'field') s.picking = false;   // any other control leaves the field picker
+
+    const value = interaction.isStringSelectMenu() ? interaction.values[0] : null;
+    const render = () => interaction.update(ebView(sid, s));
+    const warn = (error) => interaction.reply({ content: `⚠️ ${error}`, ephemeral: true });
+    // From a menu, answering with a fresh builder is what un-selects the picked option.
+    const refuse = async (error) => { await render(); return interaction.followUp({ content: `⚠️ ${error}`, ephemeral: true }); };
+    // A modal has to be the FIRST answer, so the menu that opened it keeps its option selected —
+    // and picking the same option again fires nothing, so a dismissed modal would lock it.
+    // Re-sending the builder through the command's own token resets the menus. That token lives
+    // 15 minutes; after that the reset just fails, and picking another option first still works.
+    const openModal = async (modalKind, i) => {
+        const values = s.draft?.kind === modalKind && s.draft.index === i ? s.draft.values : embedBuilder.modalPrefill(s.state, modalKind, i);
+        await interaction.showModal(embedBuilder.builderModal(modalKind, sid, values, i));
+        s.cmd.editReply(ebView(sid, s)).catch(() => {});
+    };
+    const apply = async (editKind, values) => {
+        const r = embedBuilder.applyEdit(s.state, editKind, values);
+        if (r.ok) { s.state = r.state; s.draft = null; return render(); }
+        if (!interaction.isModalSubmit()) return refuse(r.error);
+        s.draft = { kind: editKind, index, values };   // the next open of this modal keeps what was typed
+        return warn(r.error);
+    };
+    const icons = () => ({
+        logoUrl: brandThumb(interaction.guild, client.user), botAvatar: client.user.displayAvatarURL({ size: 256 }),
+        userAvatar: interaction.member.displayAvatarURL({ size: 256 }), userName: interaction.member.displayName,
+    });
+
+    if (action === 'm') {
+        return apply(kind, { ...Object.fromEntries(interaction.fields.fields.map((f, id) => [id, f.value ?? ''])), index });
+    }
+    if (action === 'edit') {
+        if (value === 'export') {
+            const json = embedBuilder.toJson(s.state);
+            await render();
+            return interaction.followUp(json.length <= 1980 && !json.includes('```')
+                ? { content: `\`\`\`json\n${json}\n\`\`\``, ephemeral: true }
+                : { files: [new AttachmentBuilder(Buffer.from(json), { name: 'embed.json' })], ephemeral: true });
+        }
+        if (value === 'clearButtons') return apply('clearButtons');
+        if (value === 'editField') {
+            if (!s.state.fields.length) return refuse('No fields yet — add one first.');
+            s.picking = true;
+            return render();
+        }
+        if (value === 'addField' && s.state.fields.length >= 25) return refuse('An embed holds at most 25 fields.');
+        if (value === 'addButton' && s.state.buttons.length >= 5) return refuse('At most 5 link buttons.');
+        return openModal(value);
+    }
+    if (action === 'field') {
+        if (value !== 'back') return openModal('editField', value);
+        s.picking = false;
+        return render();
+    }
+    if (action === 'colour') return value === 'custom' ? openModal('hex') : apply('colour', { key: value });
+    if (action === 'icons') return apply('icons', { pick: value, ...icons() });
+    if (action === 'ts') return apply('timestamp');
+    if (action === 'style') return apply('rrStyle', icons());
+    if (action === 'reset') return apply('reset');
+    if (action === 'cancel') {
+        ebSessions.delete(sid);
+        return interaction.update({ content: '❌ Embed builder closed — nothing was sent.', embeds: [], components: [] });
+    }
+    if (action !== 'send') return;
+
+    const error = embedBuilder.validate(s.state, { sending: true });
+    if (error) return warn(error);
+    const target = await client.channels.fetch(s.targetChannelId).catch(() => null);
+    const me = target?.guild?.members.me;
+    const F = PermissionsBitField.Flags;
+    if (!me || !target.permissionsFor(me)?.has([F.ViewChannel, F.SendMessages, F.EmbedLinks])) {
+        return warn(`I can't post in ${target ?? 'that channel'} — I need View Channel, Send Messages and Embed Links there.`);
+    }
+    const canEveryone = Boolean(target.permissionsFor(interaction.member)?.has(F.MentionEveryone));
+    const { allowedMentions, everyoneDropped } = embedBuilder.allowedMentionsFor(s.state.content, canEveryone);
+    const payload = { ...embedBuilder.toMessagePayload(s.state), allowedMentions };
+    await interaction.deferUpdate();   // a send can outlast the three seconds an answer gets
+    let sent;
+    try {
+        sent = s.editMessageId ? await target.messages.edit(s.editMessageId, payload) : await target.send(payload);
+    } catch (e) {
+        // The session stays: fix what Discord refused and press the button again.
+        return interaction.followUp({ content: `⚠️ Discord refused it: ${e.message || e}`, ephemeral: true });
+    }
+    ebSessions.delete(sid);
+    return interaction.editReply({
+        content: `✅ ${s.editMessageId ? 'Saved' : 'Sent'}: ${sent.url}`
+            + (everyoneDropped ? '\n-# @everyone/@here did not ping — you lack Mention Everyone there.' : ''),
+        embeds: [], components: [],
+    });
+}
+
 // ── Panel, modal and ticket buttons ───────────────────────────────────────────
 // Its own listener, keyed on customId: the /help, /steal and /roles menus in this file use
 // in-memory collectors that die with the process, which is fine for a menu that lives 30 seconds
@@ -2030,6 +2181,10 @@ client.on('interactionCreate', async (interaction) => {
             }
             return openTicket(interaction, category, fields);
         }
+
+        // /buildembed: keyed here rather than on a collector, so a builder a restart forgot says
+        // "expired" instead of Discord's "This interaction failed".
+        if (interaction.customId?.startsWith('eb:')) return await handleEmbedBuilder(interaction);
 
         if (!interaction.isButton() || !interaction.customId.startsWith('ticket:')) return;
         const channel = interaction.channel;
@@ -2540,6 +2695,9 @@ const slashCommands = [
     new SlashCommandBuilder().setName('say').setDescription('Send a message as the bot')
         .addStringOption(o => o.setName('message').setDescription('The message to send').setRequired(true))
         .addChannelOption(o => o.setName('channel').setDescription('Channel to send in (default: current)').addChannelTypes(ChannelType.GuildText).setRequired(false)),
+    new SlashCommandBuilder().setName('buildembed').setDescription('Staff — build an embed (colour, icons, fields, link buttons) and send it')
+        .addChannelOption(o => o.setName('channel').setDescription('Channel to send to (default: current)').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement).setRequired(false))
+        .addStringOption(o => o.setName('edit').setDescription('Link to a message I sent — edit that one instead').setRequired(false)),
     new SlashCommandBuilder().setName('clear').setDescription('Delete messages in this channel')
         .addIntegerOption(o => o.setName('amount').setDescription('Number of messages to delete').setRequired(true)
             .addChoices({ name: '10 messages', value: 10 }, { name: '25 messages', value: 25 }, { name: '50 messages', value: 50 }, { name: '100 messages', value: 100 }))
@@ -2924,6 +3082,7 @@ client.on('interactionCreate', async (interaction) => {
                     { name: '`/clear` `amount` `filter` `[user]`', value: 'Delete messages — pick amount, filter type, and optionally a specific user' },
                     { name: '`/purge` `amount`', value: 'Quick bulk-delete messages' },
                     { name: '`/say` `message` `[channel]`', value: 'Send an announcement as the bot' },
+                    { name: '`/buildembed` `[channel]` `[edit]`', value: 'Build an embed like Discohook — colour, icons, fields, link buttons — or edit one I sent' },
                     { name: '`/close` `[reason]`', value: 'Close a ticket channel *(use inside a ticket channel)*' },
                 ).setFooter({ text: 'RazorReaper Bot | razorreaper.app', iconURL: client.user.displayAvatarURL() }),
             staff: () => new EmbedBuilder()
@@ -3153,6 +3312,9 @@ client.on('interactionCreate', async (interaction) => {
         await targetChannel.send(text);
         return interaction.reply({ embeds: [okEmbed(`✅ Message sent to ${targetChannel}`)], ephemeral: true });
     }
+
+    // ── /buildembed ───────────────────────────────────────────────────────────
+    if (commandName === 'buildembed') return startEmbedBuilder(interaction);
 
     // ── /clear ────────────────────────────────────────────────────────────────
     if (commandName === 'clear') {
