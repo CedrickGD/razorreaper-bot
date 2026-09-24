@@ -3106,20 +3106,26 @@ async function reactionUserIds(g) {
 }
 
 // Draws — or with `rerollCount` draws again, skipping the last winners — and announces. The result
-// is saved BEFORE anything is posted: a crash in between loses the announcement, never draws twice.
+// is saved (posted: false) BEFORE anything is posted, so a failed or crashed post is posted again
+// by the ticker — at worst the winners are pinged twice — and never drawn twice.
 async function drawGiveaway(g, rerollCount = 0) {
-    if (giveawayBusy.has(g.messageId) || g.state !== (rerollCount ? 'ended' : 'active')) return false;
+    const repost = !rerollCount && g.posted === false;
+    if (giveawayBusy.has(g.messageId) || g.state !== (rerollCount || repost ? 'ended' : 'active')) return false;
     giveawayBusy.add(g.messageId);
     try {
         const msg = await fetchPost(g);
-        const reacted = await reactionUserIds(g);
-        await fetchGuildMembers(msg.guild);          // from then on the cache follows joins and leaves live
-        const entrants = reacted.filter(id => msg.guild.members.cache.has(id));
-        const winnerIds = ga.pickWinners(entrants, rerollCount || g.winners, undefined, rerollCount ? g.winnerIds : []);
-        Object.assign(g, { state: 'ended', winnerIds });
-        saveGiveaways();
+        if (!repost) {
+            const reacted = await reactionUserIds(g);
+            await fetchGuildMembers(msg.guild);      // from then on the cache follows joins and leaves live
+            const entrants = reacted.filter(id => msg.guild.members.cache.has(id));
+            const winnerIds = ga.pickWinners(entrants, rerollCount || g.winners, undefined, rerollCount ? g.winnerIds : []);
+            Object.assign(g, { state: 'ended', winnerIds, posted: false });
+            saveGiveaways();
+        }
         await msg.edit({ embeds: [giveawayEmbed(g, msg.guild)] });
-        await announceWinners(msg, winnerIds, g.prize);
+        await announceWinners(msg, g.winnerIds, g.prize);
+        g.posted = true;
+        saveGiveaways();
         return true;
     } finally {
         giveawayBusy.delete(g.messageId);
@@ -3128,22 +3134,27 @@ async function drawGiveaway(g, rerollCount = 0) {
 
 function closeContest(c, winnerIds) {
     if (giveaways.contest !== c) return;
-    Object.assign(c, { state: 'ended', winnerIds });
+    Object.assign(c, { state: 'ended', winnerIds, posted: false });
     giveaways.pastContests.push(c);
     giveaways.contest = null;
     saveGiveaways();
 }
 
+// Like drawGiveaway: closed and saved first, then posted; a closed contest with posted: false only
+// has its result posted again.
 async function finishContest(c) {
-    if (giveawayBusy.has(c.messageId) || giveaways.contest !== c || !inviteStore) return false;
+    const repost = c.posted === false;
+    if (giveawayBusy.has(c.messageId) || !(repost || giveaways.contest === c) || !inviteStore) return false;
     giveawayBusy.add(c.messageId);
     try {
-        await inviteChain;                           // a join still being diffed counts too
+        if (!repost) await inviteChain;              // a join still being diffed counts too
         const msg = await fetchPost(c);
         const rows = ga.contestStandings(inviteStore, c, Date.now());
-        closeContest(c, rows.slice(0, c.winners).map(r => r.inviterId));
+        if (!repost) closeContest(c, rows.slice(0, c.winners).map(r => r.inviterId));
         await msg.edit({ embeds: [contestEmbed(c, rows, msg.guild)] });
         await announceWinners(msg, c.winnerIds, c.prize);
+        c.posted = true;
+        saveGiveaways();
         return true;
     } finally {
         giveawayBusy.delete(c.messageId);
@@ -3167,7 +3178,11 @@ async function refreshStandings(c) {
 // next tick. Either way it is logged once. Returns the reason for a staff reply.
 function giveawayFailed(item, e, endQuietly) {
     const gone = GONE_CODES.has(e?.code);
-    if (gone) endQuietly();
+    if (gone) {
+        endQuietly();
+        delete item.posted;                          // nowhere left to post the result
+        saveGiveaways();
+    }
     if (!giveawayWarned.has(item.messageId)) {
         giveawayWarned.add(item.messageId);
         console.warn(`[giveaways] ${item.messageId} "${item.prize}": ${gone ? 'message deleted — ended without winners' : `could not finish: ${e?.message || e}`}`);
@@ -3184,8 +3199,9 @@ const endContestQuietly = c => () => closeContest(c, []);
 async function giveawayTick() {
     const due = ga.dueItems(giveaways, Date.now());
     for (const g of due.giveaways) await drawGiveaway(g).catch(e => giveawayFailed(g, e, endGiveawayQuietly(g)));
-    const c = due.contest || due.standings;
-    if (c) await (due.contest ? finishContest(c) : refreshStandings(c)).catch(e => giveawayFailed(c, e, endContestQuietly(c)));
+    for (const c of due.contests) await finishContest(c).catch(e => giveawayFailed(c, e, endContestQuietly(c)));
+    const s = due.standings;
+    if (s) await refreshStandings(s).catch(e => giveawayFailed(s, e, endContestQuietly(s)));
 }
 
 async function giveawayCommand(interaction) {

@@ -4,11 +4,11 @@
 // posts, fetches the 🎉 reactions and keeps the file; test/ covers the rules.
 //
 // Store (/data/giveaways.json), times in ms:
-//   { v: 1, giveaways: [{ messageId, channelId, prize, winners, endsAt, hostId, state, winnerIds }],
+//   { v: 1, giveaways: [{ messageId, channelId, prize, winners, endsAt, hostId, state, winnerIds, posted }],
 //     contest: { messageId, channelId, prize, winners, startsAt, endsAt, hostId, state, winnerIds,
-//                lastStandingsAt } | null,
+//                lastStandingsAt, posted } | null,
 //     pastContests: [contest…] }
-// state: 'active' | 'ended' | 'cancelled'.
+// state: 'active' | 'ended' | 'cancelled'. posted: false = drawn, but the result is not posted yet.
 const crypto = require('crypto');
 
 const MINUTE = 60_000;
@@ -64,12 +64,15 @@ function contestStandings(inviteStore, contest, now = Date.now()) {
         .map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
-/** What the ticker has to do now: giveaways to draw, the contest to finish, standings to refresh. */
+/**
+ * What the ticker has to do now: giveaways to draw, contests to finish, standings to refresh.
+ * Drawn items whose post failed (`posted: false`) come back too, to post the result again.
+ */
 function dueItems(store, now) {
     const c = store.contest?.state === 'active' ? store.contest : null;
     return {
-        giveaways: store.giveaways.filter(g => g.state === 'active' && g.endsAt <= now),
-        contest: c && c.endsAt <= now ? c : null,
+        giveaways: store.giveaways.filter(g => (g.state === 'active' && g.endsAt <= now) || g.posted === false),
+        contests: [...(c && c.endsAt <= now ? [c] : []), ...store.pastContests.filter(p => p.posted === false)],
         standings: c && c.endsAt > now && now - (c.lastStandingsAt || 0) >= STANDINGS_EVERY_MS ? c : null,
     };
 }

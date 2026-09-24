@@ -107,18 +107,23 @@ test('dueItems: ended-but-active giveaways, a due contest, standings every 10 mi
         { messageId: '2', state: 'active', endsAt: 101 },
         { messageId: '3', state: 'ended', endsAt: 50 },
         { messageId: '4', state: 'cancelled', endsAt: 50 },
+        { messageId: '5', state: 'ended', endsAt: 50, posted: false },   // drawn, the post failed: post again
+        { messageId: '6', state: 'ended', endsAt: 50, posted: true },
     ];
-    assert.deepStrictEqual(dueItems(s, 100).giveaways.map(g => g.messageId), ['1']);
-    assert.strictEqual(dueItems(s, 100).contest, null);
+    assert.deepStrictEqual(dueItems(s, 100).giveaways.map(g => g.messageId), ['1', '5']);
+    assert.deepStrictEqual(dueItems(s, 100).contests, []);
 
     s.contest = { state: 'active', startsAt: 0, endsAt: DAY, lastStandingsAt: 0 };
     assert.strictEqual(dueItems(s, STANDINGS_EVERY_MS - 1).standings, null);
     assert.strictEqual(dueItems(s, STANDINGS_EVERY_MS).standings, s.contest);
-    assert.strictEqual(dueItems(s, STANDINGS_EVERY_MS).contest, null);
-    assert.strictEqual(dueItems(s, DAY).contest, s.contest);
+    assert.deepStrictEqual(dueItems(s, STANDINGS_EVERY_MS).contests, []);
+    assert.deepStrictEqual(dueItems(s, DAY).contests, [s.contest]);
     assert.strictEqual(dueItems(s, DAY).standings, null);
     s.contest.state = 'ended';
-    assert.deepStrictEqual([dueItems(s, DAY).contest, dueItems(s, DAY).standings], [null, null]);
+    assert.deepStrictEqual([dueItems(s, DAY).contests, dueItems(s, DAY).standings], [[], null]);
+    const stuck = { state: 'ended', endsAt: 50, posted: false };
+    s.pastContests = [{ state: 'ended', endsAt: 40, posted: true }, stuck];
+    assert.deepStrictEqual(dueItems(s, DAY).contests, [stuck]);
 });
 
 test('parseStore: a written store round-trips, anything else is null', () => {
