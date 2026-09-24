@@ -2354,6 +2354,7 @@ Path: ‹…›
 - toast.regionfailed: Failed to capture the region.
 - toast.needregion: Calibrate the region first.
 - toast.referencefailed: Could not capture the reference snapshot.
+- toast.referenceblank: The capture came back blank — nothing to match on. If ARK runs in Fullscreen, switch it to Windowed Fullscreen and capture again with the target on screen.
 - toast.referencecaptured: Reference snapshot captured.
 - toast.needreference: Capture a reference first.
 - toast.masknothing: Nothing stayed still — is the element still on screen?

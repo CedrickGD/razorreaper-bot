@@ -2814,7 +2814,7 @@ client.on('guildCreate', (guild) => {
 });
 
 // ── Ready ─────────────────────────────────────────────────────────────────────
-client.once('ready', async () => {
+client.once('clientReady', async () => {
     console.log(`[RazorReaper] Online as ${client.user.tag}`);
     console.log(`[RazorReaper] Connected to ${client.guilds.cache.size} server(s):`);
     client.guilds.cache.forEach(g => console.log(`  - ${g.name} (${g.id})`));
