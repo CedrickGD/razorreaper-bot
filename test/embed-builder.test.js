@@ -236,6 +236,10 @@ test('an empty draft previews a placeholder; the field picker replaces the edit 
     const picker = builderView(full(), 'S', { targetName: 'x', picking: true }).components[0].toJSON().components[0];
     assert.strictEqual(picker.custom_id, 'eb:S:field');
     assert.deepStrictEqual(picker.options.map(o => o.value), ['0', '1', 'back']);
+    // A menu holds 25 options: at 25 fields every field stays pickable and Back is what drops.
+    const fields = Array.from({ length: 25 }, (_, i) => ({ name: `F${i}`, value: 'v', inline: false }));
+    const maxed = builderView(draft({ fields }), 'S', { targetName: 'x', picking: true }).components[0].toJSON().components[0];
+    assert.deepStrictEqual(maxed.options.map(o => o.value), fields.map((_, i) => String(i)));
 });
 
 test('modals open prefilled with the current values, and never with an empty value', () => {

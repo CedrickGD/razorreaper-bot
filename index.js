@@ -2007,7 +2007,11 @@ async function startEmbedBuilder(interaction) {
     const now = Date.now();
     for (const [sid, s] of ebSessions) if (now - s.touchedAt > EB_TTL) ebSessions.delete(sid);
 
+    // The bot sees more than a staff member may: a channel they can't see is refused, and a link
+    // into one reads as not found, so neither its content nor its author leaks into the builder.
+    const hidden = (c) => !c?.permissionsFor(member)?.has(PermissionsBitField.Flags.ViewChannel);
     let target = interaction.options.getChannel('channel') || interaction.channel;
+    if (hidden(target)) return interaction.reply({ embeds: [errEmbed('❌ You don\'t have access to that channel.')], ephemeral: true });
     let state = embedBuilder.newState();
     let editMessageId = null;
     const link = interaction.options.getString('edit');
@@ -2016,7 +2020,7 @@ async function startEmbedBuilder(interaction) {
         const msg = guildId === guild.id
             ? await client.channels.fetch(channelId).then(c => c?.messages?.fetch(messageId)).catch(() => null)
             : null;
-        if (!msg) return interaction.reply({ embeds: [errEmbed('❌ No message found — paste its link (right-click → Copy Message Link).')], ephemeral: true });
+        if (!msg || hidden(msg.channel)) return interaction.reply({ embeds: [errEmbed('❌ No message found — paste its link (right-click → Copy Message Link).')], ephemeral: true });
         const data = {
             authorId: msg.author.id, content: msg.content,
             embeds: msg.embeds.map(e => e.toJSON()), components: msg.components.map(c => c.toJSON()),

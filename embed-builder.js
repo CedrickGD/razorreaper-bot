@@ -381,7 +381,7 @@ function builderView(s, sid, { targetName, editing = false, picking = false }) {
                 description: f.value.replace(/\s+/g, ' ').slice(0, 100),
             })),
             { label: '← Back', value: 'back' },
-        ].slice(0, 25))
+        ].slice(0, 25))   // at 25 fields Back is what drops, not field 25: any other control leaves the picker too
         : select('edit', '✏️ Edit…', EDIT_MENU.map(([value, label, description]) => ({ value, label, description })));
     const colourName = Object.values(COLOURS).find(([, c]) => c === s.color)?.[0] ?? hex(s.color);
 
