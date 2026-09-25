@@ -41,11 +41,16 @@ antivirus entirely. If a scanner deletes the file mid-download, the install fail
 message — that is the first thing to check.
 
 **"Update available" every time / the update never finishes (the 1.4.8 loop).**
-Versions around **1.4.8** could get stuck in a loop where the update downloaded but never applied
-— install-on-close plus the tray process plus the staged-installer cleanup could fight each other.
-The fix is not another restart: download the current installer from <https://dl.razorreaper.app>
-and run it over the existing install. Settings and licence survive; nothing has to be uninstalled
-first.
+**1.4.8** downloads the update and installs it only when the app really exits — but the window's
+X only hides it to the tray, so it never exits, and the next start throws the download away and
+fetches it again. Any of these ends the loop:
+1. On **Home**, press the update button (**Update Now**, which turns into **Install & Restart**
+   once the download is done) and accept the Windows prompt.
+2. Or right-click the RazorReaper icon in the tray → **Quit**, then accept the Windows prompt.
+3. Or download the current installer from <https://dl.razorreaper.app> and run it over the
+   existing install.
+Settings and licence survive; nothing has to be uninstalled first. From 1.4.9 on the app installs
+updates by itself.
 
 **"Update v… is ready — restart to install" but nothing happens.**
 RazorReaper deliberately refuses to restart while **ARK or one of your macros is running**. Close
