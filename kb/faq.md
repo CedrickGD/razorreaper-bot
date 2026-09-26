@@ -15,11 +15,22 @@ few pages are marked *Lifetime only* — those do not come with the monthly plan
 Discord, Lifetime holders get the **Lifetime** role instead of **RR-Customer**; it opens every
 chat RR-Customer does plus exclusive-chat.
 
+**Reinstalled Windows / factory reset / "my Premium is gone".**
+A reinstall or reset on the SAME PC keeps the licence on that PC; the app only forgot the key.
+Tell the member to enter it once more: the **Freemium** button at the bottom of the sidebar (or
+**My account → Redeem key**), paste the whole key, **Activate**. Premium switches on at once, no
+restart. Only if that answers *License has reached its maximum number of uses.* is it the case
+below.
+
+**New Discord account.** The member runs `/verify` with their key on the new account. If the bot
+answers *This license is already linked to another Discord account.*, ask for the **last 4
+characters** of the key and the old Discord name, then escalate with **I need a human**.
+
 **Activation fails / "key already used".**
 Keys bind to one PC at activation. In order:
 1. Check the key is pasted whole, with the dashes and no trailing space.
-2. If it was activated on another PC (or after a Windows reinstall / new hardware), it has to be
-   released and rebound — that is a manual step only the owner can do. Ask the member for the
+2. If it was activated on another PC or the hardware changed (new drive, motherboard or CPU), the
+   old PC has to be released — that is a manual step only the owner can do. Ask the member for the
    **last 4 characters** of the key (never the whole key) and the Discord name on the order, then
    escalate with **I need a human**.
 3. If the app says *Access suspended* or *Access permanently revoked*, that is an administrator
